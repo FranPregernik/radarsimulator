@@ -1,0 +1,40 @@
+group 'hr.franp'
+version '1.0-SNAPSHOT'
+
+project.ext.set('javafxHome', System.env['JAVAFX_HOME'])
+
+buildscript {
+    ext.kotlin_version = '1.0.5-2'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'kotlin'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://oss.sonatype.org/content/repositories/snapshots/'
+    }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile files("${javafxHome}/rt/lib/jfxrt.jar")
+
+    // https://mvnrepository.com/artifact/no.tornado/tornadofx
+    compile group: 'no.tornado', name: 'tornadofx', version: '1.5.8'
+
+    // https://mvnrepository.com/artifact/org.controlsfx/controlsfx
+    compile group: 'org.controlsfx', name: 'controlsfx', version: '8.40.12'
+
+    // https://mvnrepository.com/artifact/org.jfxtras/jfxtras-labs
+    compile group: 'org.jfxtras', name: 'jfxtras-labs', version: '8.0-r5'
+
+    compile group: 'org.fxmisc.easybind', name: 'easybind', version: '1.0.4-SNAPSHOT'
+}

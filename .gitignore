@@ -85,3 +85,7 @@ _xmsgs/
 # vivado project folder
 vivado
 .Xil
+
+#  idea
+.idea
+*.iml
