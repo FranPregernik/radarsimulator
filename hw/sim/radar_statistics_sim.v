@@ -23,14 +23,21 @@
 module radar_statistics_sim;
 
     localparam DATA_WIDTH = 32;
+    localparam DEL = 5;
+    
+    localparam US_RATIO = 100;
+    localparam TRIG_RATIO = US_RATIO * 5;
+    localparam ACP_RATIO = TRIG_RATIO * 5;
+    localparam ARP_RATIO = ACP_RATIO * 5;
+
+
     
     // Inputs
     reg in_clk;
-    integer i;
-    
-    reg arp;  
-    reg acp;    
-    reg trig;
+    wire us_clk;
+    wire arp;  
+    wire acp;    
+    wire trig;
     
     // Outputs
     wire [DATA_WIDTH-1:0] ARP_US;
@@ -43,36 +50,24 @@ module radar_statistics_sim;
         .ARP(arp),
         .ACP(acp),
         .TRIG(trig),
-        .US_CLK(in_clk),
+        .US_CLK(us_clk),
+        .SYS_CLK(in_clk),
         .CALIBRATED(CALIBRATED),
         .ARP_US(ARP_US),
         .ACP_CNT(ACP_CNT),
         .TRIG_CNT(TRIG_CNT)
     );
+    
+    clk_divider #(US_RATIO) c1 (in_clk, us_clk);
+    clk_divider #(ARP_RATIO) c2 (in_clk, arp);
+    clk_divider #(ACP_RATIO) c3 (in_clk, acp);
+    clk_divider #(TRIG_RATIO) c4 (in_clk, trig);
  
     initial
     begin
-        i = 0;
         in_clk = 0;
-        arp = 0;
-        acp = 0;
-        trig = 0;
         forever
-        #500 in_clk = ~in_clk;
-    end
-    
-    always @(posedge in_clk)
-    begin
-        if (i > 0 && i % 2_048_000 == 0)
-            arp <= ~arp;
-
-        if ((i-500) > 0 && (i-500) % 500 == 0)
-            acp <= ~acp;      
-
-        if ((i-50) > 0 && (i-50) % 50 == 0)
-            trig <= ~trig;    
-            
-        i <= i + 1;       
+            #DEL in_clk = ~in_clk;
     end
  
 endmodule

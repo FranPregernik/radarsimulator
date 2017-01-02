@@ -225,11 +225,6 @@ CONFIG.NUM_PORTS {8} \
      return 1
    }
   
-  set_property -dict [ list \
-CONFIG.NUM_READ_OUTSTANDING {1} \
-CONFIG.NUM_WRITE_OUTSTANDING {1} \
- ] [get_bd_intf_pins /radar_simulator/radar_sim_ctrl_axi_0/S_AXI]
-
   # Create instance: radar_sim_fixed_target_axis, and set properties
   set block_name radar_sim_target_axis
   set block_cell_name radar_sim_fixed_target_axis
@@ -289,7 +284,7 @@ CONFIG.NUM_WRITE_OUTSTANDING {1} \
   connect_bd_net -net RADAR_CLK_1 [get_bd_pins RADAR_CLK] [get_bd_pins us_divider/IN_CLK]
   connect_bd_net -net RADAR_TRIG_1 [get_bd_pins RADAR_TRIG] [get_bd_pins led_concat/In4] [get_bd_pins radar_statistics_0/TRIG]
   connect_bd_net -net RadarStatistics_0_CALIBRATED [get_bd_pins led_concat/In1] [get_bd_pins radar_sim_ctrl_axi_0/RADAR_CAL] [get_bd_pins radar_statistics_0/CALIBRATED]
-  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins S_CTRL_AXI_ACLK] [get_bd_pins axis_data_fifo_ft/s_axis_aclk] [get_bd_pins axis_data_fifo_mt/s_axis_aclk] [get_bd_pins axis_dwidth_converter_ft/aclk] [get_bd_pins axis_dwidth_converter_mt/aclk] [get_bd_pins radar_sim_ctrl_axi_0/S_AXI_ACLK] [get_bd_pins radar_sim_fixed_target_axis/S_AXIS_ACLK] [get_bd_pins radar_sim_moving_target_axis/S_AXIS_ACLK]
+  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins S_CTRL_AXI_ACLK] [get_bd_pins axis_data_fifo_ft/s_axis_aclk] [get_bd_pins axis_data_fifo_mt/s_axis_aclk] [get_bd_pins axis_dwidth_converter_ft/aclk] [get_bd_pins axis_dwidth_converter_mt/aclk] [get_bd_pins radar_sim_ctrl_axi_0/S_AXI_ACLK] [get_bd_pins radar_sim_fixed_target_axis/S_AXIS_ACLK] [get_bd_pins radar_sim_moving_target_axis/S_AXIS_ACLK] [get_bd_pins radar_statistics_0/SYS_CLK]
   connect_bd_net -net radar_sim_ctrl_axi_0_RADAR_EN [get_bd_pins led_concat/In0] [get_bd_pins radar_sim_ctrl_axi_0/RADAR_EN]
   connect_bd_net -net radar_sim_fixed_target_axis_gen_signal [get_bd_pins SIM_FT_SIG] [get_bd_pins radar_sim_fixed_target_axis/gen_signal]
   connect_bd_net -net radar_sim_moving_target_axis_gen_signal [get_bd_pins SIM_MT_SIG] [get_bd_pins radar_sim_moving_target_axis/gen_signal]
@@ -306,53 +301,53 @@ CONFIG.NUM_WRITE_OUTSTANDING {1} \
    commentid: "",
    guistr: "# # String gsaved with Nlview 6.6.5b  2016-09-06 bk=1.3687 VDI=39 GEI=35 GUI=JA:1.6
 #  -string -flagsOSRD
-preplace port RADAR_CLK -pg 1 -y 190 -defaultsOSRD
-preplace port RADAR_ACP -pg 1 -y 260 -defaultsOSRD
-preplace port S_CTRL_AXI_ARESETN -pg 1 -y 450 -defaultsOSRD
-preplace port SIM_FT_SIG -pg 1 -y 440 -defaultsOSRD
-preplace port S_CTRL_AXI -pg 1 -y 50 -defaultsOSRD
-preplace port SIM_MT_SIG -pg 1 -y 610 -defaultsOSRD
-preplace port S_MT_AXIS -pg 1 -y 580 -defaultsOSRD
-preplace port S_CTRL_AXI_ACLK -pg 1 -y 530 -defaultsOSRD
-preplace port S_FT_AXIS -pg 1 -y 410 -defaultsOSRD
-preplace port RADAR_TRIG -pg 1 -y 280 -defaultsOSRD
-preplace port RADAR_ARP -pg 1 -y 240 -defaultsOSRD
-preplace portBus leds -pg 1 -y 270 -defaultsOSRD
-preplace inst led_concat -pg 1 -lvl 4 -y 270 -defaultsOSRD
+preplace port RADAR_CLK -pg 1 -y 180 -defaultsOSRD
+preplace port RADAR_ACP -pg 1 -y 250 -defaultsOSRD
+preplace port S_CTRL_AXI_ARESETN -pg 1 -y 410 -defaultsOSRD
+preplace port SIM_FT_SIG -pg 1 -y 400 -defaultsOSRD
+preplace port S_CTRL_AXI -pg 1 -y 70 -defaultsOSRD
+preplace port SIM_MT_SIG -pg 1 -y 570 -defaultsOSRD
+preplace port S_MT_AXIS -pg 1 -y 540 -defaultsOSRD
+preplace port S_CTRL_AXI_ACLK -pg 1 -y 490 -defaultsOSRD
+preplace port S_FT_AXIS -pg 1 -y 370 -defaultsOSRD
+preplace port RADAR_TRIG -pg 1 -y 10 -defaultsOSRD
+preplace port RADAR_ARP -pg 1 -y 120 -defaultsOSRD
+preplace portBus leds -pg 1 -y 230 -defaultsOSRD
+preplace inst led_concat -pg 1 -lvl 4 -y 230 -defaultsOSRD
 preplace inst radar_statistics_0 -pg 1 -lvl 2 -y 160 -defaultsOSRD
-preplace inst radar_sim_moving_target_axis -pg 1 -lvl 4 -y 610 -defaultsOSRD
-preplace inst axis_dwidth_converter_mt -pg 1 -lvl 2 -y 600 -defaultsOSRD
-preplace inst axis_data_fifo_mt -pg 1 -lvl 3 -y 620 -defaultsOSRD
-preplace inst us_divider -pg 1 -lvl 1 -y 190 -defaultsOSRD
-preplace inst axis_dwidth_converter_ft -pg 1 -lvl 2 -y 430 -defaultsOSRD
-preplace inst radar_sim_ctrl_axi_0 -pg 1 -lvl 3 -y 110 -defaultsOSRD
-preplace inst constant_low -pg 1 -lvl 3 -y 330 -defaultsOSRD
-preplace inst axis_data_fifo_ft -pg 1 -lvl 3 -y 450 -defaultsOSRD
-preplace inst radar_sim_fixed_target_axis -pg 1 -lvl 4 -y 440 -defaultsOSRD
-preplace netloc S_CTRL_AXI_1 1 0 3 NJ 50 NJ 50 NJ
+preplace inst radar_sim_moving_target_axis -pg 1 -lvl 4 -y 570 -defaultsOSRD
+preplace inst axis_dwidth_converter_mt -pg 1 -lvl 2 -y 560 -defaultsOSRD
+preplace inst axis_data_fifo_mt -pg 1 -lvl 3 -y 580 -defaultsOSRD
+preplace inst us_divider -pg 1 -lvl 1 -y 180 -defaultsOSRD
+preplace inst axis_dwidth_converter_ft -pg 1 -lvl 2 -y 390 -defaultsOSRD
+preplace inst radar_sim_ctrl_axi_0 -pg 1 -lvl 3 -y 130 -defaultsOSRD
+preplace inst constant_low -pg 1 -lvl 3 -y 300 -defaultsOSRD
+preplace inst axis_data_fifo_ft -pg 1 -lvl 3 -y 410 -defaultsOSRD
+preplace inst radar_sim_fixed_target_axis -pg 1 -lvl 4 -y 400 -defaultsOSRD
+preplace netloc S_CTRL_AXI_1 1 0 3 NJ 70 NJ 70 NJ
 preplace netloc axis_dwidth_converter_0_M_AXIS 1 2 1 N
-preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 0 4 NJ 450 220 510 550 540 890
+preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 0 4 NJ 410 230 460 560 500 910
 preplace netloc radar_statistics_0_TRIG_CNT 1 2 1 530
-preplace netloc RadarStatistics_0_CALIBRATED 1 2 2 520 220 NJ
-preplace netloc RADAR_TRIG_1 1 0 4 NJ 280 240 280 NJ 280 NJ
-preplace netloc RADAR_ACP_1 1 0 4 NJ 260 230 260 NJ 260 N
+preplace netloc RadarStatistics_0_CALIBRATED 1 2 2 500 20 900
+preplace netloc RADAR_TRIG_1 1 0 4 NJ 10 240 10 NJ 10 910J
+preplace netloc RADAR_ACP_1 1 0 4 NJ 250 220 250 550J 240 900
 preplace netloc RADAR_CLK_1 1 0 1 NJ
-preplace netloc us_divider_OUT_CLK 1 1 1 N
-preplace netloc radar_statistics_0_ARP_US 1 2 1 500
-preplace netloc xlconstant_0_dout 1 3 1 880
+preplace netloc us_divider_OUT_CLK 1 1 1 NJ
+preplace netloc radar_statistics_0_ARP_US 1 2 1 510
+preplace netloc xlconstant_0_dout 1 3 1 900
 preplace netloc xlconcat_0_dout 1 4 1 NJ
 preplace netloc radar_sim_fixed_target_axis_gen_signal 1 4 1 NJ
-preplace netloc radar_sim_ctrl_axi_0_RADAR_EN 1 3 1 880
+preplace netloc radar_sim_ctrl_axi_0_RADAR_EN 1 3 1 890
 preplace netloc axis_data_fifo_1_M_AXIS 1 3 1 N
 preplace netloc axis_data_fifo_0_M_AXIS 1 3 1 N
-preplace netloc radar_statistics_0_ACP_CNT 1 2 1 510
-preplace netloc processing_system7_0_FCLK_CLK0 1 0 4 NJ 530 240 530 540 530 880
+preplace netloc radar_statistics_0_ACP_CNT 1 2 1 520
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 4 NJ 490 240 490 540 490 890
+preplace netloc axi_dma_mt_M_AXIS_MM2S 1 0 2 NJ 540 NJ
 preplace netloc axis_dwidth_converter_1_M_AXIS 1 2 1 N
-preplace netloc axi_dma_mt_M_AXIS_MM2S 1 0 2 NJ 580 NJ
 preplace netloc radar_sim_moving_target_axis_gen_signal 1 4 1 NJ
-preplace netloc RADAR_ARP_1 1 0 4 NJ 240 220 240 NJ 240 NJ
-preplace netloc axi_dma_ft_M_AXIS_MM2S 1 0 2 NJ 410 NJ
-levelinfo -pg 1 0 120 370 720 1030 1190 -top 0 -bot 700
+preplace netloc RADAR_ARP_1 1 0 4 NJ 120 230 260 570J 250 890J
+preplace netloc axi_dma_ft_M_AXIS_MM2S 1 0 2 NJ 370 NJ
+levelinfo -pg 1 0 120 370 730 1060 1220 -top 0 -bot 660
 ",
 }
 
@@ -1799,8 +1794,8 @@ preplace inst ps7_0_axi_periph -pg 1 -lvl 2 -y 420 -defaultsOSRD
 preplace inst rst_ps7_0_100M -pg 1 -lvl 1 -y 590 -defaultsOSRD
 preplace inst axi_mem_intercon -pg 1 -lvl 4 -y 460 -defaultsOSRD
 preplace inst processing_system7_0 -pg 1 -lvl 5 -y 420 -defaultsOSRD
-preplace netloc ps7_0_axi_periph_M02_AXI 1 2 1 680
 preplace netloc processing_system7_0_DDR 1 5 1 NJ
+preplace netloc ps7_0_axi_periph_M02_AXI 1 2 1 680
 preplace netloc radar_sim_axi_0_SIM_MT_SIG 1 5 1 NJ
 preplace netloc processing_system7_0_M_AXI_GP0 1 1 5 370 220 NJ 220 1090J 290 NJ 290 1910
 preplace netloc axi_mem_intercon_1_M00_AXI 1 4 1 1450
@@ -1842,4 +1837,6 @@ levelinfo -pg 1 0 200 540 890 1290 1680 1930 -top 0 -bot 830
 
 create_root_design ""
 
+
+common::send_msg_id "BD_TCL-1000" "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
 
