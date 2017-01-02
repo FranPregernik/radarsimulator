@@ -3,9 +3,9 @@
 // Company: franp.com
 // Engineer: Fran Pregernik <fran.pregernik@gmail.com>
 // 
-// Create Date: 12/29/2016 07:26:09 PM
+// Create Date: 12/30/2016 10:48:02 AM
 // Design Name: 
-// Module Name: ClkDivider
+// Module Name: azimuth_signal_generator
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,15 +20,17 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module ClkDivider #
+module azimuth_signal_generator #
     (
-        parameter DIVIDER = 15
+        parameter SIZE = 3200
     )
     (
-        input IN_CLK,
-        input RST,
+        input wire EN,
+        input wire TRIG,
+        input wire [SIZE-1:0] DATA,
+        input wire CLK,
         
-        output wire OUT_CLK
+        output wire SIGNAL
     );
     
     // function called clogb2 that returns an integer which has the 
@@ -39,30 +41,26 @@ module ClkDivider #
           bit_depth = bit_depth >> 1;
       end
     endfunction
+        
+    localparam BITS = clogb2(SIZE-1);
+        
+    reg [BITS-1:0] clk_idx = 0;
     
-    localparam BITS = clogb2(DIVIDER-1);
+    always @(posedge TRIG) begin
+        clk_idx = 0;
+    end 
     
-    // higher and out of the range of [0, DIVIDER-1]
-    localparam MAX = 1 << BITS;
-    
-    // how many counts to keep the out clock low
-    localparam integer HIGH = DIVIDER / 2; 
-    
-    reg [BITS:0] counter = 0;
-    
-    always @(posedge RST)
-    begin
-        counter <= 0;
-    end
-    
-    always @(posedge IN_CLK)
-    begin
-        counter = counter + 1;
-        if (counter >= DIVIDER) begin
-            counter = 0;            
+    always @(posedge CLK) begin
+        if (clk_idx < SIZE) begin
+                clk_idx = clk_idx + 1;
+        end 
+        
+        if (clk_idx > SIZE) begin
+            clk_idx = SIZE;
         end
     end
     
-    assign OUT_CLK = (counter <= HIGH);
+    // generates the signal (0/1) based on the memory register for the current time (clk_idx)
+    assign SIGNAL = EN && (clk_idx < SIZE) && (DATA[clk_idx] == 1'b1);
     
 endmodule

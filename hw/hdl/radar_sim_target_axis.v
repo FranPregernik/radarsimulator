@@ -1,7 +1,25 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: franp.com
+// Engineer: Fran Pregernik <fran.pregernik@gmail.com>
+//
+// Create Date: 12/29/2016 08:04:28 PM
+// Design Name:
+// Module Name: radar_sim_target_axis
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
 
-`timescale 1 ns / 1 ps
-
-	module radar_sim_target_axis #
+module radar_sim_target_axis #
 	(
 		// Users to add parameters here
 
@@ -9,10 +27,11 @@
 		// Do not modify the parameters beyond this line
 
 		// AXI4Stream sink: Data Width
-		parameter integer C_S_AXIS_TDATA_WIDTH	= 32
+		parameter integer C_S_AXIS_TDATA_WIDTH	= 3200
 	)
 	(
 		// Users to add ports here
+        output gen_signal,
 
 		// User ports ends
 		// Do not modify the ports beyond this line

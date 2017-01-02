@@ -40,7 +40,7 @@ if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
 
 # The design that will be created by this Tcl script contains the following 
 # module references:
-# radar_sim_axi
+# radar_sim_ctrl_axi, radar_sim_target_axis, radar_sim_target_axis, radar_statistics, clk_divider
 
 # Please add the sources of those modules before sourcing this Tcl script.
 
@@ -128,6 +128,238 @@ if { $nRet != 0 } {
 ##################################################################
 
 
+# Hierarchical cell: radar_simulator
+proc create_hier_cell_radar_simulator { parentCell nameHier } {
+
+  variable script_folder
+
+  if { $parentCell eq "" || $nameHier eq "" } {
+     catch {common::send_msg_id "BD_TCL-102" "ERROR" create_hier_cell_radar_simulator() - Empty argument(s)!"}
+     return
+  }
+
+  # Get object for parentCell
+  set parentObj [get_bd_cells $parentCell]
+  if { $parentObj == "" } {
+     catch {common::send_msg_id "BD_TCL-100" "ERROR" "Unable to find parent cell <$parentCell>!"}
+     return
+  }
+
+  # Make sure parentObj is hier blk
+  set parentType [get_property TYPE $parentObj]
+  if { $parentType ne "hier" } {
+     catch {common::send_msg_id "BD_TCL-101" "ERROR" "Parent <$parentObj> has TYPE = <$parentType>. Expected to be <hier>."}
+     return
+  }
+
+  # Save current instance; Restore later
+  set oldCurInst [current_bd_instance .]
+
+  # Set parent object as current
+  current_bd_instance $parentObj
+
+  # Create cell and set as current instance
+  set hier_obj [create_bd_cell -type hier $nameHier]
+  current_bd_instance $hier_obj
+
+  # Create interface pins
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 S_CTRL_AXI
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 S_FT_AXIS
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 S_MT_AXIS
+
+  # Create pins
+  create_bd_pin -dir I RADAR_ACP
+  create_bd_pin -dir I RADAR_ARP
+  create_bd_pin -dir I -type clk RADAR_CLK
+  create_bd_pin -dir I RADAR_TRIG
+  create_bd_pin -dir O SIM_FT_SIG
+  create_bd_pin -dir O SIM_MT_SIG
+  create_bd_pin -dir I -type clk S_CTRL_AXI_ACLK
+  create_bd_pin -dir I -type rst S_CTRL_AXI_ARESETN
+  create_bd_pin -dir O -from 7 -to 0 leds
+
+  # Create instance: axis_data_fifo_ft, and set properties
+  set axis_data_fifo_ft [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:1.1 axis_data_fifo_ft ]
+  set_property -dict [ list \
+CONFIG.FIFO_DEPTH {16} \
+ ] $axis_data_fifo_ft
+
+  # Create instance: axis_data_fifo_mt, and set properties
+  set axis_data_fifo_mt [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:1.1 axis_data_fifo_mt ]
+  set_property -dict [ list \
+CONFIG.FIFO_DEPTH {16} \
+ ] $axis_data_fifo_mt
+
+  # Create instance: axis_dwidth_converter_ft, and set properties
+  set axis_dwidth_converter_ft [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_dwidth_converter:1.1 axis_dwidth_converter_ft ]
+  set_property -dict [ list \
+CONFIG.M_TDATA_NUM_BYTES {400} \
+ ] $axis_dwidth_converter_ft
+
+  # Create instance: axis_dwidth_converter_mt, and set properties
+  set axis_dwidth_converter_mt [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_dwidth_converter:1.1 axis_dwidth_converter_mt ]
+  set_property -dict [ list \
+CONFIG.M_TDATA_NUM_BYTES {400} \
+ ] $axis_dwidth_converter_mt
+
+  # Create instance: constant_low, and set properties
+  set constant_low [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 constant_low ]
+  set_property -dict [ list \
+CONFIG.CONST_VAL {0} \
+ ] $constant_low
+
+  # Create instance: led_concat, and set properties
+  set led_concat [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat:2.1 led_concat ]
+  set_property -dict [ list \
+CONFIG.NUM_PORTS {8} \
+ ] $led_concat
+
+  # Create instance: radar_sim_ctrl_axi_0, and set properties
+  set block_name radar_sim_ctrl_axi
+  set block_cell_name radar_sim_ctrl_axi_0
+  if { [catch {set radar_sim_ctrl_axi_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_msg_id "BD_TCL-105" "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $radar_sim_ctrl_axi_0 eq "" } {
+     catch {common::send_msg_id "BD_TCL-106" "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  set_property -dict [ list \
+CONFIG.NUM_READ_OUTSTANDING {1} \
+CONFIG.NUM_WRITE_OUTSTANDING {1} \
+ ] [get_bd_intf_pins /radar_simulator/radar_sim_ctrl_axi_0/S_AXI]
+
+  # Create instance: radar_sim_fixed_target_axis, and set properties
+  set block_name radar_sim_target_axis
+  set block_cell_name radar_sim_fixed_target_axis
+  if { [catch {set radar_sim_fixed_target_axis [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_msg_id "BD_TCL-105" "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $radar_sim_fixed_target_axis eq "" } {
+     catch {common::send_msg_id "BD_TCL-106" "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create instance: radar_sim_moving_target_axis, and set properties
+  set block_name radar_sim_target_axis
+  set block_cell_name radar_sim_moving_target_axis
+  if { [catch {set radar_sim_moving_target_axis [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_msg_id "BD_TCL-105" "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $radar_sim_moving_target_axis eq "" } {
+     catch {common::send_msg_id "BD_TCL-106" "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create instance: radar_statistics_0, and set properties
+  set block_name radar_statistics
+  set block_cell_name radar_statistics_0
+  if { [catch {set radar_statistics_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_msg_id "BD_TCL-105" "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $radar_statistics_0 eq "" } {
+     catch {common::send_msg_id "BD_TCL-106" "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create instance: us_divider, and set properties
+  set block_name clk_divider
+  set block_cell_name us_divider
+  if { [catch {set us_divider [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_msg_id "BD_TCL-105" "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $us_divider eq "" } {
+     catch {common::send_msg_id "BD_TCL-106" "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create interface connections
+  connect_bd_intf_net -intf_net S_CTRL_AXI_1 [get_bd_intf_pins S_CTRL_AXI] [get_bd_intf_pins radar_sim_ctrl_axi_0/S_AXI]
+  connect_bd_intf_net -intf_net axi_dma_ft_M_AXIS_MM2S [get_bd_intf_pins S_FT_AXIS] [get_bd_intf_pins axis_dwidth_converter_ft/S_AXIS]
+  connect_bd_intf_net -intf_net axi_dma_mt_M_AXIS_MM2S [get_bd_intf_pins S_MT_AXIS] [get_bd_intf_pins axis_dwidth_converter_mt/S_AXIS]
+  connect_bd_intf_net -intf_net axis_data_fifo_0_M_AXIS [get_bd_intf_pins axis_data_fifo_ft/M_AXIS] [get_bd_intf_pins radar_sim_fixed_target_axis/S_AXIS]
+  connect_bd_intf_net -intf_net axis_data_fifo_1_M_AXIS [get_bd_intf_pins axis_data_fifo_mt/M_AXIS] [get_bd_intf_pins radar_sim_moving_target_axis/S_AXIS]
+  connect_bd_intf_net -intf_net axis_dwidth_converter_0_M_AXIS [get_bd_intf_pins axis_data_fifo_ft/S_AXIS] [get_bd_intf_pins axis_dwidth_converter_ft/M_AXIS]
+  connect_bd_intf_net -intf_net axis_dwidth_converter_1_M_AXIS [get_bd_intf_pins axis_data_fifo_mt/S_AXIS] [get_bd_intf_pins axis_dwidth_converter_mt/M_AXIS]
+
+  # Create port connections
+  connect_bd_net -net RADAR_ACP_1 [get_bd_pins RADAR_ACP] [get_bd_pins led_concat/In3] [get_bd_pins radar_statistics_0/ACP]
+  connect_bd_net -net RADAR_ARP_1 [get_bd_pins RADAR_ARP] [get_bd_pins led_concat/In2] [get_bd_pins radar_statistics_0/ARP]
+  connect_bd_net -net RADAR_CLK_1 [get_bd_pins RADAR_CLK] [get_bd_pins us_divider/IN_CLK]
+  connect_bd_net -net RADAR_TRIG_1 [get_bd_pins RADAR_TRIG] [get_bd_pins led_concat/In4] [get_bd_pins radar_statistics_0/TRIG]
+  connect_bd_net -net RadarStatistics_0_CALIBRATED [get_bd_pins led_concat/In1] [get_bd_pins radar_sim_ctrl_axi_0/RADAR_CAL] [get_bd_pins radar_statistics_0/CALIBRATED]
+  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins S_CTRL_AXI_ACLK] [get_bd_pins axis_data_fifo_ft/s_axis_aclk] [get_bd_pins axis_data_fifo_mt/s_axis_aclk] [get_bd_pins axis_dwidth_converter_ft/aclk] [get_bd_pins axis_dwidth_converter_mt/aclk] [get_bd_pins radar_sim_ctrl_axi_0/S_AXI_ACLK] [get_bd_pins radar_sim_fixed_target_axis/S_AXIS_ACLK] [get_bd_pins radar_sim_moving_target_axis/S_AXIS_ACLK]
+  connect_bd_net -net radar_sim_ctrl_axi_0_RADAR_EN [get_bd_pins led_concat/In0] [get_bd_pins radar_sim_ctrl_axi_0/RADAR_EN]
+  connect_bd_net -net radar_sim_fixed_target_axis_gen_signal [get_bd_pins SIM_FT_SIG] [get_bd_pins radar_sim_fixed_target_axis/gen_signal]
+  connect_bd_net -net radar_sim_moving_target_axis_gen_signal [get_bd_pins SIM_MT_SIG] [get_bd_pins radar_sim_moving_target_axis/gen_signal]
+  connect_bd_net -net radar_statistics_0_ACP_CNT [get_bd_pins radar_sim_ctrl_axi_0/RADAR_ACP_CNT] [get_bd_pins radar_statistics_0/ACP_CNT]
+  connect_bd_net -net radar_statistics_0_ARP_US [get_bd_pins radar_sim_ctrl_axi_0/RADAR_ARP_US] [get_bd_pins radar_statistics_0/ARP_US]
+  connect_bd_net -net radar_statistics_0_TRIG_CNT [get_bd_pins radar_sim_ctrl_axi_0/RADAR_TRIG_CNT] [get_bd_pins radar_statistics_0/TRIG_CNT]
+  connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn [get_bd_pins S_CTRL_AXI_ARESETN] [get_bd_pins axis_data_fifo_ft/s_axis_aresetn] [get_bd_pins axis_data_fifo_mt/s_axis_aresetn] [get_bd_pins axis_dwidth_converter_ft/aresetn] [get_bd_pins axis_dwidth_converter_mt/aresetn] [get_bd_pins radar_sim_ctrl_axi_0/S_AXI_ARESETN] [get_bd_pins radar_sim_fixed_target_axis/S_AXIS_ARESETN] [get_bd_pins radar_sim_moving_target_axis/S_AXIS_ARESETN]
+  connect_bd_net -net us_divider_OUT_CLK [get_bd_pins radar_statistics_0/US_CLK] [get_bd_pins us_divider/OUT_CLK]
+  connect_bd_net -net xlconcat_0_dout [get_bd_pins leds] [get_bd_pins led_concat/dout]
+  connect_bd_net -net xlconstant_0_dout [get_bd_pins constant_low/dout] [get_bd_pins led_concat/In5] [get_bd_pins led_concat/In6] [get_bd_pins led_concat/In7]
+
+  # Perform GUI Layout
+  regenerate_bd_layout -hierarchy [get_bd_cells /radar_simulator] -layout_string {
+   commentid: "",
+   guistr: "# # String gsaved with Nlview 6.6.5b  2016-09-06 bk=1.3687 VDI=39 GEI=35 GUI=JA:1.6
+#  -string -flagsOSRD
+preplace port RADAR_CLK -pg 1 -y 190 -defaultsOSRD
+preplace port RADAR_ACP -pg 1 -y 260 -defaultsOSRD
+preplace port S_CTRL_AXI_ARESETN -pg 1 -y 450 -defaultsOSRD
+preplace port SIM_FT_SIG -pg 1 -y 440 -defaultsOSRD
+preplace port S_CTRL_AXI -pg 1 -y 50 -defaultsOSRD
+preplace port SIM_MT_SIG -pg 1 -y 610 -defaultsOSRD
+preplace port S_MT_AXIS -pg 1 -y 580 -defaultsOSRD
+preplace port S_CTRL_AXI_ACLK -pg 1 -y 530 -defaultsOSRD
+preplace port S_FT_AXIS -pg 1 -y 410 -defaultsOSRD
+preplace port RADAR_TRIG -pg 1 -y 280 -defaultsOSRD
+preplace port RADAR_ARP -pg 1 -y 240 -defaultsOSRD
+preplace portBus leds -pg 1 -y 270 -defaultsOSRD
+preplace inst led_concat -pg 1 -lvl 4 -y 270 -defaultsOSRD
+preplace inst radar_statistics_0 -pg 1 -lvl 2 -y 160 -defaultsOSRD
+preplace inst radar_sim_moving_target_axis -pg 1 -lvl 4 -y 610 -defaultsOSRD
+preplace inst axis_dwidth_converter_mt -pg 1 -lvl 2 -y 600 -defaultsOSRD
+preplace inst axis_data_fifo_mt -pg 1 -lvl 3 -y 620 -defaultsOSRD
+preplace inst us_divider -pg 1 -lvl 1 -y 190 -defaultsOSRD
+preplace inst axis_dwidth_converter_ft -pg 1 -lvl 2 -y 430 -defaultsOSRD
+preplace inst radar_sim_ctrl_axi_0 -pg 1 -lvl 3 -y 110 -defaultsOSRD
+preplace inst constant_low -pg 1 -lvl 3 -y 330 -defaultsOSRD
+preplace inst axis_data_fifo_ft -pg 1 -lvl 3 -y 450 -defaultsOSRD
+preplace inst radar_sim_fixed_target_axis -pg 1 -lvl 4 -y 440 -defaultsOSRD
+preplace netloc S_CTRL_AXI_1 1 0 3 NJ 50 NJ 50 NJ
+preplace netloc axis_dwidth_converter_0_M_AXIS 1 2 1 N
+preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 0 4 NJ 450 220 510 550 540 890
+preplace netloc radar_statistics_0_TRIG_CNT 1 2 1 530
+preplace netloc RadarStatistics_0_CALIBRATED 1 2 2 520 220 NJ
+preplace netloc RADAR_TRIG_1 1 0 4 NJ 280 240 280 NJ 280 NJ
+preplace netloc RADAR_ACP_1 1 0 4 NJ 260 230 260 NJ 260 N
+preplace netloc RADAR_CLK_1 1 0 1 NJ
+preplace netloc us_divider_OUT_CLK 1 1 1 N
+preplace netloc radar_statistics_0_ARP_US 1 2 1 500
+preplace netloc xlconstant_0_dout 1 3 1 880
+preplace netloc xlconcat_0_dout 1 4 1 NJ
+preplace netloc radar_sim_fixed_target_axis_gen_signal 1 4 1 NJ
+preplace netloc radar_sim_ctrl_axi_0_RADAR_EN 1 3 1 880
+preplace netloc axis_data_fifo_1_M_AXIS 1 3 1 N
+preplace netloc axis_data_fifo_0_M_AXIS 1 3 1 N
+preplace netloc radar_statistics_0_ACP_CNT 1 2 1 510
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 4 NJ 530 240 530 540 530 880
+preplace netloc axis_dwidth_converter_1_M_AXIS 1 2 1 N
+preplace netloc axi_dma_mt_M_AXIS_MM2S 1 0 2 NJ 580 NJ
+preplace netloc radar_sim_moving_target_axis_gen_signal 1 4 1 NJ
+preplace netloc RADAR_ARP_1 1 0 4 NJ 240 220 240 NJ 240 NJ
+preplace netloc axi_dma_ft_M_AXIS_MM2S 1 0 2 NJ 410 NJ
+levelinfo -pg 1 0 120 370 720 1030 1190 -top 0 -bot 700
+",
+}
+
+  # Restore current instance
+  current_bd_instance $oldCurInst
+}
+
 
 # Procedure to create entire design; Provide argument to make
 # procedure reusable. If parentCell is "", will use root.
@@ -170,7 +402,7 @@ proc create_root_design { parentCell } {
   set RADAR_ARP [ create_bd_port -dir I RADAR_ARP ]
   set RADAR_CLK [ create_bd_port -dir I -type clk RADAR_CLK ]
   set_property -dict [ list \
-CONFIG.FREQ_HZ {100000000} \
+CONFIG.FREQ_HZ {15000000} \
  ] $RADAR_CLK
   set RADAR_TRIG [ create_bd_port -dir I RADAR_TRIG ]
   set SIM_FT_SIG [ create_bd_port -dir O SIM_FT_SIG ]
@@ -1502,30 +1734,17 @@ CONFIG.PCW_WDT_WDT_IO.VALUE_SRC {DEFAULT} \
 CONFIG.NUM_MI {3} \
  ] $ps7_0_axi_periph
 
-  # Create instance: radar_sim_axi_0, and set properties
-  set block_name radar_sim_axi
-  set block_cell_name radar_sim_axi_0
-  if { [catch {set radar_sim_axi_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
-     catch {common::send_msg_id "BD_TCL-105" "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   } elseif { $radar_sim_axi_0 eq "" } {
-     catch {common::send_msg_id "BD_TCL-106" "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   }
-  
-  set_property -dict [ list \
-CONFIG.NUM_READ_OUTSTANDING {1} \
-CONFIG.NUM_WRITE_OUTSTANDING {1} \
- ] [get_bd_intf_pins /radar_sim_axi_0/S_CTRL_AXI]
+  # Create instance: radar_simulator
+  create_hier_cell_radar_simulator [current_bd_instance .] radar_simulator
 
   # Create instance: rst_ps7_0_100M, and set properties
   set rst_ps7_0_100M [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_ps7_0_100M ]
 
   # Create interface connections
-  connect_bd_intf_net -intf_net axi_dma_ft_M_AXIS_MM2S [get_bd_intf_pins axi_dma_ft/M_AXIS_MM2S] [get_bd_intf_pins radar_sim_axi_0/S_FT_AXIS]
+  connect_bd_intf_net -intf_net axi_dma_ft_M_AXIS_MM2S [get_bd_intf_pins axi_dma_ft/M_AXIS_MM2S] [get_bd_intf_pins radar_simulator/S_FT_AXIS]
   connect_bd_intf_net -intf_net axi_dma_ft_M_AXI_MM2S [get_bd_intf_pins axi_dma_ft/M_AXI_MM2S] [get_bd_intf_pins axi_mem_intercon/S01_AXI]
   connect_bd_intf_net -intf_net axi_dma_ft_M_AXI_SG [get_bd_intf_pins axi_dma_ft/M_AXI_SG] [get_bd_intf_pins axi_mem_intercon/S00_AXI]
-  connect_bd_intf_net -intf_net axi_dma_mt_M_AXIS_MM2S [get_bd_intf_pins axi_dma_mt/M_AXIS_MM2S] [get_bd_intf_pins radar_sim_axi_0/S_MT_AXIS]
+  connect_bd_intf_net -intf_net axi_dma_mt_M_AXIS_MM2S [get_bd_intf_pins axi_dma_mt/M_AXIS_MM2S] [get_bd_intf_pins radar_simulator/S_MT_AXIS]
   connect_bd_intf_net -intf_net axi_dma_mt_M_AXI_MM2S [get_bd_intf_pins axi_dma_mt/M_AXI_MM2S] [get_bd_intf_pins axi_mem_intercon_1/S01_AXI]
   connect_bd_intf_net -intf_net axi_dma_mt_M_AXI_SG [get_bd_intf_pins axi_dma_mt/M_AXI_SG] [get_bd_intf_pins axi_mem_intercon_1/S00_AXI]
   connect_bd_intf_net -intf_net axi_mem_intercon_1_M00_AXI [get_bd_intf_pins axi_mem_intercon_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP1]
@@ -1533,22 +1752,22 @@ CONFIG.NUM_WRITE_OUTSTANDING {1} \
   connect_bd_intf_net -intf_net processing_system7_0_DDR [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7_0/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_FIXED_IO [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7_0/FIXED_IO]
   connect_bd_intf_net -intf_net processing_system7_0_M_AXI_GP0 [get_bd_intf_pins processing_system7_0/M_AXI_GP0] [get_bd_intf_pins ps7_0_axi_periph/S00_AXI]
-  connect_bd_intf_net -intf_net ps7_0_axi_periph_M00_AXI [get_bd_intf_pins ps7_0_axi_periph/M00_AXI] [get_bd_intf_pins radar_sim_axi_0/S_CTRL_AXI]
+  connect_bd_intf_net -intf_net ps7_0_axi_periph_M00_AXI [get_bd_intf_pins ps7_0_axi_periph/M00_AXI] [get_bd_intf_pins radar_simulator/S_CTRL_AXI]
   connect_bd_intf_net -intf_net ps7_0_axi_periph_M01_AXI [get_bd_intf_pins axi_dma_ft/S_AXI_LITE] [get_bd_intf_pins ps7_0_axi_periph/M01_AXI]
   connect_bd_intf_net -intf_net ps7_0_axi_periph_M02_AXI [get_bd_intf_pins axi_dma_mt/S_AXI_LITE] [get_bd_intf_pins ps7_0_axi_periph/M02_AXI]
 
   # Create port connections
-  connect_bd_net -net RADAR_ACP_1 [get_bd_ports RADAR_ACP] [get_bd_pins radar_sim_axi_0/RADAR_ACP]
-  connect_bd_net -net RADAR_ARP_1 [get_bd_ports RADAR_ARP] [get_bd_pins radar_sim_axi_0/RADAR_ARP]
-  connect_bd_net -net RADAR_CLK_1 [get_bd_ports RADAR_CLK] [get_bd_pins radar_sim_axi_0/RADAR_CLK]
-  connect_bd_net -net RADAR_TRIG_1 [get_bd_ports RADAR_TRIG] [get_bd_pins radar_sim_axi_0/RADAR_TRIG]
-  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins axi_dma_ft/m_axi_mm2s_aclk] [get_bd_pins axi_dma_ft/m_axi_sg_aclk] [get_bd_pins axi_dma_ft/s_axi_lite_aclk] [get_bd_pins axi_dma_mt/m_axi_mm2s_aclk] [get_bd_pins axi_dma_mt/m_axi_sg_aclk] [get_bd_pins axi_dma_mt/s_axi_lite_aclk] [get_bd_pins axi_mem_intercon/ACLK] [get_bd_pins axi_mem_intercon/M00_ACLK] [get_bd_pins axi_mem_intercon/S00_ACLK] [get_bd_pins axi_mem_intercon/S01_ACLK] [get_bd_pins axi_mem_intercon_1/ACLK] [get_bd_pins axi_mem_intercon_1/M00_ACLK] [get_bd_pins axi_mem_intercon_1/S00_ACLK] [get_bd_pins axi_mem_intercon_1/S01_ACLK] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP1_ACLK] [get_bd_pins ps7_0_axi_periph/ACLK] [get_bd_pins ps7_0_axi_periph/M00_ACLK] [get_bd_pins ps7_0_axi_periph/M01_ACLK] [get_bd_pins ps7_0_axi_periph/M02_ACLK] [get_bd_pins ps7_0_axi_periph/S00_ACLK] [get_bd_pins radar_sim_axi_0/S_CTRL_AXI_ACLK] [get_bd_pins radar_sim_axi_0/S_FT_AXIS_ACLK] [get_bd_pins radar_sim_axi_0/S_MT_AXIS_ACLK] [get_bd_pins rst_ps7_0_100M/slowest_sync_clk]
+  connect_bd_net -net RADAR_ACP_1 [get_bd_ports RADAR_ACP] [get_bd_pins radar_simulator/RADAR_ACP]
+  connect_bd_net -net RADAR_ARP_1 [get_bd_ports RADAR_ARP] [get_bd_pins radar_simulator/RADAR_ARP]
+  connect_bd_net -net RADAR_CLK_1 [get_bd_ports RADAR_CLK] [get_bd_pins radar_simulator/RADAR_CLK]
+  connect_bd_net -net RADAR_TRIG_1 [get_bd_ports RADAR_TRIG] [get_bd_pins radar_simulator/RADAR_TRIG]
+  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins axi_dma_ft/m_axi_mm2s_aclk] [get_bd_pins axi_dma_ft/m_axi_sg_aclk] [get_bd_pins axi_dma_ft/s_axi_lite_aclk] [get_bd_pins axi_dma_mt/m_axi_mm2s_aclk] [get_bd_pins axi_dma_mt/m_axi_sg_aclk] [get_bd_pins axi_dma_mt/s_axi_lite_aclk] [get_bd_pins axi_mem_intercon/ACLK] [get_bd_pins axi_mem_intercon/M00_ACLK] [get_bd_pins axi_mem_intercon/S00_ACLK] [get_bd_pins axi_mem_intercon/S01_ACLK] [get_bd_pins axi_mem_intercon_1/ACLK] [get_bd_pins axi_mem_intercon_1/M00_ACLK] [get_bd_pins axi_mem_intercon_1/S00_ACLK] [get_bd_pins axi_mem_intercon_1/S01_ACLK] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP1_ACLK] [get_bd_pins ps7_0_axi_periph/ACLK] [get_bd_pins ps7_0_axi_periph/M00_ACLK] [get_bd_pins ps7_0_axi_periph/M01_ACLK] [get_bd_pins ps7_0_axi_periph/M02_ACLK] [get_bd_pins ps7_0_axi_periph/S00_ACLK] [get_bd_pins radar_simulator/S_CTRL_AXI_ACLK] [get_bd_pins rst_ps7_0_100M/slowest_sync_clk]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N [get_bd_pins processing_system7_0/FCLK_RESET0_N] [get_bd_pins rst_ps7_0_100M/ext_reset_in]
-  connect_bd_net -net radar_sim_axi_0_SIM_FT_SIG [get_bd_ports SIM_FT_SIG] [get_bd_pins radar_sim_axi_0/SIM_FT_SIG]
-  connect_bd_net -net radar_sim_axi_0_SIM_MT_SIG [get_bd_ports SIM_MT_SIG] [get_bd_pins radar_sim_axi_0/SIM_MT_SIG]
-  connect_bd_net -net radar_sim_axi_0_leds [get_bd_ports LEDS] [get_bd_pins radar_sim_axi_0/leds]
+  connect_bd_net -net radar_sim_axi_0_SIM_FT_SIG [get_bd_ports SIM_FT_SIG] [get_bd_pins radar_simulator/SIM_FT_SIG]
+  connect_bd_net -net radar_sim_axi_0_SIM_MT_SIG [get_bd_ports SIM_MT_SIG] [get_bd_pins radar_simulator/SIM_MT_SIG]
+  connect_bd_net -net radar_sim_axi_0_leds [get_bd_ports LEDS] [get_bd_pins radar_simulator/leds]
   connect_bd_net -net rst_ps7_0_100M_interconnect_aresetn [get_bd_pins axi_mem_intercon/ARESETN] [get_bd_pins axi_mem_intercon_1/ARESETN] [get_bd_pins ps7_0_axi_periph/ARESETN] [get_bd_pins rst_ps7_0_100M/interconnect_aresetn]
-  connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn [get_bd_pins axi_dma_ft/axi_resetn] [get_bd_pins axi_dma_mt/axi_resetn] [get_bd_pins axi_mem_intercon/M00_ARESETN] [get_bd_pins axi_mem_intercon/S00_ARESETN] [get_bd_pins axi_mem_intercon/S01_ARESETN] [get_bd_pins axi_mem_intercon_1/M00_ARESETN] [get_bd_pins axi_mem_intercon_1/S00_ARESETN] [get_bd_pins axi_mem_intercon_1/S01_ARESETN] [get_bd_pins ps7_0_axi_periph/M00_ARESETN] [get_bd_pins ps7_0_axi_periph/M01_ARESETN] [get_bd_pins ps7_0_axi_periph/M02_ARESETN] [get_bd_pins ps7_0_axi_periph/S00_ARESETN] [get_bd_pins radar_sim_axi_0/S_CTRL_AXI_ARESETN] [get_bd_pins radar_sim_axi_0/S_FT_AXIS_ARESETN] [get_bd_pins radar_sim_axi_0/S_MT_AXIS_ARESETN] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn]
+  connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn [get_bd_pins axi_dma_ft/axi_resetn] [get_bd_pins axi_dma_mt/axi_resetn] [get_bd_pins axi_mem_intercon/M00_ARESETN] [get_bd_pins axi_mem_intercon/S00_ARESETN] [get_bd_pins axi_mem_intercon/S01_ARESETN] [get_bd_pins axi_mem_intercon_1/M00_ARESETN] [get_bd_pins axi_mem_intercon_1/S00_ARESETN] [get_bd_pins axi_mem_intercon_1/S01_ARESETN] [get_bd_pins ps7_0_axi_periph/M00_ARESETN] [get_bd_pins ps7_0_axi_periph/M01_ARESETN] [get_bd_pins ps7_0_axi_periph/M02_ARESETN] [get_bd_pins ps7_0_axi_periph/S00_ARESETN] [get_bd_pins radar_simulator/S_CTRL_AXI_ARESETN] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn]
 
   # Create address segments
   create_bd_addr_seg -range 0x20000000 -offset 0x00000000 [get_bd_addr_spaces axi_dma_ft/Data_SG] [get_bd_addr_segs processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM] SEG_processing_system7_0_HP0_DDR_LOWOCM
@@ -1557,55 +1776,55 @@ CONFIG.NUM_WRITE_OUTSTANDING {1} \
   create_bd_addr_seg -range 0x20000000 -offset 0x00000000 [get_bd_addr_spaces axi_dma_mt/Data_MM2S] [get_bd_addr_segs processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM] SEG_processing_system7_0_HP1_DDR_LOWOCM
   create_bd_addr_seg -range 0x00010000 -offset 0x40400000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_dma_ft/S_AXI_LITE/Reg] SEG_axi_dma_ft_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x40410000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_dma_mt/S_AXI_LITE/Reg] SEG_axi_dma_mt_Reg
-  create_bd_addr_seg -range 0x00010000 -offset 0x43C00000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs radar_sim_axi_0/S_CTRL_AXI/reg0] SEG_radar_sim_axi_0_reg0
+  create_bd_addr_seg -range 0x00010000 -offset 0x43C00000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs radar_simulator/radar_sim_ctrl_axi_0/S_AXI/reg0] SEG_radar_sim_ctrl_axi_0_reg0
 
   # Perform GUI Layout
   regenerate_bd_layout -layout_string {
    guistr: "# # String gsaved with Nlview 6.6.5b  2016-09-06 bk=1.3687 VDI=39 GEI=35 GUI=JA:1.6
 #  -string -flagsOSRD
-preplace port RADAR_CLK -pg 1 -y 730 -defaultsOSRD
+preplace port RADAR_CLK -pg 1 -y 720 -defaultsOSRD
 preplace port RADAR_ACP -pg 1 -y 690 -defaultsOSRD
 preplace port DDR -pg 1 -y 340 -defaultsOSRD
-preplace port SIM_FT_SIG -pg 1 -y 750 -defaultsOSRD
-preplace port SIM_MT_SIG -pg 1 -y 730 -defaultsOSRD
+preplace port SIM_FT_SIG -pg 1 -y 680 -defaultsOSRD
+preplace port SIM_MT_SIG -pg 1 -y 700 -defaultsOSRD
 preplace port FIXED_IO -pg 1 -y 360 -defaultsOSRD
-preplace port RADAR_TRIG -pg 1 -y 710 -defaultsOSRD
-preplace port RADAR_ARP -pg 1 -y 670 -defaultsOSRD
-preplace portBus LEDS -pg 1 -y 710 -defaultsOSRD
-preplace inst axi_dma_ft -pg 1 -lvl 3 -y 480 -defaultsOSRD
+preplace port RADAR_TRIG -pg 1 -y 740 -defaultsOSRD
+preplace port RADAR_ARP -pg 1 -y 700 -defaultsOSRD
+preplace portBus LEDS -pg 1 -y 720 -defaultsOSRD
+preplace inst axi_dma_ft -pg 1 -lvl 3 -y 490 -defaultsOSRD
 preplace inst axi_mem_intercon_1 -pg 1 -lvl 4 -y 140 -defaultsOSRD
-preplace inst radar_sim_axi_0 -pg 1 -lvl 5 -y 730 -defaultsOSRD
-preplace inst axi_dma_mt -pg 1 -lvl 3 -y 320 -defaultsOSRD
-preplace inst ps7_0_axi_periph -pg 1 -lvl 2 -y 410 -defaultsOSRD
-preplace inst rst_ps7_0_100M -pg 1 -lvl 1 -y 580 -defaultsOSRD
-preplace inst axi_mem_intercon -pg 1 -lvl 4 -y 450 -defaultsOSRD
+preplace inst axi_dma_mt -pg 1 -lvl 3 -y 330 -defaultsOSRD
+preplace inst radar_simulator -pg 1 -lvl 5 -y 700 -defaultsOSRD
+preplace inst ps7_0_axi_periph -pg 1 -lvl 2 -y 420 -defaultsOSRD
+preplace inst rst_ps7_0_100M -pg 1 -lvl 1 -y 590 -defaultsOSRD
+preplace inst axi_mem_intercon -pg 1 -lvl 4 -y 460 -defaultsOSRD
 preplace inst processing_system7_0 -pg 1 -lvl 5 -y 420 -defaultsOSRD
 preplace netloc ps7_0_axi_periph_M02_AXI 1 2 1 680
 preplace netloc processing_system7_0_DDR 1 5 1 NJ
 preplace netloc radar_sim_axi_0_SIM_MT_SIG 1 5 1 NJ
-preplace netloc processing_system7_0_M_AXI_GP0 1 1 5 400 210 NJ 210 1080J 290 NJ 290 1890
-preplace netloc axi_mem_intercon_1_M00_AXI 1 4 1 1440
+preplace netloc processing_system7_0_M_AXI_GP0 1 1 5 370 220 NJ 220 1090J 290 NJ 290 1910
+preplace netloc axi_mem_intercon_1_M00_AXI 1 4 1 1450
 preplace netloc axi_dma_mt_M_AXI_SG 1 3 1 1060
-preplace netloc axi_dma_ft_M_AXI_SG 1 3 1 1080
-preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 1 4 400 620 720 620 1120 620 1430
-preplace netloc processing_system7_0_FCLK_RESET0_N 1 0 6 20 490 380J 600 NJ 600 NJ 600 1430J 560 1880
-preplace netloc RADAR_TRIG_1 1 0 5 NJ 710 NJ 710 NJ 710 NJ 710 NJ
-preplace netloc RADAR_ACP_1 1 0 5 NJ 690 NJ 690 NJ 690 NJ 690 NJ
-preplace netloc axi_mem_intercon_M00_AXI 1 4 1 1430
-preplace netloc RADAR_CLK_1 1 0 5 NJ 730 NJ 730 NJ 730 NJ 730 NJ
+preplace netloc axi_dma_ft_M_AXI_SG 1 3 1 1090
+preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 1 4 390 630 720 630 1120 630 1430J
+preplace netloc processing_system7_0_FCLK_RESET0_N 1 0 6 30 680 NJ 680 NJ 680 NJ 680 1440J 560 1900
+preplace netloc RADAR_TRIG_1 1 0 5 NJ 740 NJ 740 NJ 740 NJ 740 NJ
+preplace netloc RADAR_ACP_1 1 0 5 NJ 690 NJ 690 NJ 690 NJ 690 1460J
+preplace netloc axi_mem_intercon_M00_AXI 1 4 1 1440
+preplace netloc RADAR_CLK_1 1 0 5 NJ 720 NJ 720 NJ 720 NJ 720 NJ
 preplace netloc ps7_0_axi_periph_M01_AXI 1 2 1 690
 preplace netloc radar_sim_axi_0_leds 1 5 1 NJ
 preplace netloc processing_system7_0_FIXED_IO 1 5 1 NJ
 preplace netloc radar_sim_axi_0_SIM_FT_SIG 1 5 1 NJ
-preplace netloc processing_system7_0_FCLK_CLK0 1 0 6 30 750 390 750 710 750 1100 750 1440 550 1890
-preplace netloc ps7_0_axi_periph_M00_AXI 1 2 3 700 610 NJ 610 NJ
-preplace netloc axi_dma_mt_M_AXIS_MM2S 1 3 2 1070 650 NJ
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 6 20 760 380 760 710 760 1100 760 1450 550 1910
+preplace netloc ps7_0_axi_periph_M00_AXI 1 2 3 700 620 NJ 620 NJ
+preplace netloc axi_dma_mt_M_AXIS_MM2S 1 3 2 1070 660 NJ
 preplace netloc axi_dma_ft_M_AXI_MM2S 1 3 1 1110
-preplace netloc RADAR_ARP_1 1 0 5 NJ 670 NJ 670 NJ 670 NJ 670 NJ
+preplace netloc RADAR_ARP_1 1 0 5 NJ 700 NJ 700 NJ 700 NJ 700 NJ
 preplace netloc axi_dma_mt_M_AXI_MM2S 1 3 1 1070
-preplace netloc axi_dma_ft_M_AXIS_MM2S 1 3 2 1060 630 NJ
-preplace netloc rst_ps7_0_100M_interconnect_aresetn 1 1 3 370 110 NJ 110 1090
-levelinfo -pg 1 0 200 540 890 1290 1660 1910 -top 0 -bot 900
+preplace netloc axi_dma_ft_M_AXIS_MM2S 1 3 2 1060 640 NJ
+preplace netloc rst_ps7_0_100M_interconnect_aresetn 1 1 3 370 610 NJ 610 1080
+levelinfo -pg 1 0 200 540 890 1290 1680 1930 -top 0 -bot 830
 ",
 }
 

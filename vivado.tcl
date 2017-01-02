@@ -37,12 +37,11 @@ update_ip_catalog -rebuild
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 set files [list \
- "[file normalize "$origin_dir/hw/hdl/RadarStatistics.v"]"\
- "[file normalize "$origin_dir/hw/hdl/ClkDivider.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/radar_statistics.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/clk_divider.v"]"\
  "[file normalize "$origin_dir/hw/hdl/radar_sim_target_axis.v"]"\
  "[file normalize "$origin_dir/hw/hdl/radar_sim_ctrl_axi.v"]"\
- "[file normalize "$origin_dir/hw/hdl/radar_sim_axi.v"]"\
- "[file normalize "$origin_dir/hw/hdl/AzimuthSignalGenerator.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/azimuth_signal_generator.v"]"\
 ]
 add_files -norecurse -fileset $obj $files
 
@@ -74,12 +73,12 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
- "[file normalize "$origin_dir/hw/hdl/AzimuthSignalGenerator.v"]"\
- "[file normalize "$origin_dir/hw/hdl/RadarStatistics.v"]"\
- "[file normalize "$origin_dir/hw/hdl/ClkDivider.v"]"\
- "[file normalize "$origin_dir/hw/sim/AzimuthSignalGeneratorSim.v"]"\
- "[file normalize "$origin_dir/hw/sim/RadarStatisticsSim.v"]"\
- "[file normalize "$origin_dir/hw/sim/ClkDividerSim.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/azimuth_signal_generator.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/radar_statistics.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/clk_divider.v"]"\
+ "[file normalize "$origin_dir/hw/sim/azimuth_signal_generator_sim.v"]"\
+ "[file normalize "$origin_dir/hw/sim/radar_statistics_sim.v"]"\
+ "[file normalize "$origin_dir/hw/sim/clk_divider_sim.v"]"\
 ]
 add_files -norecurse -fileset $obj $files
 

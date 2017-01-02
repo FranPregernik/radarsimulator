@@ -1,7 +1,25 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: franp.com
+// Engineer: Fran Pregernik <fran.pregernik@gmail.com>
+//
+// Create Date: 12/29/2016 08:04:28 PM
+// Design Name:
+// Module Name: radar_sim_ctrl_axi
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
 
-`timescale 1 ns / 1 ps
-
-	module radar_sim_ctrl_axi #
+module radar_sim_ctrl_axi #
 	(
 		// Users to add parameters here
 
@@ -25,8 +43,6 @@
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_ACP_CNT,
         
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_TRIG_CNT,
-        
-        input [C_S_AXI_DATA_WIDTH-1:0] RADAR_SWEEP_IDX,
         
 		// User ports ends
 		// Do not modify the ports beyond this line
@@ -122,7 +138,7 @@
 	// replaced by RADAR_ARP_US - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg2;
 	// replaced by RADAR_ACP_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg3;
 	// replaced by RADAR_TRIG_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg4;
-	// replaced by RADAR_SWEEP_IDX - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg5;
+	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg5;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg6;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg7;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg8;
@@ -237,7 +253,7 @@
 //	      slv_reg2 <= 0;
 //	      slv_reg3 <= 0;
 //	      slv_reg4 <= 0;
-//	      slv_reg5 <= 0;
+	      slv_reg5 <= 0;
 	      slv_reg6 <= 0;
 	      slv_reg7 <= 0;
 	      slv_reg8 <= 0;
@@ -282,13 +298,13 @@
 //	                // Slave register 4
 //	                slv_reg4[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
 //	              end  
-//	          4'h5:
-//	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-//	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-//	                // Respective byte enables are asserted as per write strobes 
-//	                // Slave register 5
-//	                slv_reg5[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-//	              end  
+	          4'h5:
+	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+	                // Respective byte enables are asserted as per write strobes 
+	                // Slave register 5
+	                slv_reg5[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+	              end  
 	          4'h6:
 	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
 	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
@@ -323,7 +339,7 @@
 //	                      slv_reg2 <= slv_reg2;
 //	                      slv_reg3 <= slv_reg3;
 //	                      slv_reg4 <= slv_reg4;
-//	                      slv_reg5 <= slv_reg5;
+	                      slv_reg5 <= slv_reg5;
 	                      slv_reg6 <= slv_reg6;
 	                      slv_reg7 <= slv_reg7;
 	                      slv_reg8 <= slv_reg8;
@@ -441,7 +457,7 @@
 	        4'h2   : reg_data_out <= RADAR_ARP_US;
 	        4'h3   : reg_data_out <= RADAR_ACP_CNT;
 	        4'h4   : reg_data_out <= RADAR_TRIG_CNT;
-	        4'h5   : reg_data_out <= RADAR_SWEEP_IDX;
+	        4'h5   : reg_data_out <= slv_reg5;
 	        4'h6   : reg_data_out <= slv_reg6;
 	        4'h7   : reg_data_out <= slv_reg7;
 	        4'h8   : reg_data_out <= slv_reg8;

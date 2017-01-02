@@ -1,11 +1,11 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: franp.com
+// Engineer: Fran Pregernik <fran.pregernik@gmail.com>
 // 
 // Create Date: 12/29/2016 08:04:28 PM
 // Design Name: 
-// Module Name: RadarStatistics
+// Module Name: radar_statistics
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module RadarStatistics #
+module radar_statistics #
     (
         parameter DATA_WIDTH = 32
     )

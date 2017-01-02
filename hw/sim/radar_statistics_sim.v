@@ -5,7 +5,7 @@
 // 
 // Create Date: 12/29/2016 07:30:24 PM
 // Design Name: 
-// Module Name: ClkDividerSim
+// Module Name: radar_statistics_sim
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module RadarStatisticsSim;
+module radar_statistics_sim;
 
     localparam DATA_WIDTH = 32;
     
@@ -39,7 +39,7 @@ module RadarStatisticsSim;
     wire CALIBRATED;
     
     // Instantiate the Unit Under Test (UUT)
-    RadarStatistics #(DATA_WIDTH) uut(
+    radar_statistics #(DATA_WIDTH) uut(
         .ARP(arp),
         .ACP(acp),
         .TRIG(trig),

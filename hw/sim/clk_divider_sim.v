@@ -5,7 +5,7 @@
 // 
 // Create Date: 12/29/2016 07:30:24 PM
 // Design Name: 
-// Module Name: ClkDividerSim
+// Module Name: clk_divider_sim
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module ClkDividerSim;
+module clk_divider_sim;
 
     // Inputs
     reg in_clk;
@@ -29,7 +29,7 @@ module ClkDividerSim;
     wire out_clk;
  
     // Instantiate the Unit Under Test (UUT)
-    ClkDivider #(15) uut (
+    clk_divider #(15) uut (
         .IN_CLK(in_clk), 
         .OUT_CLK(out_clk)
     );

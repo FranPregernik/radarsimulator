@@ -5,7 +5,7 @@
 // 
 // Create Date: 12/30/2016 11:00:20 AM
 // Design Name: 
-// Module Name: AzimuthSignalGeneratorSim
+// Module Name: azimuth_signal_generator_sim
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module AzimuthSignalGeneratorSim;
+module azimuth_signal_generator_sim;
 
     localparam SIZE = 3200;
     integer i;
@@ -35,7 +35,7 @@ module AzimuthSignalGeneratorSim;
     // output
     wire SIGNAL;
     
-    AzimuthSignalGenerator #(SIZE) uut (
+    azimuth_signal_generator #(SIZE) uut (
         .EN(EN),
         .TRIG(TRIG),
         .CLK(CLK),
