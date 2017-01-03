@@ -34,7 +34,7 @@ module radar_sim_ctrl_axi #
 	(
 		// Users to add ports here
         
-        output reg RADAR_EN,
+        output reg SIM_EN,
         
         input RADAR_CAL,
         
@@ -133,7 +133,7 @@ module radar_sim_ctrl_axi #
 	//------------------------------------------------
 	//-- Number of Slave Registers 10
 	
-	// replaced by RADAR_EN - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg0;
+	// replaced by SIM_EN - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg0;
     // replaced by RADAR_CAL - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg1;
 	// replaced by RADAR_ARP_US - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg2;
 	// replaced by RADAR_ACP_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg3;
@@ -452,7 +452,7 @@ module radar_sim_ctrl_axi #
 	begin
 	      // Address decoding for reading registers
 	      case ( axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] )
-	        4'h0   : reg_data_out <= RADAR_EN;
+	        4'h0   : reg_data_out <= SIM_EN;
             4'h1   : reg_data_out <= RADAR_CAL;
 	        4'h2   : reg_data_out <= RADAR_ARP_US;
 	        4'h3   : reg_data_out <= RADAR_ACP_CNT;
