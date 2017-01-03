@@ -173,10 +173,10 @@ proc create_hier_cell_radar_simulator { parentCell nameHier } {
   create_bd_pin -dir I -type clk RADAR_CLK
   create_bd_pin -dir I RADAR_TRIG
   create_bd_pin -dir O SIM_FT_SIG
+  create_bd_pin -dir O -from 7 -to 0 SIM_LEDS
   create_bd_pin -dir O SIM_MT_SIG
   create_bd_pin -dir I -type clk S_CTRL_AXI_ACLK
   create_bd_pin -dir I -type rst S_CTRL_AXI_ARESETN
-  create_bd_pin -dir O -from 7 -to 0 leds
 
   # Create instance: axis_data_fifo_ft, and set properties
   set axis_data_fifo_ft [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:1.1 axis_data_fifo_ft ]
@@ -293,7 +293,7 @@ CONFIG.NUM_PORTS {8} \
   connect_bd_net -net radar_statistics_0_TRIG_CNT [get_bd_pins radar_sim_ctrl_axi_0/RADAR_TRIG_CNT] [get_bd_pins radar_statistics_0/TRIG_CNT]
   connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn [get_bd_pins S_CTRL_AXI_ARESETN] [get_bd_pins axis_data_fifo_ft/s_axis_aresetn] [get_bd_pins axis_data_fifo_mt/s_axis_aresetn] [get_bd_pins axis_dwidth_converter_ft/aresetn] [get_bd_pins axis_dwidth_converter_mt/aresetn] [get_bd_pins radar_sim_ctrl_axi_0/S_AXI_ARESETN] [get_bd_pins radar_sim_fixed_target_axis/S_AXIS_ARESETN] [get_bd_pins radar_sim_moving_target_axis/S_AXIS_ARESETN]
   connect_bd_net -net us_divider_OUT_CLK [get_bd_pins radar_statistics_0/US_CLK] [get_bd_pins us_divider/OUT_CLK]
-  connect_bd_net -net xlconcat_0_dout [get_bd_pins leds] [get_bd_pins led_concat/dout]
+  connect_bd_net -net xlconcat_0_dout [get_bd_pins SIM_LEDS] [get_bd_pins led_concat/dout]
   connect_bd_net -net xlconstant_0_dout [get_bd_pins constant_low/dout] [get_bd_pins led_concat/In5] [get_bd_pins led_concat/In6] [get_bd_pins led_concat/In7]
 
   # Perform GUI Layout
@@ -312,7 +312,7 @@ preplace port S_CTRL_AXI_ACLK -pg 1 -y 490 -defaultsOSRD
 preplace port S_FT_AXIS -pg 1 -y 370 -defaultsOSRD
 preplace port RADAR_TRIG -pg 1 -y 10 -defaultsOSRD
 preplace port RADAR_ARP -pg 1 -y 120 -defaultsOSRD
-preplace portBus leds -pg 1 -y 230 -defaultsOSRD
+preplace portBus SIM_LEDS -pg 1 -y 230 -defaultsOSRD
 preplace inst led_concat -pg 1 -lvl 4 -y 230 -defaultsOSRD
 preplace inst radar_statistics_0 -pg 1 -lvl 2 -y 160 -defaultsOSRD
 preplace inst radar_sim_moving_target_axis -pg 1 -lvl 4 -y 570 -defaultsOSRD
@@ -347,7 +347,7 @@ preplace netloc axis_dwidth_converter_1_M_AXIS 1 2 1 N
 preplace netloc radar_sim_moving_target_axis_gen_signal 1 4 1 NJ
 preplace netloc RADAR_ARP_1 1 0 4 NJ 120 230 260 570J 250 890J
 preplace netloc axi_dma_ft_M_AXIS_MM2S 1 0 2 NJ 370 NJ
-levelinfo -pg 1 0 120 370 730 1060 1220 -top 0 -bot 660
+levelinfo -pg 1 0 120 370 730 1060 1220 -top -10 -bot 660
 ",
 }
 
@@ -1760,7 +1760,7 @@ CONFIG.NUM_MI {3} \
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N [get_bd_pins processing_system7_0/FCLK_RESET0_N] [get_bd_pins rst_ps7_0_100M/ext_reset_in]
   connect_bd_net -net radar_sim_axi_0_SIM_FT_SIG [get_bd_ports SIM_FT_SIG] [get_bd_pins radar_simulator/SIM_FT_SIG]
   connect_bd_net -net radar_sim_axi_0_SIM_MT_SIG [get_bd_ports SIM_MT_SIG] [get_bd_pins radar_simulator/SIM_MT_SIG]
-  connect_bd_net -net radar_sim_axi_0_leds [get_bd_ports LEDS] [get_bd_pins radar_simulator/leds]
+  connect_bd_net -net radar_sim_axi_0_leds [get_bd_ports LEDS] [get_bd_pins radar_simulator/SIM_LEDS]
   connect_bd_net -net rst_ps7_0_100M_interconnect_aresetn [get_bd_pins axi_mem_intercon/ARESETN] [get_bd_pins axi_mem_intercon_1/ARESETN] [get_bd_pins ps7_0_axi_periph/ARESETN] [get_bd_pins rst_ps7_0_100M/interconnect_aresetn]
   connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn [get_bd_pins axi_dma_ft/axi_resetn] [get_bd_pins axi_dma_mt/axi_resetn] [get_bd_pins axi_mem_intercon/M00_ARESETN] [get_bd_pins axi_mem_intercon/S00_ARESETN] [get_bd_pins axi_mem_intercon/S01_ARESETN] [get_bd_pins axi_mem_intercon_1/M00_ARESETN] [get_bd_pins axi_mem_intercon_1/S00_ARESETN] [get_bd_pins axi_mem_intercon_1/S01_ARESETN] [get_bd_pins ps7_0_axi_periph/M00_ARESETN] [get_bd_pins ps7_0_axi_periph/M01_ARESETN] [get_bd_pins ps7_0_axi_periph/M02_ARESETN] [get_bd_pins ps7_0_axi_periph/S00_ARESETN] [get_bd_pins radar_simulator/S_CTRL_AXI_ARESETN] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn]
 
@@ -1778,7 +1778,7 @@ CONFIG.NUM_MI {3} \
    guistr: "# # String gsaved with Nlview 6.6.5b  2016-09-06 bk=1.3687 VDI=39 GEI=35 GUI=JA:1.6
 #  -string -flagsOSRD
 preplace port RADAR_CLK -pg 1 -y 720 -defaultsOSRD
-preplace port RADAR_ACP -pg 1 -y 690 -defaultsOSRD
+preplace port RADAR_ACP -pg 1 -y 680 -defaultsOSRD
 preplace port DDR -pg 1 -y 340 -defaultsOSRD
 preplace port SIM_FT_SIG -pg 1 -y 680 -defaultsOSRD
 preplace port SIM_MT_SIG -pg 1 -y 700 -defaultsOSRD
@@ -1804,7 +1804,7 @@ preplace netloc axi_dma_ft_M_AXI_SG 1 3 1 1090
 preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 1 4 390 630 720 630 1120 630 1430J
 preplace netloc processing_system7_0_FCLK_RESET0_N 1 0 6 30 680 NJ 680 NJ 680 NJ 680 1440J 560 1900
 preplace netloc RADAR_TRIG_1 1 0 5 NJ 740 NJ 740 NJ 740 NJ 740 NJ
-preplace netloc RADAR_ACP_1 1 0 5 NJ 690 NJ 690 NJ 690 NJ 690 1460J
+preplace netloc RADAR_ACP_1 1 0 5 10J 690 NJ 690 NJ 690 NJ 690 1460J
 preplace netloc axi_mem_intercon_M00_AXI 1 4 1 1440
 preplace netloc RADAR_CLK_1 1 0 5 NJ 720 NJ 720 NJ 720 NJ 720 NJ
 preplace netloc ps7_0_axi_periph_M01_AXI 1 2 1 690
@@ -1819,7 +1819,7 @@ preplace netloc RADAR_ARP_1 1 0 5 NJ 700 NJ 700 NJ 700 NJ 700 NJ
 preplace netloc axi_dma_mt_M_AXI_MM2S 1 3 1 1070
 preplace netloc axi_dma_ft_M_AXIS_MM2S 1 3 2 1060 640 NJ
 preplace netloc rst_ps7_0_100M_interconnect_aresetn 1 1 3 370 610 NJ 610 1080
-levelinfo -pg 1 0 200 540 890 1290 1680 1930 -top 0 -bot 830
+levelinfo -pg 1 -10 200 540 890 1290 1680 1930 -top 0 -bot 830
 ",
 }
 
@@ -1837,6 +1837,4 @@ levelinfo -pg 1 0 200 540 890 1290 1680 1930 -top 0 -bot 830
 
 create_root_design ""
 
-
-common::send_msg_id "BD_TCL-1000" "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
 
