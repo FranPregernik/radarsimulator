@@ -42,7 +42,7 @@ module radar_statistics_sim;
     // Outputs
     wire [DATA_WIDTH-1:0] ARP_US;
     wire [DATA_WIDTH-1:0] ACP_CNT;
-    wire [DATA_WIDTH-1:0] TRIG_CNT;
+    wire [DATA_WIDTH-1:0] TRIG_US;
     wire CALIBRATED;
     
     // Instantiate the Unit Under Test (UUT)
@@ -55,7 +55,7 @@ module radar_statistics_sim;
         .CALIBRATED(CALIBRATED),
         .ARP_US(ARP_US),
         .ACP_CNT(ACP_CNT),
-        .TRIG_CNT(TRIG_CNT)
+        .TRIG_US(TRIG_US)
     );
     
     clk_divider #(US_RATIO) c1 (in_clk, us_clk);

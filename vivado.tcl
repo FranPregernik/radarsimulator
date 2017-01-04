@@ -66,24 +66,65 @@ set_property "file_type" "XDC" $file_obj
 set obj [get_filesets constrs_1]
 set_property "target_constrs_file" "$origin_dir/hw/constrs/main.xdc" $obj
 
-# Create 'sim_1' fileset (if not found)
-if {[string equal [get_filesets -quiet sim_1] ""]} {
-  create_fileset -simset sim_1
+# Create 'edge_detect' fileset (if not found)
+if {[string equal [get_filesets -quiet edge_detect] ""]} {
+  create_fileset -simset edge_detect
 }
 
-# Set 'sim_1' fileset object
-set obj [get_filesets sim_1]
+# Set 'edge_detect' fileset object
+set obj [get_filesets edge_detect]
 set files [list \
  "[file normalize "$origin_dir/hw/hdl/edge_detect.v"]"\
- "[file normalize "$origin_dir/hw/hdl/azimuth_signal_generator.v"]"\
- "[file normalize "$origin_dir/hw/hdl/radar_statistics.v"]"\
- "[file normalize "$origin_dir/hw/hdl/clk_divider.v"]"\
- "[file normalize "$origin_dir/hw/sim/azimuth_signal_generator_sim.v"]"\
- "[file normalize "$origin_dir/hw/sim/radar_statistics_sim.v"]"\
- "[file normalize "$origin_dir/hw/sim/clk_divider_sim.v"]"\
  "[file normalize "$origin_dir/hw/sim/edge_detect_sim.v"]"\
 ]
 add_files -norecurse -fileset $obj $files
+set_property top edge_detect_sim [get_filesets edge_detect]
+set_property top_lib xil_defaultlib [get_filesets edge_detect]
+
+# Create 'azimuth_signal_generator' fileset (if not found)
+if {[string equal [get_filesets -quiet azimuth_signal_generator] ""]} {
+  create_fileset -simset azimuth_signal_generator
+}
+
+# Set 'azimuth_signal_generator' fileset object
+set obj [get_filesets azimuth_signal_generator]
+set files [list \
+ "[file normalize "$origin_dir/hw/hdl/azimuth_signal_generator.v"]"\
+ "[file normalize "$origin_dir/hw/sim/azimuth_signal_generator_sim.v"]"\
+]
+add_files -norecurse -fileset $obj $files
+set_property top azimuth_signal_generator_sim [get_filesets azimuth_signal_generator]
+set_property top_lib xil_defaultlib [get_filesets azimuth_signal_generator]
+
+# Create 'radar_statistics' fileset (if not found)
+if {[string equal [get_filesets -quiet radar_statistics] ""]} {
+  create_fileset -simset radar_statistics
+}
+
+# Set 'radar_statistics' fileset object
+set obj [get_filesets radar_statistics]
+set files [list \
+ "[file normalize "$origin_dir/hw/hdl/radar_statistics.v"]"\
+ "[file normalize "$origin_dir/hw/sim/radar_statistics_sim.v"]"\
+]
+add_files -norecurse -fileset $obj $files
+set_property top radar_statistics_sim [get_filesets radar_statistics]
+set_property top_lib xil_defaultlib [get_filesets radar_statistics]
+
+# Create 'clk_divider' fileset (if not found)
+if {[string equal [get_filesets -quiet clk_divider] ""]} {
+  create_fileset -simset clk_divider
+}
+
+# Set 'clk_divider' fileset object
+set obj [get_filesets clk_divider]
+set files [list \
+ "[file normalize "$origin_dir/hw/hdl/clk_divider.v"]"\
+ "[file normalize "$origin_dir/hw/sim/clk_divider_sim.v"]"\
+]
+add_files -norecurse -fileset $obj $files
+set_property top clk_divider_sim [get_filesets clk_divider]
+set_property top_lib xil_defaultlib [get_filesets clk_divider]
 
 # Create block design
 source $origin_dir/hw/bd/design_1.tcl

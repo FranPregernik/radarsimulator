@@ -284,10 +284,10 @@ CONFIG.NUM_WRITE_OUTSTANDING {1} \
   connect_bd_intf_net -intf_net axis_dwidth_converter_1_M_AXIS [get_bd_intf_pins axis_data_fifo_mt/S_AXIS] [get_bd_intf_pins axis_dwidth_converter_mt/M_AXIS]
 
   # Create port connections
-  connect_bd_net -net RADAR_ACP_1 [get_bd_pins RADAR_ACP] [get_bd_pins led_concat/In3] [get_bd_pins radar_sim_fixed_target_axis/RADAR_ACP] [get_bd_pins radar_sim_moving_target_axis/RADAR_ACP] [get_bd_pins radar_statistics_0/ACP]
+  connect_bd_net -net RADAR_ACP_1 [get_bd_pins RADAR_ACP] [get_bd_pins led_concat/In3] [get_bd_pins radar_sim_fixed_target_axis/ACP] [get_bd_pins radar_sim_moving_target_axis/ACP] [get_bd_pins radar_statistics_0/ACP]
   connect_bd_net -net RADAR_ARP_1 [get_bd_pins RADAR_ARP] [get_bd_pins led_concat/In2] [get_bd_pins radar_statistics_0/ARP]
   connect_bd_net -net RADAR_CLK_1 [get_bd_pins RADAR_CLK] [get_bd_pins us_divider/IN_CLK]
-  connect_bd_net -net RADAR_TRIG_1 [get_bd_pins RADAR_TRIG] [get_bd_pins led_concat/In4] [get_bd_pins radar_sim_fixed_target_axis/RADAR_TRIG] [get_bd_pins radar_sim_moving_target_axis/RADAR_TRIG] [get_bd_pins radar_statistics_0/TRIG]
+  connect_bd_net -net RADAR_TRIG_1 [get_bd_pins RADAR_TRIG] [get_bd_pins led_concat/In4] [get_bd_pins radar_sim_fixed_target_axis/TRIG] [get_bd_pins radar_sim_moving_target_axis/TRIG] [get_bd_pins radar_statistics_0/TRIG]
   connect_bd_net -net RadarStatistics_0_CALIBRATED [get_bd_pins led_concat/In1] [get_bd_pins radar_sim_ctrl_axi_0/RADAR_CAL] [get_bd_pins radar_statistics_0/CALIBRATED]
   connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins S_CTRL_AXI_ACLK] [get_bd_pins axis_data_fifo_ft/s_axis_aclk] [get_bd_pins axis_data_fifo_mt/s_axis_aclk] [get_bd_pins axis_dwidth_converter_ft/aclk] [get_bd_pins axis_dwidth_converter_mt/aclk] [get_bd_pins radar_sim_ctrl_axi_0/S_AXI_ACLK] [get_bd_pins radar_sim_fixed_target_axis/S_AXIS_ACLK] [get_bd_pins radar_sim_moving_target_axis/S_AXIS_ACLK] [get_bd_pins radar_statistics_0/SYS_CLK]
   connect_bd_net -net radar_sim_ctrl_axi_0_SIM_EN [get_bd_pins led_concat/In0] [get_bd_pins radar_sim_ctrl_axi_0/SIM_EN] [get_bd_pins radar_sim_fixed_target_axis/SIM_EN] [get_bd_pins radar_sim_moving_target_axis/SIM_EN]
@@ -295,7 +295,7 @@ CONFIG.NUM_WRITE_OUTSTANDING {1} \
   connect_bd_net -net radar_sim_moving_target_axis_gen_signal [get_bd_pins SIM_MT_SIG] [get_bd_pins radar_sim_moving_target_axis/GEN_SIGNAL]
   connect_bd_net -net radar_statistics_0_ACP_CNT [get_bd_pins radar_sim_ctrl_axi_0/RADAR_ACP_CNT] [get_bd_pins radar_statistics_0/ACP_CNT]
   connect_bd_net -net radar_statistics_0_ARP_US [get_bd_pins radar_sim_ctrl_axi_0/RADAR_ARP_US] [get_bd_pins radar_statistics_0/ARP_US]
-  connect_bd_net -net radar_statistics_0_TRIG_CNT [get_bd_pins radar_sim_ctrl_axi_0/RADAR_TRIG_CNT] [get_bd_pins radar_statistics_0/TRIG_CNT]
+  connect_bd_net -net radar_statistics_0_TRIG_US [get_bd_pins radar_sim_ctrl_axi_0/RADAR_TRIG_US] [get_bd_pins radar_statistics_0/TRIG_US]
   connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn [get_bd_pins S_CTRL_AXI_ARESETN] [get_bd_pins axis_data_fifo_ft/s_axis_aresetn] [get_bd_pins axis_data_fifo_mt/s_axis_aresetn] [get_bd_pins axis_dwidth_converter_ft/aresetn] [get_bd_pins axis_dwidth_converter_mt/aresetn] [get_bd_pins radar_sim_ctrl_axi_0/S_AXI_ARESETN] [get_bd_pins radar_sim_fixed_target_axis/S_AXIS_ARESETN] [get_bd_pins radar_sim_moving_target_axis/S_AXIS_ARESETN]
   connect_bd_net -net us_divider_OUT_CLK [get_bd_pins radar_sim_fixed_target_axis/US_CLK] [get_bd_pins radar_sim_moving_target_axis/US_CLK] [get_bd_pins radar_statistics_0/US_CLK] [get_bd_pins us_divider/OUT_CLK]
   connect_bd_net -net xlconcat_0_dout [get_bd_pins SIM_LEDS] [get_bd_pins led_concat/dout]
@@ -333,7 +333,6 @@ preplace netloc S_CTRL_AXI_1 1 0 3 NJ 60 NJ 60 NJ
 preplace netloc axis_dwidth_converter_0_M_AXIS 1 2 1 N
 preplace netloc radar_sim_ctrl_axi_0_SIM_EN 1 3 1 930
 preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 0 4 NJ 700 260 700 590 700 980
-preplace netloc radar_statistics_0_TRIG_CNT 1 2 1 560
 preplace netloc RadarStatistics_0_CALIBRATED 1 2 2 530 10 940J
 preplace netloc RADAR_TRIG_1 1 0 4 20J 150 240 250 NJ 250 950
 preplace netloc RADAR_ACP_1 1 0 4 NJ 300 220 300 600J 240 940
@@ -345,6 +344,7 @@ preplace netloc xlconcat_0_dout 1 4 1 NJ
 preplace netloc radar_sim_fixed_target_axis_gen_signal 1 4 1 NJ
 preplace netloc axis_data_fifo_1_M_AXIS 1 3 1 N
 preplace netloc axis_data_fifo_0_M_AXIS 1 3 1 N
+preplace netloc radar_statistics_0_TRIG_US 1 2 1 560
 preplace netloc radar_statistics_0_ACP_CNT 1 2 1 550
 preplace netloc processing_system7_0_FCLK_CLK0 1 0 4 NJ 510 250 510 580 510 970
 preplace netloc axi_dma_mt_M_AXIS_MM2S 1 0 2 NJ 570 NJ

@@ -31,11 +31,20 @@ module radar_sim_target_axis #
 	)
 	(
 		// Users to add ports here
+
+		// is the simulator enabled
 		input SIM_EN,
-		input RADAR_ACP,
-		input RADAR_TRIG,
+
+		// radar antenna angle change
+		input ACP,
+
+		// radar antenna transmission start
+		input TRIG,
+
+        // steady 1MHz clock
 		input US_CLK,
-		
+
+		// time based signal that specifies a target is present or not
         output GEN_SIGNAL,
 
 		// User ports ends

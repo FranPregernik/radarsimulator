@@ -42,7 +42,7 @@ module radar_sim_ctrl_axi #
         
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_ACP_CNT,
         
-        input [C_S_AXI_DATA_WIDTH-1:0] RADAR_TRIG_CNT,
+        input [C_S_AXI_DATA_WIDTH-1:0] RADAR_TRIG_US,
         
 		// User ports ends
 		// Do not modify the ports beyond this line
@@ -137,7 +137,7 @@ module radar_sim_ctrl_axi #
     // replaced by RADAR_CAL - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg1;
 	// replaced by RADAR_ARP_US - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg2;
 	// replaced by RADAR_ACP_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg3;
-	// replaced by RADAR_TRIG_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg4;
+	// replaced by RADAR_TRIG_US - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg4;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg5;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg6;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg7;
@@ -456,7 +456,7 @@ module radar_sim_ctrl_axi #
             4'h1   : reg_data_out <= RADAR_CAL;
 	        4'h2   : reg_data_out <= RADAR_ARP_US;
 	        4'h3   : reg_data_out <= RADAR_ACP_CNT;
-	        4'h4   : reg_data_out <= RADAR_TRIG_CNT;
+	        4'h4   : reg_data_out <= RADAR_TRIG_US;
 	        4'h5   : reg_data_out <= slv_reg5;
 	        4'h6   : reg_data_out <= slv_reg6;
 	        4'h7   : reg_data_out <= slv_reg7;
