@@ -34,9 +34,11 @@ module radar_statistics #
         input TRIG,
 
         // Steady 1MHz clock
+        (* X_INTERFACE_PARAMETER = "FREQ_HZ 1000000" *)
         input US_CLK,
 
         // PL system clock
+        (* X_INTERFACE_PARAMETER = "FREQ_HZ 100000000" *)
         input SYS_CLK,
 
         // Signals that the measurements are stable

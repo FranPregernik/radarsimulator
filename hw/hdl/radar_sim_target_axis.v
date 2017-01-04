@@ -42,6 +42,7 @@ module radar_sim_target_axis #
 		input TRIG,
 
         // steady 1MHz clock
+        (* X_INTERFACE_PARAMETER = "FREQ_HZ 1000000" *)
 		input US_CLK,
 
 		// time based signal that specifies a target is present or not

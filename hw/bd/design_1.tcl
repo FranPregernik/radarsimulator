@@ -315,7 +315,7 @@ preplace port SIM_MT_SIG -pg 1 -y 640 -defaultsOSRD
 preplace port S_MT_AXIS -pg 1 -y 570 -defaultsOSRD
 preplace port S_CTRL_AXI_ACLK -pg 1 -y 510 -defaultsOSRD
 preplace port S_FT_AXIS -pg 1 -y 370 -defaultsOSRD
-preplace port RADAR_TRIG -pg 1 -y 280 -defaultsOSRD
+preplace port RADAR_TRIG -pg 1 -y 290 -defaultsOSRD
 preplace port RADAR_ARP -pg 1 -y 110 -defaultsOSRD
 preplace portBus SIM_LEDS -pg 1 -y 230 -defaultsOSRD
 preplace inst led_concat -pg 1 -lvl 4 -y 230 -defaultsOSRD
@@ -332,12 +332,12 @@ preplace inst radar_sim_fixed_target_axis -pg 1 -lvl 4 -y 440 -defaultsOSRD
 preplace netloc S_CTRL_AXI_1 1 0 3 NJ 60 NJ 60 NJ
 preplace netloc axis_dwidth_converter_0_M_AXIS 1 2 1 N
 preplace netloc radar_sim_ctrl_axi_0_SIM_EN 1 3 1 930
-preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 0 4 NJ 700 260 700 590 700 980
+preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 0 4 NJ 700 270 700 580 700 980
 preplace netloc RadarStatistics_0_CALIBRATED 1 2 2 530 10 940J
-preplace netloc RADAR_TRIG_1 1 0 4 20J 150 240 250 NJ 250 950
-preplace netloc RADAR_ACP_1 1 0 4 NJ 300 220 300 600J 240 940
+preplace netloc RADAR_TRIG_1 1 0 4 NJ 290 230 290 600J 250 950
+preplace netloc RADAR_ACP_1 1 0 4 NJ 300 220 300 590J 240 940
 preplace netloc RADAR_CLK_1 1 0 1 NJ
-preplace netloc us_divider_OUT_CLK 1 1 3 230 240 550J 490 960
+preplace netloc us_divider_OUT_CLK 1 1 3 240 490 NJ 490 960
 preplace netloc radar_statistics_0_ARP_US 1 2 1 540
 preplace netloc xlconstant_0_dout 1 3 1 920
 preplace netloc xlconcat_0_dout 1 4 1 NJ
@@ -346,11 +346,11 @@ preplace netloc axis_data_fifo_1_M_AXIS 1 3 1 N
 preplace netloc axis_data_fifo_0_M_AXIS 1 3 1 N
 preplace netloc radar_statistics_0_TRIG_US 1 2 1 560
 preplace netloc radar_statistics_0_ACP_CNT 1 2 1 550
-preplace netloc processing_system7_0_FCLK_CLK0 1 0 4 NJ 510 250 510 580 510 970
-preplace netloc axi_dma_mt_M_AXIS_MM2S 1 0 2 NJ 570 NJ
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 4 NJ 510 260 510 570 510 970
 preplace netloc axis_dwidth_converter_1_M_AXIS 1 2 1 N
+preplace netloc axi_dma_mt_M_AXIS_MM2S 1 0 2 NJ 570 NJ
 preplace netloc radar_sim_moving_target_axis_gen_signal 1 4 1 NJ
-preplace netloc RADAR_ARP_1 1 0 4 NJ 110 220 50 570J 230 920
+preplace netloc RADAR_ARP_1 1 0 4 NJ 110 250 240 540J 230 920
 preplace netloc axi_dma_ft_M_AXIS_MM2S 1 0 2 NJ 370 NJ
 levelinfo -pg 1 0 120 400 760 1120 1280 -top 0 -bot 750
 ",
@@ -1783,14 +1783,14 @@ CONFIG.NUM_MI {3} \
    guistr: "# # String gsaved with Nlview 6.6.5b  2016-09-06 bk=1.3687 VDI=39 GEI=35 GUI=JA:1.6
 #  -string -flagsOSRD
 preplace port RADAR_CLK -pg 1 -y 720 -defaultsOSRD
-preplace port RADAR_ACP -pg 1 -y 680 -defaultsOSRD
+preplace port RADAR_ACP -pg 1 -y 690 -defaultsOSRD
 preplace port DDR -pg 1 -y 340 -defaultsOSRD
 preplace port SIM_FT_SIG -pg 1 -y 680 -defaultsOSRD
-preplace port SIM_MT_SIG -pg 1 -y 700 -defaultsOSRD
+preplace port SIM_MT_SIG -pg 1 -y 720 -defaultsOSRD
 preplace port FIXED_IO -pg 1 -y 360 -defaultsOSRD
 preplace port RADAR_TRIG -pg 1 -y 740 -defaultsOSRD
 preplace port RADAR_ARP -pg 1 -y 700 -defaultsOSRD
-preplace portBus LEDS -pg 1 -y 720 -defaultsOSRD
+preplace portBus LEDS -pg 1 -y 700 -defaultsOSRD
 preplace inst axi_dma_ft -pg 1 -lvl 3 -y 490 -defaultsOSRD
 preplace inst axi_mem_intercon_1 -pg 1 -lvl 4 -y 140 -defaultsOSRD
 preplace inst axi_dma_mt -pg 1 -lvl 3 -y 330 -defaultsOSRD
@@ -1799,32 +1799,32 @@ preplace inst ps7_0_axi_periph -pg 1 -lvl 2 -y 420 -defaultsOSRD
 preplace inst rst_ps7_0_100M -pg 1 -lvl 1 -y 590 -defaultsOSRD
 preplace inst axi_mem_intercon -pg 1 -lvl 4 -y 460 -defaultsOSRD
 preplace inst processing_system7_0 -pg 1 -lvl 5 -y 420 -defaultsOSRD
-preplace netloc processing_system7_0_DDR 1 5 1 NJ
 preplace netloc ps7_0_axi_periph_M02_AXI 1 2 1 680
+preplace netloc processing_system7_0_DDR 1 5 1 NJ
 preplace netloc radar_sim_axi_0_SIM_MT_SIG 1 5 1 NJ
-preplace netloc processing_system7_0_M_AXI_GP0 1 1 5 400 220 NJ 220 1080J 290 NJ 290 1910
-preplace netloc axi_mem_intercon_1_M00_AXI 1 4 1 1440
+preplace netloc processing_system7_0_M_AXI_GP0 1 1 5 370 220 NJ 220 1090J 290 NJ 290 1910
+preplace netloc axi_mem_intercon_1_M00_AXI 1 4 1 1450
 preplace netloc axi_dma_mt_M_AXI_SG 1 3 1 1060
-preplace netloc axi_dma_ft_M_AXI_SG 1 3 1 1080
-preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 1 4 400 630 720 630 1120 630 1430J
-preplace netloc processing_system7_0_FCLK_RESET0_N 1 0 6 10 500 380J 610 NJ 610 NJ 610 1450J 560 1900
+preplace netloc axi_dma_ft_M_AXI_SG 1 3 1 1090
+preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 1 4 390 630 720 630 1120 630 1430J
+preplace netloc processing_system7_0_FCLK_RESET0_N 1 0 6 30 680 NJ 680 NJ 680 NJ 680 1440J 560 1900
 preplace netloc RADAR_TRIG_1 1 0 5 NJ 740 NJ 740 NJ 740 NJ 740 NJ
-preplace netloc RADAR_ACP_1 1 0 5 NJ 680 NJ 680 NJ 680 NJ 680 NJ
-preplace netloc axi_mem_intercon_M00_AXI 1 4 1 1430
+preplace netloc RADAR_ACP_1 1 0 5 NJ 690 NJ 690 NJ 690 NJ 690 1460J
+preplace netloc axi_mem_intercon_M00_AXI 1 4 1 1440
 preplace netloc RADAR_CLK_1 1 0 5 NJ 720 NJ 720 NJ 720 NJ 720 NJ
 preplace netloc ps7_0_axi_periph_M01_AXI 1 2 1 690
 preplace netloc radar_sim_axi_0_leds 1 5 1 NJ
 preplace netloc processing_system7_0_FIXED_IO 1 5 1 NJ
 preplace netloc radar_sim_axi_0_SIM_FT_SIG 1 5 1 NJ
-preplace netloc processing_system7_0_FCLK_CLK0 1 0 6 20 760 390 760 710 760 1100 760 1440 550 1910
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 6 20 760 380 760 710 760 1100 760 1450 550 1910
 preplace netloc ps7_0_axi_periph_M00_AXI 1 2 3 700 620 NJ 620 NJ
 preplace netloc axi_dma_mt_M_AXIS_MM2S 1 3 2 1070 660 NJ
 preplace netloc axi_dma_ft_M_AXI_MM2S 1 3 1 1110
 preplace netloc RADAR_ARP_1 1 0 5 NJ 700 NJ 700 NJ 700 NJ 700 NJ
 preplace netloc axi_dma_mt_M_AXI_MM2S 1 3 1 1070
 preplace netloc axi_dma_ft_M_AXIS_MM2S 1 3 2 1060 640 NJ
-preplace netloc rst_ps7_0_100M_interconnect_aresetn 1 1 3 370 110 NJ 110 1090
-levelinfo -pg 1 -10 200 540 890 1290 1680 1930 -top 0 -bot 830
+preplace netloc rst_ps7_0_100M_interconnect_aresetn 1 1 3 370 610 NJ 610 1080
+levelinfo -pg 1 0 200 540 890 1290 1680 1930 -top 0 -bot 830
 ",
 }
 
