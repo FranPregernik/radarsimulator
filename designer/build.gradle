@@ -1,8 +1,6 @@
 group 'hr.franp'
 version '1.0-SNAPSHOT'
 
-project.ext.set('javafxHome', System.env['JAVAFX_HOME'])
-
 buildscript {
     ext.kotlin_version = '1.0.5-2'
 
@@ -25,7 +23,7 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile files("${javafxHome}/rt/lib/jfxrt.jar")
+    compile fileTree(dir: "${System.properties['java.home']}", include: '**/jfxrt.jar')
 
     // https://mvnrepository.com/artifact/no.tornado/tornadofx
     compile group: 'no.tornado', name: 'tornadofx', version: '1.5.8'
