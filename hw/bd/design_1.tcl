@@ -1843,5 +1843,3 @@ levelinfo -pg 1 -10 200 540 890 1290 1680 1930 -top 0 -bot 830
 create_root_design ""
 
 
-common::send_msg_id "BD_TCL-1000" "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
-
