@@ -378,6 +378,8 @@ class RadarScreenView : View() {
             .filter { it == controller.selectedMovingTarget || controller.displayParameters.targetDisplayFilter.isEmpty() || it.name in controller.displayParameters.targetDisplayFilter }
             .forEachIndexed { i, target ->
 
+                val type = target.type ?: return@forEachIndexed
+
                 // shift colors for each target and if the target is selected display other targets semi-transparent
                 val color = Color.RED.deriveColor(
                     i * (360.0 / movingTargetCount),
@@ -422,7 +424,7 @@ class RadarScreenView : View() {
                 if (pt != null) {
                     val distance = sqrt(pow(pt.x, 2.0) + pow(pt.y, 2.0))
                     val text = "${target.name}\nhdg=${AngleStringConverter.decimalFormat.format(ps?.headingDeg)}\ns=${SpeedStringConverter.decimalFormat.format(ps?.vKmh)}\nr=${DistanceStringConverter.decimalFormat.format(distance)}"
-                    val movingTarget = when (target.type) {
+                    val movingTarget = when (type) {
                         MovingTargetType.Cloud1 -> {
                             MovingTargetPositionMarker(
                                 displayScale = displayScale,
