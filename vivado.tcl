@@ -47,8 +47,8 @@ set files [list \
  "[file normalize "$origin_dir/hw/hdl/acp_generator.v"]"\
  "[file normalize "$origin_dir/hw/hdl/arp_generator.v"]"\
  "[file normalize "$origin_dir/hw/hdl/trig_generator.v"]"\
- "[file normalize "$origin_dir/hw/hdl/asg_ft_generator.v.v"]"\
- "[file normalize "$origin_dir/hw/hdl/asg_mt_generator.v.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/asg_ft_generator.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/asg_mt_generator.v"]"\
 ]
 add_files -norecurse -fileset $obj $files
 
