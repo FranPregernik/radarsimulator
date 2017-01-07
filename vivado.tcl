@@ -43,6 +43,12 @@ set files [list \
  "[file normalize "$origin_dir/hw/hdl/radar_sim_target_axis.v"]"\
  "[file normalize "$origin_dir/hw/hdl/radar_sim_ctrl_axi.v"]"\
  "[file normalize "$origin_dir/hw/hdl/azimuth_signal_generator.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/mux_2_1.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/acp_generator.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/arp_generator.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/trig_generator.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/asg_ft_generator.v.v"]"\
+ "[file normalize "$origin_dir/hw/hdl/asg_mt_generator.v.v"]"\
 ]
 add_files -norecurse -fileset $obj $files
 
@@ -96,6 +102,21 @@ add_files -norecurse -fileset $obj $files
 set_property top azimuth_signal_generator_sim [get_filesets azimuth_signal_generator]
 set_property top_lib xil_defaultlib [get_filesets azimuth_signal_generator]
 
+# Create 'mux' fileset (if not found)
+if {[string equal [get_filesets -quiet mux] ""]} {
+  create_fileset -simset mux
+}
+
+# Set 'mux' fileset object
+set obj [get_filesets mux]
+set files [list \
+ "[file normalize "$origin_dir/hw/hdl/mux_2_1.v"]"\
+ "[file normalize "$origin_dir/hw/sim/mux_sim.v"]"\
+]
+add_files -norecurse -fileset $obj $files
+set_property top mux_sim [get_filesets mux]
+set_property top_lib xil_defaultlib [get_filesets mux]
+
 # Create 'radar_statistics' fileset (if not found)
 if {[string equal [get_filesets -quiet radar_statistics] ""]} {
   create_fileset -simset radar_statistics
@@ -132,5 +153,6 @@ source $origin_dir/hw/bd/design_1.tcl
 # Generate the wrapper
 set design_name [get_bd_designs]
 make_wrapper -files [get_files $design_name.bd] -top -import
+set_property top design_1_wrapper [current_fileset]
 
 puts "INFO: Project created:radar_simulator"

@@ -33,7 +33,8 @@ module radar_sim_ctrl_axi #
 	)
 	(
 		// Users to add ports here
-        
+
+        (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
         output reg SIM_EN,
         
         input RADAR_CAL,
@@ -248,7 +249,7 @@ module radar_sim_ctrl_axi #
 	begin
 	  if ( S_AXI_ARESETN == 1'b0 )
 	    begin
-//	      slv_reg0 <= 0;
+	      SIM_EN <= 0;
 //	      slv_reg1 <= 0;
 //	      slv_reg2 <= 0;
 //	      slv_reg3 <= 0;
@@ -263,13 +264,13 @@ module radar_sim_ctrl_axi #
 	    if (slv_reg_wren)
 	      begin
 	        case ( axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] )
-//	          4'h0:
-//	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-//	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-//	                // Respective byte enables are asserted as per write strobes 
-//	                // Slave register 0
-//	                slv_reg0[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-//	              end  
+	          4'h0:
+	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+	                // Respective byte enables are asserted as per write strobes 
+	                // Slave register 0
+	                SIM_EN <= S_AXI_WDATA[0];
+	              end  
 //	          4'h1:
 //	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
 //	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
@@ -334,7 +335,7 @@ module radar_sim_ctrl_axi #
 	                slv_reg9[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
 	              end  
 	          default : begin
-//	                      slv_reg0 <= slv_reg0;
+                          SIM_EN <= SIM_EN;
 //	                      slv_reg1 <= slv_reg1;
 //	                      slv_reg2 <= slv_reg2;
 //	                      slv_reg3 <= slv_reg3;

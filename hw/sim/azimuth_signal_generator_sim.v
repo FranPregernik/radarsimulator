@@ -33,14 +33,14 @@ module azimuth_signal_generator_sim;
     reg EN;
         
     // output
-    wire SIGNAL;
+    wire GEN_SIGNAL;
     
     azimuth_signal_generator #(SIZE) uut (
         .EN(EN),
         .TRIG(TRIG),
         .CLK(CLK),
         .DATA(DATA),
-        .SIGNAL(SIGNAL)
+        .GEN_SIGNAL(GEN_SIGNAL)
     );
     
     initial

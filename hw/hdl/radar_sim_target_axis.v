@@ -33,6 +33,7 @@ module radar_sim_target_axis #
 		// Users to add ports here
 
 		// is the simulator enabled
+		(* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
 		input SIM_EN,
 
 		// radar antenna angle change
@@ -40,10 +41,6 @@ module radar_sim_target_axis #
 
 		// radar antenna transmission start
 		input TRIG,
-
-        // steady 1MHz clock
-        (* X_INTERFACE_PARAMETER = "FREQ_HZ 1000000" *)
-		input US_CLK,
 
 		// time based signal that specifies a target is present or not
         output GEN_SIGNAL,
@@ -68,6 +65,12 @@ module radar_sim_target_axis #
 	// temporary register to store the current azimuth radar response data
 	reg [C_S_AXIS_TDATA_WIDTH-1:0] bank;
 
+    wire USEC;
+    clk_divider #(100) cd(
+        .IN_SIG(S_AXIS_ACLK),
+        .OUT_SIG(USEC)
+    );
+
     // create synchronous ACP posedge signal
     wire acp_posedge;
     edge_detect acp_ed(
@@ -79,11 +82,12 @@ module radar_sim_target_axis #
     // initialize the radar signal response generator
     azimuth_signal_generator #(C_S_AXIS_TDATA_WIDTH) asg(
         .EN(SIM_EN),
-        .TRIG(RADAR_TRIG),
+        .TRIG(TRIG),
         .DATA(bank),
-        .CLK(US_CLK),
+        .CLK(USEC),
+        .SYS_CLK(S_AXIS_ACLK),
         
-        .SIGNAL(GEN_SIGNAL)
+        .GEN_SIGNAL(GEN_SIGNAL)
     );
 
     // ready to receive if the simulation is enabled and the next ACP happens

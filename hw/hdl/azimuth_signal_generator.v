@@ -25,12 +25,23 @@ module azimuth_signal_generator #
         parameter SIZE = 3200
     )
     (
+        (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
         input wire EN,
+
         input wire TRIG,
+
         input wire [SIZE-1:0] DATA,
+
         input wire CLK,
+
+        // Declare the attributes above the port declaration
+        (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 SYS_CLK CLK" *)
+        // Supported parameters: ASSOCIATED_CLKEN, ASSOCIATED_RESET, ASSOCIATED_ASYNC_RESET, ASSOCIATED_BUSIF, CLK_DOMAIN, PHASE, FREQ_HZ
+        // Output clocks will require FREQ_HZ to be set (note the value is in HZ and an integer is expected).
+        (* X_INTERFACE_PARAMETER = "FREQ_HZ 100000000" *)
+        input wire SYS_CLK,
         
-        output wire SIGNAL
+        output wire GEN_SIGNAL
     );
     
     // function called clogb2 that returns an integer which has the 
@@ -46,21 +57,42 @@ module azimuth_signal_generator #
         
     reg [BITS-1:0] clk_idx = 0;
     
-    always @(posedge TRIG) begin
-        clk_idx = 0;
-    end 
+    // create synchronous TRIG posedge signal
+    wire trig_posedge;
+    edge_detect trig_ed(
+       .async_sig(TRIG),
+       .clk(SYS_CLK),
+       .rise(trig_posedge)
+    );
     
-    always @(posedge CLK) begin
-        if (clk_idx < SIZE) begin
-                clk_idx = clk_idx + 1;
-        end 
+    // create synchronous CLK posedge signal
+    wire clk_posedge;
+    edge_detect clk_ed(
+       .async_sig(CLK),
+       .clk(SYS_CLK),
+       .rise(clk_posedge)
+    );
+    
+    always @(posedge SYS_CLK) begin
+        if (trig_posedge) begin
+            clk_idx = 0;
+            
+            if (clk_posedge) begin
+                clk_idx = 1;
+            end
+            
+        end else if (clk_posedge) begin
         
-        if (clk_idx > SIZE) begin
-            clk_idx = SIZE;
+            if (clk_idx < SIZE) begin
+                clk_idx = clk_idx + 1;
+            end
+            if (clk_idx > SIZE) begin
+                clk_idx = SIZE;
+            end
         end
     end
     
-    // generates the signal (0/1) based on the memory register for the current time (clk_idx)
-    assign SIGNAL = EN && (clk_idx < SIZE) && (DATA[clk_idx] == 1'b1);
+    // generates the signal (0/1) based on the memory register for the current time (clk_idx in DATA)
+    assign GEN_SIGNAL = EN && (clk_idx < SIZE) && (DATA[clk_idx] == 1'b1);
     
 endmodule

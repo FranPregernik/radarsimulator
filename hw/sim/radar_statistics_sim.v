@@ -50,7 +50,7 @@ module radar_statistics_sim;
         .ARP(arp),
         .ACP(acp),
         .TRIG(trig),
-        .US_CLK(us_clk),
+        .USEC(us_clk),
         .SYS_CLK(in_clk),
         .CALIBRATED(CALIBRATED),
         .ARP_US(ARP_US),

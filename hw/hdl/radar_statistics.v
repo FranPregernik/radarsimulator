@@ -25,32 +25,34 @@ module radar_statistics #
     )
     (
         // RADAR ARP signal - posedge signals North, one turn of the antenna
+        (* MARK_DEBUG="true" *)
         input ARP,
 
         // RADAR ACP signal - LSB of the rotation encoder
+        (* MARK_DEBUG="true" *)
         input ACP,
 
         // RADAR TRIG signal - posedge signals the antenna transmission start
+        (* MARK_DEBUG="true" *)
         input TRIG,
 
-        // Steady 1MHz clock
-        (* X_INTERFACE_PARAMETER = "FREQ_HZ 1000000" *)
-        input US_CLK,
-
         // PL system clock
-        (* X_INTERFACE_PARAMETER = "FREQ_HZ 100000000" *)
-        input SYS_CLK,
+
+        input S_AXIS_ACLK,
 
         // Signals that the measurements are stable
         output CALIBRATED,
 
         // ARP signal period
+        (* MARK_DEBUG="true" *)
         output reg [DATA_WIDTH-1:0] ARP_US = 0,
 
         // Number of ACPs between two ARPs
+        (* MARK_DEBUG="true" *)
         output reg [DATA_WIDTH-1:0] ACP_CNT = 0,
 
         // TRIG signal period
+        (* MARK_DEBUG="true" *)
         output reg [DATA_WIDTH-1:0] TRIG_US = 0
     );
     
@@ -65,42 +67,47 @@ module radar_statistics #
     reg [DATA_WIDTH-1:0] trig_us_tmp = 0;
     reg [DATA_WIDTH-1:0] trig_us_prev = 0;
 
-    
-    assign CALIBRATED = (ARP_US == arp_us_prev) 
-        && (ACP_CNT == acp_cnt_prev) 
-        && (TRIG_US == trig_us_prev);
+    wire USEC;
+    clk_divider #(100) cd(
+        .IN_SIG(S_AXIS_ACLK),
+        .OUT_SIG(USEC)
+    );
+
+    assign CALIBRATED = (ARP_US > 0) && (ARP_US == arp_us_prev) 
+        && (ACP_CNT > 0) && (ACP_CNT == acp_cnt_prev) 
+        && (TRIG_US > 0) && (TRIG_US == trig_us_prev);
 
 
     wire arp_posedge;
     edge_detect arp_ed(
         .async_sig(ARP),
-        .clk(SYS_CLK),
+        .clk(S_AXIS_ACLK),
         .rise(arp_posedge)
     );
     
     wire acp_posedge;
     edge_detect acp_ed(
        .async_sig(ACP),
-       .clk(SYS_CLK),
+       .clk(S_AXIS_ACLK),
        .rise(acp_posedge)
     );
 
     wire trig_posedge;
     edge_detect trig_ed(
        .async_sig(TRIG),
-       .clk(SYS_CLK),
+       .clk(S_AXIS_ACLK),
        .rise(trig_posedge)
     );
     
     wire us_clk_posedge;
     edge_detect us_clk_ed(
-       .async_sig(US_CLK),
-       .clk(SYS_CLK),
+       .async_sig(USEC),
+       .clk(S_AXIS_ACLK),
        .rise(us_clk_posedge)
     );    
 
     // keep track of microseconds passed between ARPs
-    always @(posedge SYS_CLK) begin
+    always @(posedge S_AXIS_ACLK) begin
         if (arp_posedge) begin
             arp_us_prev = ARP_US;
             ARP_US <= arp_us_tmp;
@@ -120,7 +127,7 @@ module radar_statistics #
         
     
     // keep track of ACP counts between ARPs
-    always @(posedge SYS_CLK) begin
+    always @(posedge S_AXIS_ACLK) begin
         if (arp_posedge) begin
             acp_cnt_prev <= ACP_CNT;
             ACP_CNT <= acp_cnt_tmp;
@@ -140,7 +147,7 @@ module radar_statistics #
     
 
     // keep track of microseconds between TRIGs
-    always @(posedge SYS_CLK) begin
+    always @(posedge S_AXIS_ACLK) begin
         if (trig_posedge) begin
             trig_us_prev <= TRIG_US;
             TRIG_US <= trig_us_tmp;

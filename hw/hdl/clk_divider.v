@@ -25,8 +25,8 @@ module clk_divider #
         parameter DIVIDER = 15
     )
     (
-        input IN_CLK,
-        output wire OUT_CLK
+        input IN_SIG,
+        output wire OUT_SIG
     );
     
     // function called clogb2 that returns an integer which has the 
@@ -48,7 +48,7 @@ module clk_divider #
     
     reg [BITS:0] counter = 0;
     
-    always @(posedge IN_CLK)
+    always @(posedge IN_SIG)
     begin
         counter = counter + 1;
         if (counter >= DIVIDER) begin
@@ -56,6 +56,6 @@ module clk_divider #
         end
     end
     
-    assign OUT_CLK = (counter <= HIGH);
+    assign OUT_SIG = (counter <= HIGH);
     
 endmodule

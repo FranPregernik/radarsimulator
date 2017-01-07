@@ -3,9 +3,9 @@
 // Company: franp.com
 // Engineer: Fran Pregernik <fran.pregernik@gmail.com>
 // 
-// Create Date: 12/29/2016 07:30:24 PM
+// Create Date: 01/04/2017 09:47:07 PM
 // Design Name: 
-// Module Name: clk_divider_sim
+// Module Name: mux_2_1
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,25 +20,17 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module clk_divider_sim;
-
-    // Inputs
-    reg in_clk;
- 
-    // Outputs
-    wire out_clk;
- 
-    // Instantiate the Unit Under Test (UUT)
-    clk_divider #(15) uut (
-        .IN_SIG(in_clk),
-        .OUT_SIG(out_clk)
+module mux_2_1(
+        
+        (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
+        (* MARK_DEBUG="true" *)
+        input M_SEL,
+        
+        input M_IN_0,
+        
+        input M_IN_1,
+        
+        output M_OUT
     );
- 
-    initial
-    begin
-        in_clk = 0;
-        forever
-            #50 in_clk = ~in_clk;
-    end
- 
+    assign M_OUT = M_SEL ? M_IN_1 : M_IN_0;                  
 endmodule
