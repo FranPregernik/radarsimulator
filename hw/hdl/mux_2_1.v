@@ -23,7 +23,6 @@
 module mux_2_1(
         
         (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
-        (* MARK_DEBUG="true" *)
         input M_SEL,
         
         input M_IN_0,

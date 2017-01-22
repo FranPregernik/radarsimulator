@@ -57,31 +57,15 @@ module azimuth_signal_generator #
         
     reg [BITS-1:0] clk_idx = 0;
     
-    // create synchronous TRIG posedge signal
-    wire trig_posedge;
-    edge_detect trig_ed(
-       .async_sig(TRIG),
-       .clk(SYS_CLK),
-       .rise(trig_posedge)
-    );
-    
-    // create synchronous CLK posedge signal
-    wire clk_posedge;
-    edge_detect clk_ed(
-       .async_sig(CLK),
-       .clk(SYS_CLK),
-       .rise(clk_posedge)
-    );
-    
     always @(posedge SYS_CLK) begin
-        if (trig_posedge) begin
+        if (TRIG) begin
             clk_idx = 0;
             
-            if (clk_posedge) begin
+            if (CLK) begin
                 clk_idx = 1;
             end
             
-        end else if (clk_posedge) begin
+        end else if (CLK) begin
         
             if (clk_idx < SIZE) begin
                 clk_idx = clk_idx + 1;
@@ -93,6 +77,6 @@ module azimuth_signal_generator #
     end
     
     // generates the signal (0/1) based on the memory register for the current time (clk_idx in DATA)
-    assign GEN_SIGNAL = EN && (clk_idx < SIZE) && (DATA[clk_idx] == 1'b1);
+    assign GEN_SIGNAL = EN && (clk_idx < SIZE) && DATA[clk_idx];
     
 endmodule

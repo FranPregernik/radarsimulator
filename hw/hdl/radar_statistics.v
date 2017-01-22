@@ -36,6 +36,9 @@ module radar_statistics #
         (* MARK_DEBUG="true" *)
         input TRIG,
 
+        // constant microseconds clock
+        input wire USEC,
+
         // PL system clock
 
         input S_AXIS_ACLK,
@@ -67,60 +70,26 @@ module radar_statistics #
     reg [DATA_WIDTH-1:0] trig_us_tmp = 0;
     reg [DATA_WIDTH-1:0] trig_us_prev = 0;
 
-    wire USEC;
-    clk_divider #(100) cd(
-        .IN_SIG(S_AXIS_ACLK),
-        .OUT_SIG(USEC)
-    );
 
     assign CALIBRATED = (ARP_US > 0) && (ARP_US == arp_us_prev) 
         && (ACP_CNT > 0) && (ACP_CNT == acp_cnt_prev) 
         && (TRIG_US > 0) && (TRIG_US == trig_us_prev);
 
-
-    wire arp_posedge;
-    edge_detect arp_ed(
-        .async_sig(ARP),
-        .clk(S_AXIS_ACLK),
-        .rise(arp_posedge)
-    );
-    
-    wire acp_posedge;
-    edge_detect acp_ed(
-       .async_sig(ACP),
-       .clk(S_AXIS_ACLK),
-       .rise(acp_posedge)
-    );
-
-    wire trig_posedge;
-    edge_detect trig_ed(
-       .async_sig(TRIG),
-       .clk(S_AXIS_ACLK),
-       .rise(trig_posedge)
-    );
-    
-    wire us_clk_posedge;
-    edge_detect us_clk_ed(
-       .async_sig(USEC),
-       .clk(S_AXIS_ACLK),
-       .rise(us_clk_posedge)
-    );    
-
     // keep track of microseconds passed between ARPs
     always @(posedge S_AXIS_ACLK) begin
-        if (arp_posedge) begin
+        if (ARP) begin
             arp_us_prev = ARP_US;
             ARP_US <= arp_us_tmp;
             
             // edge case handling when both signals appear at the same time
             // without this the count would be off by -1 
-            if (us_clk_posedge) begin
+            if (USEC) begin
                 arp_us_tmp <= 1;
             end else begin 
                 arp_us_tmp <= 0;
             end
             
-        end else if (us_clk_posedge) begin
+        end else if (USEC) begin
             arp_us_tmp <= arp_us_tmp + 1;
         end
     end
@@ -128,19 +97,19 @@ module radar_statistics #
     
     // keep track of ACP counts between ARPs
     always @(posedge S_AXIS_ACLK) begin
-        if (arp_posedge) begin
+        if (ARP) begin
             acp_cnt_prev <= ACP_CNT;
             ACP_CNT <= acp_cnt_tmp;
             
             // edge case handling when both signals appear at the same time
             // without this the count would be off by -1 
-            if (acp_posedge) begin
+            if (ACP) begin
                 acp_cnt_tmp <= 1;
             end else begin 
                 acp_cnt_tmp <= 0;
             end
             
-        end else if (acp_posedge) begin
+        end else if (ACP) begin
             acp_cnt_tmp <= acp_cnt_tmp + 1;
         end
     end
@@ -148,19 +117,19 @@ module radar_statistics #
 
     // keep track of microseconds between TRIGs
     always @(posedge S_AXIS_ACLK) begin
-        if (trig_posedge) begin
+        if (TRIG) begin
             trig_us_prev <= TRIG_US;
             TRIG_US <= trig_us_tmp;
             
             // edge case handling when both signals appear at the same time
             // without this the count would be off by -1 
-            if (us_clk_posedge) begin
+            if (USEC) begin
                 trig_us_tmp <= 1;
             end else begin 
                 trig_us_tmp <= 0;
             end
             
-        end else if (us_clk_posedge) begin
+        end else if (USEC) begin
             trig_us_tmp <= trig_us_tmp + 1;
         end
     end

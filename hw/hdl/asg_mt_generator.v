@@ -27,6 +27,9 @@ module asg_mt_generator #
     (
         input wire TRIG,
 
+        // constant microseconds clock
+        input wire USEC,
+        
         // Declare the attributes above the port declaration
         (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 SYS_CLK CLK" *)
         // Supported parameters: ASSOCIATED_CLKEN, ASSOCIATED_RESET, ASSOCIATED_ASYNC_RESET, ASSOCIATED_BUSIF, CLK_DOMAIN, PHASE, FREQ_HZ
@@ -37,21 +40,28 @@ module asg_mt_generator #
         output wire GEN_SIGNAL
     );
 
-    reg EN = 1;
-    reg [SIZE-1:0] DATA = (1<<100) + (1<<500) + (1<<900) + (1<<1300) + (1<<1700) + (1<<2100) + (1<<2500);
     
-    wire USEC;
-    clk_divider #(100) cd(
-        .IN_SIG(SYS_CLK),
-        .OUT_SIG(USEC)
-    );
+    reg EN = 1;
+    reg [SIZE-1:0] DATA = 0;
+    
+    always @* begin
+        // 3 microsecond pulses
+        DATA[302:300] <= 3'b111;
+        DATA[702:700] <= 3'b111;
+        DATA[1102:1100] <= 3'b111;
+        DATA[1502:1500] <= 3'b111;
+        DATA[1902:1900] <= 3'b111;
+        DATA[2302:2300] <= 3'b111;
+        DATA[2702:2700] <= 3'b111;
+        DATA[3102:3100] <= 3'b111;
+    end
 
     azimuth_signal_generator #(SIZE) asg (
         .EN(EN),
         .TRIG(TRIG),
         .DATA(DATA),
         .CLK(USEC),
-        .SYS_CLK(USEC),
+        .SYS_CLK(SYS_CLK),
         .GEN_SIGNAL(GEN_SIGNAL)
     );
     

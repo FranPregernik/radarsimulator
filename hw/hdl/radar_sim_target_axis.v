@@ -41,6 +41,9 @@ module radar_sim_target_axis #
 
 		// radar antenna transmission start
 		input TRIG,
+        
+        // constant microseconds clock
+        input wire USEC,
 
 		// time based signal that specifies a target is present or not
         output GEN_SIGNAL,
@@ -65,39 +68,23 @@ module radar_sim_target_axis #
 	// temporary register to store the current azimuth radar response data
 	reg [C_S_AXIS_TDATA_WIDTH-1:0] bank;
 
-    wire USEC;
-    clk_divider #(100) cd(
-        .IN_SIG(S_AXIS_ACLK),
-        .OUT_SIG(USEC)
-    );
-
-    // create synchronous ACP posedge signal
-    wire acp_posedge;
-    edge_detect acp_ed(
-       .async_sig(ACP),
-       .clk(S_AXIS_ACLK),
-       .rise(acp_posedge)
-    );
-
     // initialize the radar signal response generator
     azimuth_signal_generator #(C_S_AXIS_TDATA_WIDTH) asg(
         .EN(SIM_EN),
         .TRIG(TRIG),
         .DATA(bank),
-        .CLK(USEC),
-        .SYS_CLK(S_AXIS_ACLK),
-        
+        .CLK(USEC),        
         .GEN_SIGNAL(GEN_SIGNAL)
     );
 
     // ready to receive if the simulation is enabled and the next ACP happens
-	assign S_AXIS_TREADY = SIM_EN && acp_posedge;
+	assign S_AXIS_TREADY = SIM_EN && ACP;
 	
     always @(posedge S_AXIS_ACLK) begin  
         if (!S_AXIS_ARESETN) begin
             // Synchronous reset (active low)
             bank <= 0;
-	    end else if (acp_posedge) begin
+	    end else if (ACP) begin
             // on next ACP load fresh data
             bank <= S_AXIS_TDATA;
        end

@@ -23,22 +23,30 @@
 module azimuth_signal_generator_sim;
 
     localparam SIZE = 3200;
-    integer i;
-    integer j;
+    localparam HSIZE = SIZE / 2;
+    localparam HHIGH = {HSIZE{1'b1}};
+    localparam HLOW = {HSIZE{1'b0}};
     
     // Inputs
     reg CLK;
     reg TRIG;
-    reg [SIZE-1:0] DATA;
     reg EN;
+    wire US_CLK;
+    reg [SIZE-1:0] DATA;
         
     // output
     wire GEN_SIGNAL;
     
+    clk_divider #(100) us_clk(
+        .IN_SIG(CLK),
+        .OUT_SIG(US_CLK)
+    );
+    
     azimuth_signal_generator #(SIZE) uut (
         .EN(EN),
         .TRIG(TRIG),
-        .CLK(CLK),
+        .CLK(US_CLK),
+        .SYS_CLK(CLK),
         .DATA(DATA),
         .GEN_SIGNAL(GEN_SIGNAL)
     );
@@ -47,31 +55,14 @@ module azimuth_signal_generator_sim;
     begin
         TRIG = 0;
         CLK = 0;
-        EN = 0;
-        DATA = 0;
-        j = 0;
-
-        for (i = 0; i < SIZE/2; i = i + 1) begin
-            DATA[i] = 1;
-        end
-            
+        EN = 1;
+        DATA =  {HLOW, HHIGH};
+        
         forever
-            #500 CLK = ~CLK;
+            #10 CLK <= ~CLK;
+            
+        #10000 TRIG <= 1;
+        #100 TRIG <= 0;
     end
-    
-    initial begin
-        #4000000 EN = 0;
-        #200 EN = 1;
-        #100 TRIG = 1;
-        #500 TRIG = 0;
-    end; 
-
-    initial begin
-        #9000000 EN = 0;
-        #100 DATA = ~DATA;
-        #200 EN = 1;
-        #100 TRIG = 1;
-        #500 TRIG = 0;
-    end;           
     
 endmodule
