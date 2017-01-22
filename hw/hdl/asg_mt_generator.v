@@ -25,10 +25,10 @@ module asg_mt_generator #
         parameter SIZE = 3200
     )
     (
-        input wire TRIG,
+        input wire RADAR_TRIG_PE,
 
         // constant microseconds clock
-        input wire USEC,
+        input wire USEC_PE,
         
         // Declare the attributes above the port declaration
         (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 SYS_CLK CLK" *)
@@ -58,9 +58,9 @@ module asg_mt_generator #
 
     azimuth_signal_generator #(SIZE) asg (
         .EN(EN),
-        .TRIG(TRIG),
+        .TRIG(RADAR_TRIG_PE),
         .DATA(DATA),
-        .CLK(USEC),
+        .CLK(USEC_PE),
         .SYS_CLK(SYS_CLK),
         .GEN_SIGNAL(GEN_SIGNAL)
     );

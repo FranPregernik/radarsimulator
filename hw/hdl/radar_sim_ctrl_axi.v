@@ -35,16 +35,20 @@ module radar_sim_ctrl_axi #
 		// Users to add ports here
 
         (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
-        output reg SIM_EN,
+        output SIM_EN,
         
         input RADAR_CAL,
         
+        input RADAR_ARP_PE,
+        
+        input RADAR_ACP_PE,
+
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_ARP_US,
         
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_ACP_CNT,
         
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_TRIG_US,
-        
+                
 		// User ports ends
 		// Do not modify the ports beyond this line
 
@@ -134,12 +138,15 @@ module radar_sim_ctrl_axi #
 	//------------------------------------------------
 	//-- Number of Slave Registers 10
 	
-	// replaced by SIM_EN - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg0;
+	reg sim_en_req;
     // replaced by RADAR_CAL - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg1;
 	// replaced by RADAR_ARP_US - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg2;
 	// replaced by RADAR_ACP_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg3;
 	// replaced by RADAR_TRIG_US - reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg4;
-	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg5;
+	
+	// ACP_IDX - rotational position since the beginning of the simulation
+	reg [C_S_AXI_DATA_WIDTH-1:0]	ACP_IDX;
+	
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg6;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg7;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg8;
@@ -149,7 +156,9 @@ module radar_sim_ctrl_axi #
 	wire	 slv_reg_wren;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	 reg_data_out;
 	integer	 byte_index;
-
+	
+    reg first_arp = 0;
+    
 	// I/O Connections assignments
 
 	assign S_AXI_AWREADY	= axi_awready;
@@ -249,13 +258,13 @@ module radar_sim_ctrl_axi #
 	begin
 	  if ( S_AXI_ARESETN == 1'b0 )
 	    begin
-	      SIM_EN <= 0;
+	      sim_en_req <= 0;
 //	      slv_reg1 <= 0;
 //	      slv_reg2 <= 0;
 //	      slv_reg3 <= 0;
 //	      slv_reg4 <= 0;
-	      slv_reg5 <= 0;
-	      slv_reg6 <= 0;
+//	      ACP_IDX <= 0;
+//	      slv_reg6 <= 0;
 	      slv_reg7 <= 0;
 	      slv_reg8 <= 0;
 	      slv_reg9 <= 0;
@@ -269,7 +278,7 @@ module radar_sim_ctrl_axi #
 	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
 	                // Respective byte enables are asserted as per write strobes 
 	                // Slave register 0
-	                SIM_EN <= S_AXI_WDATA[0];
+	                sim_en_req <= S_AXI_WDATA[0];
 	              end  
 //	          4'h1:
 //	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
@@ -299,20 +308,20 @@ module radar_sim_ctrl_axi #
 //	                // Slave register 4
 //	                slv_reg4[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
 //	              end  
-	          4'h5:
-	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-	                // Respective byte enables are asserted as per write strobes 
-	                // Slave register 5
-	                slv_reg5[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-	              end  
-	          4'h6:
-	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-	                // Respective byte enables are asserted as per write strobes 
-	                // Slave register 6
-	                slv_reg6[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-	              end  
+//	          4'h5:
+//	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+//	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+//	                // Respective byte enables are asserted as per write strobes 
+//	                // Slave register 5
+//	                ACP_IDX[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+//	              end  
+//	          4'h6:
+//	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+//	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+//	                // Respective byte enables are asserted as per write strobes 
+//	                // Slave register 6
+//	                slv_reg6[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+//	              end  
 	          4'h7:
 	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
 	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
@@ -335,13 +344,13 @@ module radar_sim_ctrl_axi #
 	                slv_reg9[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
 	              end  
 	          default : begin
-                          SIM_EN <= SIM_EN;
+                          sim_en_req <= sim_en_req;
 //	                      slv_reg1 <= slv_reg1;
 //	                      slv_reg2 <= slv_reg2;
 //	                      slv_reg3 <= slv_reg3;
 //	                      slv_reg4 <= slv_reg4;
-	                      slv_reg5 <= slv_reg5;
-	                      slv_reg6 <= slv_reg6;
+//	                      ACP_IDX <= ACP_IDX;
+//	                      slv_reg6 <= slv_reg6;
 	                      slv_reg7 <= slv_reg7;
 	                      slv_reg8 <= slv_reg8;
 	                      slv_reg9 <= slv_reg9;
@@ -453,12 +462,12 @@ module radar_sim_ctrl_axi #
 	begin
 	      // Address decoding for reading registers
 	      case ( axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] )
-	        4'h0   : reg_data_out <= SIM_EN;
+	        4'h0   : reg_data_out <= sim_en_req;
             4'h1   : reg_data_out <= RADAR_CAL;
 	        4'h2   : reg_data_out <= RADAR_ARP_US;
 	        4'h3   : reg_data_out <= RADAR_ACP_CNT;
 	        4'h4   : reg_data_out <= RADAR_TRIG_US;
-	        4'h5   : reg_data_out <= slv_reg5;
+	        4'h5   : reg_data_out <= ACP_IDX;
 	        4'h6   : reg_data_out <= slv_reg6;
 	        4'h7   : reg_data_out <= slv_reg7;
 	        4'h8   : reg_data_out <= slv_reg8;
@@ -487,7 +496,29 @@ module radar_sim_ctrl_axi #
 	end    
 
 	// Add user logic here
+    always @(posedge S_AXI_ACLK) begin
+        if (~sim_en_req) begin
+            first_arp <= 0;
+            slv_reg6 <= 0;
+        end else begin
+            if (RADAR_CAL && RADAR_ARP_PE) begin
+                first_arp <= 1;
+                slv_reg6 <= 1;
+            end;
+        end;
+    end     
 
+    always @(posedge S_AXI_ACLK) begin
+        if (~sim_en_req) begin
+            ACP_IDX <= 0;
+        end else if (sim_en_req && RADAR_CAL && first_arp && RADAR_ACP_PE) begin
+            // find first ARP since sim_en_req and enable counting
+            ACP_IDX <= ACP_IDX + 1;
+        end
+    end
+    
+    assign SIM_EN = sim_en_req && first_arp;
+    
 	// User logic ends
 
-	endmodule
+endmodule
