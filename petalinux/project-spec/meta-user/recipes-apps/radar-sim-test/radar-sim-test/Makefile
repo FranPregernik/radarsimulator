@@ -1,0 +1,11 @@
+APP = radar-sim-test
+
+# Add any other object files to this list below
+APP_OBJS = radar-sim-test.o
+
+all: build
+
+build: $(APP)
+
+$(APP): $(APP_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $(APP_OBJS) $(LDLIBS)

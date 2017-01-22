@@ -89,3 +89,6 @@ vivado
 #  idea
 .idea
 *.iml
+/Packages
+/workspace
+/petalinux/components/plnx_workspace/.metadata

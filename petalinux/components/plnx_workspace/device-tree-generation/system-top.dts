@@ -1,0 +1,25 @@
+/dts-v1/;
+/include/ "system-conf.dtsi"
+/ {
+	scratch_mem@3e000000 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+                reg = <0x10000000 0x10000000>;
+		compatible = "generic-uio";
+		interrupts = < 0 58 0 >; //< Needed for older versions of uio driver, it's fake, make sure doesn't clash with anything
+		interrupt-parent = <0x1>;
+	};
+};
+
+&radar_sim_subsytem_radar_simulator_radar_sim_ctrl_axi_0 {
+ compatible = "generic-uio";
+};
+
+&axi_dma_ft {
+ compatible = "generic-uio";
+};
+
+&axi_dma_mt {
+ compatible = "generic-uio";
+};
+
