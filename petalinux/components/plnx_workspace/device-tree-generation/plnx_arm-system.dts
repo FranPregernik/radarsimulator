@@ -7,7 +7,7 @@
 	model = "petalinux";
 
 	chosen {
-		bootargs = "console=ttyPS0,115200 earlyprintk uio_pdrv_genirq.of_id=generic-uio";
+		bootargs = "console=ttyPS0,115200 earlyprintk uio_pdrv_genirq.of_id=generic-uio mem=384M";
 		stdout-path = "serial0:115200ns";
 	};
 
@@ -513,10 +513,10 @@
 		};
 	};
 
-	scratch_mem@3e000000 {
+	scratch_mem@19000000 {
 		#address-cells = <0x1>;
 		#size-cells = <0x1>;
-		reg = <0x10000000 0x10000000>;
+		reg = <0x19000000 0x7000000>;
 		compatible = "generic-uio";
 		interrupts = <0x0 0x3a 0x0>;
 		interrupt-parent = <0x1>;

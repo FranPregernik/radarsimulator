@@ -1,10 +1,10 @@
 /dts-v1/;
 /include/ "system-conf.dtsi"
 / {
-	scratch_mem@3e000000 {
+	scratch_mem@19000000 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-                reg = <0x10000000 0x10000000>;
+                reg = <0x19000000 0x7000000>; //< Start at 400MB (0x19000000) address till the end 112Mb (0x7000000)
 		compatible = "generic-uio";
 		interrupts = < 0 58 0 >; //< Needed for older versions of uio driver, it's fake, make sure doesn't clash with anything
 		interrupt-parent = <0x1>;

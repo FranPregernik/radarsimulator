@@ -16,7 +16,7 @@
 		spi0 = &qspi;
 	};
 	chosen {
-		bootargs = "console=ttyPS0,115200 earlyprintk uio_pdrv_genirq.of_id=generic-uio";
+		bootargs = "console=ttyPS0,115200 earlyprintk uio_pdrv_genirq.of_id=generic-uio mem=384M";
 		stdout-path = "serial0:115200ns";
 	};
 	memory {
