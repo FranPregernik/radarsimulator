@@ -2,21 +2,21 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: franp.com
 // Engineer: Fran Pregernik <fran.pregernik@gmail.com>
-// 
+//
 // Create Date: 12/30/2016 10:48:02 AM
-// Design Name: 
+// Design Name:
 // Module Name: azimuth_signal_generator
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
 // Revision:
 // Revision 0.01 - File Created
 // Additional Comments:
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////
 
 
@@ -40,11 +40,11 @@ module azimuth_signal_generator #
         // Output clocks will require FREQ_HZ to be set (note the value is in HZ and an integer is expected).
         (* X_INTERFACE_PARAMETER = "FREQ_HZ 100000000" *)
         input wire SYS_CLK,
-        
+
         output wire GEN_SIGNAL
     );
-    
-    // function called clogb2 that returns an integer which has the 
+
+    // function called clogb2 that returns an integer which has the
     // value of the ceiling of the log base 2.
     function integer clogb2 (input integer bit_depth);
       begin
@@ -52,21 +52,21 @@ module azimuth_signal_generator #
           bit_depth = bit_depth >> 1;
       end
     endfunction
-        
+
     localparam BITS = clogb2(SIZE-1);
-        
+
     reg [BITS-1:0] clk_idx = 0;
-    
+
     always @(posedge SYS_CLK) begin
         if (TRIG) begin
             clk_idx = 0;
-            
+
             if (CLK) begin
                 clk_idx = 1;
             end
-            
+
         end else if (CLK) begin
-        
+
             if (clk_idx < SIZE) begin
                 clk_idx = clk_idx + 1;
             end
@@ -75,8 +75,8 @@ module azimuth_signal_generator #
             end
         end
     end
-    
+
     // generates the signal (0/1) based on the memory register for the current time (clk_idx in DATA)
     assign GEN_SIGNAL = EN && (clk_idx < SIZE) && DATA[clk_idx];
-    
+
 endmodule

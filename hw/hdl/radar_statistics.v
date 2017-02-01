@@ -2,21 +2,21 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: franp.com
 // Engineer: Fran Pregernik <fran.pregernik@gmail.com>
-// 
+//
 // Create Date: 12/29/2016 08:04:28 PM
-// Design Name: 
+// Design Name:
 // Module Name: radar_statistics
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
 // Revision:
 // Revision 0.01 - File Created
 // Additional Comments:
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////
 
 module radar_statistics #
@@ -58,11 +58,11 @@ module radar_statistics #
         (* MARK_DEBUG="true" *)
         output reg [DATA_WIDTH-1:0] RADAR_TRIG_US = 0
     );
-    
-       
+
+
     reg [DATA_WIDTH-1:0] arp_us_tmp = 0;
     reg [DATA_WIDTH-1:0] arp_us_prev = 0;
-    
+
     reg [DATA_WIDTH-1:0] acp_cnt_tmp = 0;
     reg [DATA_WIDTH-1:0] acp_cnt_prev = 0;
 
@@ -71,8 +71,8 @@ module radar_statistics #
     reg [DATA_WIDTH-1:0] trig_us_prev = 0;
 
 
-    assign CALIBRATED = (RADAR_ARP_US > 0) && (RADAR_ARP_US == arp_us_prev) 
-        && (RADAR_ACP_CNT > 0) && (RADAR_ACP_CNT == acp_cnt_prev) 
+    assign CALIBRATED = (RADAR_ARP_US > 0) && (RADAR_ARP_US == arp_us_prev)
+        && (RADAR_ACP_CNT > 0) && (RADAR_ACP_CNT == acp_cnt_prev)
         && (RADAR_TRIG_US > 0) && (RADAR_TRIG_US == trig_us_prev);
 
     // keep track of microseconds passed between ARPs
@@ -80,58 +80,58 @@ module radar_statistics #
         if (RADAR_ARP_PE) begin
             arp_us_prev = RADAR_ARP_US;
             RADAR_ARP_US <= arp_us_tmp;
-            
+
             // edge case handling when both signals appear at the same time
-            // without this the count would be off by -1 
+            // without this the count would be off by -1
             if (USEC_PE) begin
                 arp_us_tmp <= 1;
-            end else begin 
+            end else begin
                 arp_us_tmp <= 0;
             end
-            
+
         end else if (USEC_PE) begin
             arp_us_tmp <= arp_us_tmp + 1;
         end
     end
-        
-    
+
+
     // keep track of ACP counts between ARPs
     always @(posedge S_AXIS_ACLK) begin
         if (RADAR_ARP_PE) begin
             acp_cnt_prev <= RADAR_ACP_CNT;
             RADAR_ACP_CNT <= acp_cnt_tmp;
-            
+
             // edge case handling when both signals appear at the same time
-            // without this the count would be off by -1 
+            // without this the count would be off by -1
             if (RADAR_ACP_PE) begin
                 acp_cnt_tmp <= 1;
-            end else begin 
+            end else begin
                 acp_cnt_tmp <= 0;
             end
-            
+
         end else if (RADAR_ACP_PE) begin
             acp_cnt_tmp <= acp_cnt_tmp + 1;
         end
     end
-    
+
 
     // keep track of microseconds between TRIGs
     always @(posedge S_AXIS_ACLK) begin
         if (RADAR_TRIG_PE) begin
             trig_us_prev <= RADAR_TRIG_US;
             RADAR_TRIG_US <= trig_us_tmp;
-            
+
             // edge case handling when both signals appear at the same time
-            // without this the count would be off by -1 
+            // without this the count would be off by -1
             if (USEC_PE) begin
                 trig_us_tmp <= 1;
-            end else begin 
+            end else begin
                 trig_us_tmp <= 0;
             end
-            
+
         end else if (USEC_PE) begin
             trig_us_tmp <= trig_us_tmp + 1;
         end
     end
-        
+
 endmodule
