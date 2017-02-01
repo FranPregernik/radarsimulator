@@ -4,17 +4,22 @@
 /*                                                                   */
 /*********************************************************************/
 
-#include <iostream>
-#include  <iomanip>
-#include <chrono>
-#include <thread>
-#include <bitset>
+#include "radar-sim-test.h"
 
 #include <stdint.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 
-using namespace std;
+#include <iostream>
+#include <iomanip>
+#include <chrono>  // Ignore CPPLintBear
+#include <thread>  // Ignore CPPLintBear
+#include <bitset>
+
+#include "xparameters.h"
+#include "xaxidma_linux.h"
+
+using namespace std;  // Ignore CPPLintBear
 
 /*
 
@@ -32,9 +37,9 @@ using namespace std;
 #define    DESCRIPTOR_REGISTERS_SIZE          0xFFFF
 #define    CTRL_REGISTERS_SIZE                0xFFFF
 #define    SG_DMA_DESCRIPTORS_WIDTH           0xFFFF
-#define    MM_DATA_WIDTH					  1024
-#define    TRIG_MAX							  (3 * MM_DATA_WIDTH) // 3072 bits = 96 32bit numbers
-#define	   TRIG_BYTE_CNT				      (TRIG_MAX / 8) // 400 bytes
+#define    MM_DATA_WIDTH                      1024
+#define    TRIG_MAX                           (3 * MM_DATA_WIDTH)   // 3072 bits = 96 32bit numbers
+#define    TRIG_BYTE_CNT                      (TRIG_MAX / 8)    // 400 bytes
 
 /*********************************************************************/
 /*                       define mmap locations                       */
@@ -89,51 +94,51 @@ using namespace std;
 #define MM2S_TAILDESC_MSB           0x14    // unused with 32bit addresses
 
 // direct DMA
-#define MM2SA_SA					0x18    // source address
-#define MM2SA_LENGTH    			0x28    // source address
+#define MM2SA_SA                    0x18    // source address
+#define MM2SA_LENGTH                0x28    // source address
 
 struct rsim {
     int device_handle;
-    unsigned int scratch_mem_addr;
+    uint scratch_mem_addr;
 
-    unsigned int *ctrl_register_mmap;
-    unsigned int mem_blk_byte_size;
+    uint *ctrl_register_mmap;
+    uint mem_blk_byte_size;
 
-    unsigned int *ft_adma_register_mmap;
+    uint *ft_adma_register_mmap;
 
-    unsigned int ft_mm2s_descriptor_register_addr;
-    unsigned int *ft_mm2s_descriptor_register_mmap;
+    uint ft_mm2s_descriptor_register_addr;
+    uint *ft_mm2s_descriptor_register_mmap;
 
-    unsigned int ft_source_mem_addr;
-    unsigned int *ft_source_mem_map;
-    unsigned int ft_source_mem_blk_cnt;
+    uint ft_source_mem_addr;
+    uint *ft_source_mem_map;
+    uint ft_source_mem_blk_cnt;
 
-    unsigned int *mt_adma_register_mmap;
+    uint *mt_adma_register_mmap;
 
-    unsigned int mt_mm2s_descriptor_register_addr;
-    unsigned int *mt_mm2s_descriptor_register_mmap;
+    uint mt_mm2s_descriptor_register_addr;
+    uint *mt_mm2s_descriptor_register_mmap;
 
-    unsigned int mt_source_mem_addr;
-    unsigned int *mt_source_mem_map_1;
-    unsigned int *mt_source_mem_map_2;
-    unsigned int *mt_source_mem_map_3;
-    unsigned int mt_source_mem_blk_cnt;
+    uint mt_source_mem_addr;
+    uint *mt_source_mem_map_1;
+    uint *mt_source_mem_map_2;
+    uint *mt_source_mem_map_3;
+    uint mt_source_mem_blk_cnt;
 
 };
 
 struct rsim_stat {
     bool calibrated;
-    unsigned int arp_us;
-    unsigned int acp_cnt;
-    unsigned int trig_us;
-    unsigned int acp_idx;
+    uint arp_us;
+    uint acp_cnt;
+    uint trig_us;
+    uint acp_idx;
 
-    unsigned int ft_dma_status;
-    unsigned int mt_dma_status;
+    uint ft_dma_status;
+    uint mt_dma_status;
 };
 
-void print_mem(unsigned int *mem_loc, unsigned int word_count) {
-    for (unsigned int i = 0; i < word_count; i++) {
+void print_mem(uint *mem_loc, uint word_count) {
+    for (uint i = 0; i < word_count; i++) {
         cout << noshowbase << "0x" << setfill('0') << setw(8) << right << hex << mem_loc + i << " ";
         cout << noshowbase << "0x" << setfill('0') << setw(8) << right << hex << mem_loc[i] << " ";
         cout << std::bitset < 32 > (mem_loc[i]) << endl;
@@ -143,7 +148,7 @@ void print_mem(unsigned int *mem_loc, unsigned int word_count) {
 /*********************************************************************/
 /*                 reset and halt all dma operations                 */
 /*********************************************************************/
-void reset_halt_dma(unsigned int * axi_dma_register_mmap) {
+void reset_halt_dma(uint *axi_dma_register_mmap) {
     axi_dma_register_mmap[MM2S_CONTROL_REGISTER >> 2] = 0x4;
     axi_dma_register_mmap[MM2S_CONTROL_REGISTER >> 2] = 0x0;
 }
@@ -168,17 +173,19 @@ void prog_exit(int exit_code, rsim sim) {
     exit(exit_code);
 }
 
-rsim setup_rsim(unsigned int ctrl_register_addr, unsigned int ft_adma_register_addr, unsigned int mt_adma_register_addr, unsigned int scratch_addr) {
+rsim setup_rsim(uint ctrl_register_addr, uint ft_adma_register_addr, uint mt_adma_register_addr, uint scratch_addr) {
 
     rsim sim = { };
     sim.scratch_mem_addr = scratch_addr;
 
     sim.device_handle = open("/dev/mem", O_RDWR | O_SYNC);
 
-    unsigned int *scratch_mem_raw = (unsigned int *) mmap(NULL,
+    uint *scratch_mem_raw =  reinterpret_cast<uint *>(mmap(NULL,
     SCRATCH_MEM_SIZE,
-    PROT_READ | PROT_WRITE,
-    MAP_SHARED, sim.device_handle, (off_t) SCRATCH_MEM_LOCATION);
+    PROT_READ |
+    PROT_WRITE,
+    MAP_SHARED, sim.device_handle, (off_t)
+    SCRATCH_MEM_LOCATION));
 
     if (scratch_mem_raw == MAP_FAILED) {
         cerr << "Unable to map to scratch memory" << endl;
@@ -186,14 +193,14 @@ rsim setup_rsim(unsigned int ctrl_register_addr, unsigned int ft_adma_register_a
     }
 
     // clear scratch memory
-    for (unsigned int i = 0; i < SCRATCH_MEM_SIZE / 4; i++) {
+    for (uint i = 0; i < SCRATCH_MEM_SIZE / 4; i++) {
         scratch_mem_raw[i] = 0x00000000;
     }
 
-    sim.ctrl_register_mmap = (uint *) mmap(NULL,
+    sim.ctrl_register_mmap = reinterpret_cast<uint *>(mmap(NULL,
     CTRL_REGISTERS_SIZE,
     PROT_READ | PROT_WRITE,
-    MAP_SHARED, sim.device_handle, (off_t) ctrl_register_addr);
+    MAP_SHARED, sim.device_handle, (off_t) ctrl_register_addr));
 
     if (!sim.ctrl_register_mmap[RSIM_CTRL_CALIBRATED]) {
         cerr << "system is not calibrated" << endl;
@@ -205,15 +212,15 @@ rsim setup_rsim(unsigned int ctrl_register_addr, unsigned int ft_adma_register_a
 
     sim.mem_blk_byte_size = sim.ctrl_register_mmap[RSIM_CTRL_ACP_CNT] * TRIG_BYTE_CNT;
 
-    sim.ft_adma_register_mmap = (unsigned int *) mmap(NULL,
+    sim.ft_adma_register_mmap = reinterpret_cast<uint *>(mmap(NULL,
     DESCRIPTOR_REGISTERS_SIZE,
     PROT_READ | PROT_WRITE,
-    MAP_SHARED, sim.device_handle, (off_t) ft_adma_register_addr);
+    MAP_SHARED, sim.device_handle, (off_t) ft_adma_register_addr));
 
-    sim.mt_adma_register_mmap = (unsigned int *) mmap(NULL,
+    sim.mt_adma_register_mmap = reinterpret_cast<uint *>(mmap(NULL,
     DESCRIPTOR_REGISTERS_SIZE,
     PROT_READ | PROT_WRITE,
-    MAP_SHARED, sim.device_handle, (off_t) mt_adma_register_addr);
+    MAP_SHARED, sim.device_handle, (off_t) mt_adma_register_addr));
 
     sim.ft_mm2s_descriptor_register_addr = scratch_addr + FT_MM2S_DMA_DESCRIPTORS_OFFSET;
     sim.ft_mm2s_descriptor_register_mmap = scratch_mem_raw + FT_MM2S_DMA_DESCRIPTORS_OFFSET;
@@ -223,13 +230,13 @@ rsim setup_rsim(unsigned int ctrl_register_addr, unsigned int ft_adma_register_a
 
     sim.ft_source_mem_addr = scratch_addr + RSIM_SOURCE_MEM_OFFSET;
     sim.ft_source_mem_blk_cnt = 1;
-    sim.ft_source_mem_map = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET) / sizeof(unsigned int);
+    sim.ft_source_mem_map = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET) / sizeof(uint);
 
     sim.mt_source_mem_addr = scratch_addr + RSIM_SOURCE_MEM_OFFSET + sim.mem_blk_byte_size;
     sim.mt_source_mem_blk_cnt = MT_DESCRIPTOR_REGISTERS_SIZE;
-    sim.mt_source_mem_map_1 = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET + sim.mem_blk_byte_size) / sizeof(unsigned int);
-    sim.mt_source_mem_map_2 = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET + 2 * sim.mem_blk_byte_size) / sizeof(unsigned int);
-    sim.mt_source_mem_map_3 = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET + 3 * sim.mem_blk_byte_size) / sizeof(unsigned int);
+    sim.mt_source_mem_map_1 = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET + sim.mem_blk_byte_size) / sizeof(uint);
+    sim.mt_source_mem_map_2 = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET + 2 * sim.mem_blk_byte_size) / sizeof(uint);
+    sim.mt_source_mem_map_3 = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET + 3 * sim.mem_blk_byte_size) / sizeof(uint);
 
     // SETUP DMA
     reset_halt_dma(sim.ft_adma_register_mmap);
@@ -335,7 +342,7 @@ void print_rsim_stat(rsim_stat stat) {
 /**
  * Fetches the statistics from the control unit
  */
-unsigned int get_rsim_acp_idx(rsim sim) {
+uint get_rsim_acp_idx(rsim sim) {
     return sim.ctrl_register_mmap[0x14];
 }
 
@@ -354,21 +361,21 @@ bool start_rsim(rsim sim) {
     uint32_t ft_current_descriptor_address;
     uint32_t ft_tail_descriptor_address;
 
-    ft_current_descriptor_address = sim.ft_mm2s_descriptor_register_addr; // save current descriptor address
+    ft_current_descriptor_address = sim.ft_mm2s_descriptor_register_addr;   // save current descriptor address
 
-    sim.ft_mm2s_descriptor_register_mmap[0x0 >> 2] = sim.ft_mm2s_descriptor_register_addr + 0x40; // set next descriptor address (1st descriptor)
-    sim.ft_mm2s_descriptor_register_mmap[0x8 >> 2] = sim.ft_source_mem_addr; // set target buffer address
-    sim.ft_mm2s_descriptor_register_mmap[0x18 >> 2] = sim.mem_blk_byte_size; // set mm2s/s2mm buffer length to control register
+    sim.ft_mm2s_descriptor_register_mmap[0x0 >> 2] = sim.ft_mm2s_descriptor_register_addr + 0x40;   // set next descriptor address (1st descriptor)
+    sim.ft_mm2s_descriptor_register_mmap[0x8 >> 2] = sim.ft_source_mem_addr;    // set target buffer address
+    sim.ft_mm2s_descriptor_register_mmap[0x18 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
 
-    sim.ft_mm2s_descriptor_register_mmap[0x40 >> 2] = sim.ft_mm2s_descriptor_register_addr + 0x80; // set next descriptor address
-    sim.ft_mm2s_descriptor_register_mmap[0x48 >> 2] = sim.ft_source_mem_addr; // set target buffer address
-    sim.ft_mm2s_descriptor_register_mmap[0x58 >> 2] = sim.mem_blk_byte_size; // set mm2s/s2mm buffer length to control register
+    sim.ft_mm2s_descriptor_register_mmap[0x40 >> 2] = sim.ft_mm2s_descriptor_register_addr + 0x80;  // set next descriptor address
+    sim.ft_mm2s_descriptor_register_mmap[0x48 >> 2] = sim.ft_source_mem_addr;   // set target buffer address
+    sim.ft_mm2s_descriptor_register_mmap[0x58 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
 
     sim.ft_mm2s_descriptor_register_mmap[0x80 >> 2] = sim.mt_mm2s_descriptor_register_addr; // set next descriptor address (1st descriptor)
-    sim.ft_mm2s_descriptor_register_mmap[0x88 >> 2] = sim.ft_source_mem_addr; // set target buffer address
-    sim.ft_mm2s_descriptor_register_mmap[0x98 >> 2] = sim.mem_blk_byte_size; // set mm2s/s2mm buffer length to control register
+    sim.ft_mm2s_descriptor_register_mmap[0x88 >> 2] = sim.ft_source_mem_addr;   // set target buffer address
+    sim.ft_mm2s_descriptor_register_mmap[0x98 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
 
-    ft_tail_descriptor_address = sim.ft_mm2s_descriptor_register_addr + 0x50; // save tail descriptor address
+    ft_tail_descriptor_address = sim.ft_mm2s_descriptor_register_addr + 0x50;   // save tail descriptor address
 
     /*********************************************************************/
     /*               build MT MM2S stream and control stream             */
@@ -380,21 +387,21 @@ bool start_rsim(rsim sim) {
     uint32_t mt_current_descriptor_address;
     uint32_t mt_tail_descriptor_address;
 
-    mt_current_descriptor_address = sim.mt_mm2s_descriptor_register_addr; // save current descriptor address
+    mt_current_descriptor_address = sim.mt_mm2s_descriptor_register_addr;   // save current descriptor address
 
-    sim.mt_mm2s_descriptor_register_mmap[0x0 >> 2] = sim.mt_mm2s_descriptor_register_addr + 0x40; // set next descriptor address
-    sim.mt_mm2s_descriptor_register_mmap[0x8 >> 2] = sim.mt_source_mem_addr + 0x0; // set target buffer address
-    sim.mt_mm2s_descriptor_register_mmap[0x18 >> 2] = sim.mem_blk_byte_size; // set mm2s/s2mm buffer length to control register
+    sim.mt_mm2s_descriptor_register_mmap[0x0 >> 2] = sim.mt_mm2s_descriptor_register_addr + 0x40;   // set next descriptor address
+    sim.mt_mm2s_descriptor_register_mmap[0x8 >> 2] = sim.mt_source_mem_addr + 0x0;  // set target buffer address
+    sim.mt_mm2s_descriptor_register_mmap[0x18 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
 
-    sim.mt_mm2s_descriptor_register_mmap[0x40 >> 2] = sim.mt_mm2s_descriptor_register_addr + 0x80; // set next descriptor address
-    sim.mt_mm2s_descriptor_register_mmap[0x48 >> 2] = sim.mt_source_mem_addr + (sim.mem_blk_byte_size / sizeof(unsigned int)); // set target buffer address
-    sim.mt_mm2s_descriptor_register_mmap[0x58 >> 2] = sim.mem_blk_byte_size; // set mm2s/s2mm buffer length to control register
+    sim.mt_mm2s_descriptor_register_mmap[0x40 >> 2] = sim.mt_mm2s_descriptor_register_addr + 0x80;    // set next descriptor address
+    sim.mt_mm2s_descriptor_register_mmap[0x48 >> 2] = sim.mt_source_mem_addr + (sim.mem_blk_byte_size / sizeof(uint));   // set target buffer address
+    sim.mt_mm2s_descriptor_register_mmap[0x58 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
 
     sim.mt_mm2s_descriptor_register_mmap[0x80 >> 2] = sim.mt_mm2s_descriptor_register_addr; // set next descriptor address (1st descriptor)
-    sim.mt_mm2s_descriptor_register_mmap[0x88 >> 2] = sim.mt_source_mem_addr + (2 * sim.mem_blk_byte_size / sizeof(unsigned int)); // set target buffer address
-    sim.mt_mm2s_descriptor_register_mmap[0x98 >> 2] = sim.mem_blk_byte_size; // set mm2s/s2mm buffer length to control register
+    sim.mt_mm2s_descriptor_register_mmap[0x88 >> 2] = sim.mt_source_mem_addr + (2 * sim.mem_blk_byte_size / sizeof(uint)); // set target buffer address
+    sim.mt_mm2s_descriptor_register_mmap[0x98 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
 
-    mt_tail_descriptor_address = mt_current_descriptor_address + 0x50; // save tail descriptor address
+    mt_tail_descriptor_address = mt_current_descriptor_address + 0x50;  // save tail descriptor address
 
     /*********************************************************************/
     /*                 set current descriptor addresses                  */
@@ -430,8 +437,8 @@ bool start_rsim(rsim sim) {
 /**
  * Cleans a simulation memory page.
  */
-void clear_mem(unsigned int *mem_loc, unsigned int mem_byte_size) {
-    for (unsigned int i = 0; i < mem_byte_size / sizeof(unsigned int); i++) {
+void clear_mem(uint *mem_loc, uint mem_byte_size) {
+    for (uint i = 0; i < mem_byte_size / sizeof(uint); i++) {
         mem_loc[i] = 0x00000000;
     }
 }
@@ -439,17 +446,22 @@ void clear_mem(unsigned int *mem_loc, unsigned int mem_byte_size) {
 int main() {
 
     // setup radar simulator
-    rsim sim = setup_rsim(
-    RSIM_CTRL_REGISTER_LOCATION,
+    rsim sim = setup_rsim(RSIM_CTRL_REGISTER_LOCATION,
     FT_AXI_DMA_REGISTER_LOCATION,
     MT_AXI_DMA_REGISTER_LOCATION,
     SCRATCH_MEM_LOCATION);
 
     cout << showbase << hex;
     cout << "Memory map:" << endl;
-    cout << "1. Scratch mem addr: " << SCRATCH_MEM_LOCATION << "-" << SCRATCH_MEM_LOCATION + SCRATCH_MEM_LOCATION << " size:" << SCRATCH_MEM_SIZE << endl;
-    cout << "2. FT descriptors addr: " << sim.ft_mm2s_descriptor_register_addr << "-" << sim.ft_mm2s_descriptor_register_addr + FT_MM2S_DMA_DESCRIPTORS_SIZE << " size: " << FT_MM2S_DMA_DESCRIPTORS_SIZE << endl;
-    cout << "4. MT descriptors addr: " << sim.mt_mm2s_descriptor_register_addr << "-" << sim.mt_mm2s_descriptor_register_addr + MT_MM2S_DMA_DESCRIPTORS_SIZE << " size: " << MT_MM2S_DMA_DESCRIPTORS_SIZE << endl;
+    cout << "1. Scratch mem addr: " << SCRATCH_MEM_LOCATION << "-" <<
+    SCRATCH_MEM_LOCATION +
+    SCRATCH_MEM_LOCATION << " size:" << SCRATCH_MEM_SIZE << endl;
+    cout << "2. FT descriptors addr: " << sim.ft_mm2s_descriptor_register_addr << "-" << sim.ft_mm2s_descriptor_register_addr +
+    FT_MM2S_DMA_DESCRIPTORS_SIZE << " size: " <<
+    FT_MM2S_DMA_DESCRIPTORS_SIZE << endl;
+    cout << "4. MT descriptors addr: " << sim.mt_mm2s_descriptor_register_addr << "-" << sim.mt_mm2s_descriptor_register_addr +
+    MT_MM2S_DMA_DESCRIPTORS_SIZE << " size: " <<
+    MT_MM2S_DMA_DESCRIPTORS_SIZE << endl;
     cout << "5. FT mem addr: " << sim.ft_source_mem_addr << "-" << sim.ft_source_mem_addr + sim.ft_source_mem_blk_cnt * sim.mem_blk_byte_size << " size: " << sim.ft_source_mem_blk_cnt * sim.mem_blk_byte_size << endl;
     cout << "6. MT mem addr: " << sim.mt_source_mem_addr << "-" << sim.mt_source_mem_addr + sim.mt_source_mem_blk_cnt * sim.mem_blk_byte_size << " size: " << sim.mt_source_mem_blk_cnt * sim.mem_blk_byte_size << endl;
 
@@ -462,16 +474,16 @@ int main() {
     clear_mem(sim.mt_source_mem_map_1, sim.mem_blk_byte_size);
     clear_mem(sim.mt_source_mem_map_2, sim.mem_blk_byte_size);
     clear_mem(sim.mt_source_mem_map_3, sim.mem_blk_byte_size);
-    unsigned int trig_word_cnt = TRIG_BYTE_CNT / sizeof(unsigned int);
-    for (unsigned int i = 0; i < stat.acp_cnt; i++) {
-        unsigned int pos = (i % stat.trig_us);
-        unsigned int inv_pos = stat.trig_us - pos;
+    uint trig_word_cnt = TRIG_BYTE_CNT / sizeof(uint);
+    for (uint i = 0; i < stat.acp_cnt; i++) {
+        uint pos = (i % stat.trig_us);
+        uint inv_pos = stat.trig_us - pos;
 
-        unsigned int word_offset = i * trig_word_cnt + (pos / 32);
-        unsigned int bit_offset = pos % 32;
+        uint word_offset = i * trig_word_cnt + (pos / 32);
+        uint bit_offset = pos % 32;
 
-        unsigned int inv_word_offset = i * trig_word_cnt + (inv_pos / 32);
-        unsigned int inv_bit_offset = inv_pos % 32;
+        uint inv_word_offset = i * trig_word_cnt + (inv_pos / 32);
+        uint inv_bit_offset = inv_pos % 32;
 
         sim.ft_source_mem_map[word_offset] = 0x00000000 + (1 << bit_offset);
         sim.mt_source_mem_map_1[inv_word_offset] = 0x00000000 + (1 << inv_bit_offset);
