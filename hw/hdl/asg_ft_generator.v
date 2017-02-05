@@ -59,7 +59,7 @@ module asg_ft_generator #
         .EN(EN),
         .TRIG(RADAR_TRIG_PE),
         .DATA(DATA),
-        .CLK(USEC_PE),
+        .CLK_PE(USEC_PE),
         .SYS_CLK(SYS_CLK),
         .GEN_SIGNAL(GEN_SIGNAL)
     );

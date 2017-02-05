@@ -76,4 +76,3 @@ set_property IOSTANDARD LVCMOS33 [get_ports SW_7]
 ############################
 # DEBUG                    #
 ############################
-

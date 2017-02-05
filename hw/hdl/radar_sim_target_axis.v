@@ -73,7 +73,8 @@ module radar_sim_target_axis #
         .EN(SIM_EN),
         .TRIG(RADAR_TRIG_PE),
         .DATA(bank),
-        .CLK(USEC_PE),
+        .CLK_PE(USEC_PE),
+        .SYS_CLK(S_AXIS_ACLK),
         .GEN_SIGNAL(GEN_SIGNAL)
     );
 
