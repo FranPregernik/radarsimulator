@@ -156,3 +156,8 @@ make_wrapper -files [get_files $design_name.bd] -top -import
 set_property top design_1_wrapper [current_fileset]
 
 puts "INFO: Project created:radar_simulator"
+
+
+# Settings for synth and implementation
+set_property strategy Flow_PerfOptimized_high [get_runs synth_1]
+set_property strategy Performance_ExtraTimingOpt [get_runs impl_1]

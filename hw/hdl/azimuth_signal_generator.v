@@ -44,21 +44,37 @@ module azimuth_signal_generator #
         output wire GEN_SIGNAL
     );
 
-    reg [SIZE-1:0] clk_mask = 0;
-    
+    // function called clogb2 that returns an integer which has the
+    // value of the ceiling of the log base 2.
+    function integer clogb2 (input integer bit_depth);
+      begin
+        for(clogb2=0; bit_depth>0; clogb2=clogb2+1)
+          bit_depth = bit_depth >> 1;
+      end
+    endfunction
+
+    localparam BITS = clogb2(SIZE-1);
+
+    reg [BITS-1:0] clk_idx = 1'bx;
+
     always @(posedge SYS_CLK) begin
         if (EN) begin
             if (TRIG) begin
-                clk_mask = 1;    
-            end else if (CLK_PE && (clk_mask != 0)) begin
-                clk_mask = clk_mask << 1;
+                clk_idx = 0;
+            end else if (CLK_PE && (clk_idx >= 0)) begin
+                if (clk_idx < SIZE) begin
+                    clk_idx = clk_idx + 1;
+                end
+                if (clk_idx > SIZE) begin
+                    clk_idx = SIZE;
+                end
             end
         end else begin
-            clk_mask = 0;
+            clk_idx = 1'bx;
         end
     end
-       
-    // generates the signal (0/1) based on the memory register for the current time (clk_idx in int_data)
-    assign GEN_SIGNAL = (|(DATA & clk_mask)) && EN;
+
+    // generates the signal (0/1) based on the memory register for the current time (clk_idx in DATA)
+    assign GEN_SIGNAL = EN && DATA[clk_idx];
 
 endmodule
