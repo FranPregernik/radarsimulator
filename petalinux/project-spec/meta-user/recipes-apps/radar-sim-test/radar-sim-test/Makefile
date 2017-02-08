@@ -2,7 +2,7 @@ APP = radar-sim-test
 CPPFLAGS += -std=c++11
 
 # Add any other object files to this list below
-APP_OBJS = radar-sim-test.o
+APP_OBJS = xilinx/xaxidma_bd.o xilinx/xaxidma_bdring.o xilinx/xaxidma_g.o xilinx/xaxidma_sinit.o xilinx/xaxidma.o radar-sim-test.o
 
 all: build
 

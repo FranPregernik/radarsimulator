@@ -1,50 +1,136 @@
-/*********************************************************************/
-/*                 TRANSFER MEMORY TO ZYNQ PL (MM2S)                 */
-/*                 AND FROM ZYNQ PL TO MEMORY (S2MM)                 */
-/*                                                                   */
-/*********************************************************************/
-
-#include "radar-sim-test.h"
-
-#include <stdint.h>
+/******************************************************************************
+ *
+ * Copyright (C) 2010 - 2016 Xilinx, Inc.  All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * Use of the Software is limited solely to applications:
+ * (a) running on a Xilinx device, or
+ * (b) that interact with a Xilinx device through a bus or interconnect.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * XILINX  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+ * OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ * Except as contained in this notice, the name of the Xilinx shall not be used
+ * in advertising or otherwise to promote the sale, use or other dealings in
+ * this Software without prior written authorization from Xilinx.
+ *
+ ******************************************************************************/
+/*****************************************************************************/
+/**
+ *
+ * @file xaxidma_example_sg_poll.c
+ *
+ * This file demonstrates how to use the xaxidma driver on the Xilinx AXI
+ * DMA core (AXIDMA) to transfer packets in polling mode when the AXIDMA
+ * core is configured in Scatter Gather Mode.
+ *
+ * This code assumes a loopback hardware widget is connected to the AXI DMA
+ * core for data packet loopback.
+ *
+ * To see the debug print, you need a Uart16550 or uartlite in your system,
+ * and please set "-DDEBUG" in your compiler options. You need to rebuild your
+ * software executable.
+ *
+ * Make sure that MEMORY_BASE is defined properly as per the HW system. The
+ * h/w system built in Area mode has a maximum DDR memory limit of 64MB. In
+ * throughput mode, it is 512MB.  These limits are need to ensured for
+ * proper operation of this code.
+ *
+ *
+ * <pre>
+ * MODIFICATION HISTORY:
+ *
+ * Ver   Who  Date     Changes
+ * ----- ---- -------- -------------------------------------------------------
+ * 1.00a jz   05/17/10 First release
+ * 2.00a jz   08/10/10 Second release, added in xaxidma_g.c, xaxidma_sinit.c,
+ *                     updated tcl file, added xaxidma_porting_guide.h, removed
+ *                     workaround for endianness
+ * 4.00a rkv  02/22/11 Name of the file has been changed for naming consistency
+ *                     Added interrupt support for ARM.
+ * 5.00a srt  03/05/12 Added Flushing and Invalidation of Caches to fix CRs
+ *                     648103, 648701.
+ *                     Added V7 DDR Base Address to fix CR 649405.
+ * 6.00a srt  03/27/12 Changed API calls to support MCDMA driver.
+ * 7.00a srt  06/18/12 API calls are reverted back for backward compatibility.
+ * 7.01a srt  11/02/12 Buffer sizes (Tx and Rx) are modified to meet maximum
+ *             DDR memory limit of the h/w system built with Area mode
+ * 7.02a srt  03/01/13 Updated DDR base address for IPI designs (CR 703656).
+ * 9.1   adk  01/07/16 Updated DDR base address for Ultrascale (CR 799532) and
+ *             removed the defines for S6/V6.
+ * 9.2   vak  15/04/16 Fixed compilation warnings in th example
+ * </pre>
+ *
+ * ***************************************************************************
+ */
+/***************************** Include Files *********************************/
+#include <stdio.h>
+#include <string.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/time.h>
 
-#include <iostream>
-#include <iomanip>
-#include <chrono>  // Ignore CPPLintBear
-#include <thread>  // Ignore CPPLintBear
-#include <bitset>
+#include "xilinx/xaxidma.h"
+#include "xilinx/xparameters.h"
 
-#include "xparameters.h"
-#include "xaxidma_linux.h"
-
-using namespace std;  // Ignore CPPLintBear
+/******************** Constant Definitions **********************************/
 
 /*
-
- from AXI DMA v7.1 - LogiCORE IP Product Guide http://www.xilinx.com/support/documentation/ip_documentation/axi_dma/v7_1/pg021_axi_dma.pdf
-
- 1. Write the address of the starting descriptor to the Current Descriptor register. If AXI DMA is configured for an address space greater than 32, then also program the MSB 32 bits of the current descriptor.
- 2. Start the MM2S channel running by setting the run/stop bit to 1 (MM2S_DMACR.RS =1). The Halted bit (DMASR.Halted) should deassert indicating the MM2S channel is running.
- 3. If desired, enable interrupts by writing a 1 to MM2S_DMACR.IOC_IrqEn and MM2S_DMACR.Err_IrqEn.
- 4. Write a valid address to the Tail Descriptor register. If AXI DMA is configured for an address space greater than 32, then also program the MSB 32 bits of the tail descriptor.
- 5. Writing to the Tail Descriptor register triggers the DMA to start fetching the descriptors from the memory. In case of multichannel configuration, the fetching of descriptors starts when the packet arrives on the S2MM channel.
- 6. The fetched descriptors are processed, Data is read from the memory and then output to the MM2S streaming channel.
-
+ * Device hardware build related constants.
  */
 
-#define    DESCRIPTOR_REGISTERS_SIZE          0xFFFF
-#define    CTRL_REGISTERS_SIZE                0xFFFF
-#define    SG_DMA_DESCRIPTORS_WIDTH           0xFFFF
-#define    MM_DATA_WIDTH                      1024
-#define    TRIG_MAX                           (3 * MM_DATA_WIDTH)   // 3072 bits = 96 32bit numbers
-#define    TRIG_BYTE_CNT                      (TRIG_MAX / 8)    // 400 bytes
+#define DMA_DEV_ID      XPAR_AXIDMA_0_DEVICE_ID
 
-/*********************************************************************/
-/*                       define mmap locations                       */
-/*          consult the README for the exact memory layout           */
-/*********************************************************************/
+#define MEM_BASE_ADDR       0x19000000
+
+#define TX_BD_SPACE_BASE    (MEM_BASE_ADDR)
+#define TX_BD_SPACE_HIGH    (MEM_BASE_ADDR + 0x00000FFF)
+#define RX_BD_SPACE_BASE    (MEM_BASE_ADDR + 0x00001000)
+#define RX_BD_SPACE_HIGH    (MEM_BASE_ADDR + 0x00001FFF)
+#define TX_BUFFER_BASE      (MEM_BASE_ADDR + 0x00100000)
+#define TX_BUFFER_HIGH      (MEM_BASE_ADDR + 0x05848000)
+
+#define MAX_PKT_U32_LEN     0x2400
+#define MARK_UNCACHEABLE        0x701
+
+#define TEST_START_VALUE    0xC
+
+/**************************** Type Definitions *******************************/
+
+/***************** Macros (Inline Functions) Definitions *********************/
+
+/************************** Function Prototypes ******************************/
+
+static int TxSetup(XAxiDma * AxiDmaInstPtr, int devMemHandle);
+static int SendPacket(XAxiDma * AxiDmaInstPtr);
+static int CheckDmaResult(XAxiDma * AxiDmaInstPtr);
+
+/************************** Variable Definitions *****************************/
+/*
+ * Device instance definitions
+ */
+XAxiDma AxiDma;
+
+/*
+ * Buffer for transmit packet. Must be 32-bit aligned to be used by DMA.
+ */
+u32 *Packet;
 
 // AXI LITE Register Address Map for the control/statistics unit
 #define    RSIM_CTRL_REGISTER_LOCATION           0x43C00000
@@ -54,466 +140,521 @@ using namespace std;  // Ignore CPPLintBear
 #define    RSIM_CTRL_ACP_CNT                     0x3
 #define    RSIM_CTRL_TRIG_US                     0x4
 #define    RSIM_CTRL_ACP_IDX                     0x5
+#define    RSIM_CTRL_FT_FIFO_CNT                 0x6
+#define    RSIM_CTRL_FT_FIFO_RD_CNT              0x7
+#define    RSIM_CTRL_FT_FIFO_WR_CNT              0x8
+#define    RSIM_CTRL_MT_FIFO_CNT                 0x9
+#define    RSIM_CTRL_MT_FIFO_RD_CNT              0xA
+#define    RSIM_CTRL_MT_FIFO_WR_CNT              0xB
 
-// AXI DMA Register Address Map for fixed targets
-#define    FT_AXI_DMA_REGISTER_LOCATION          0x40400000
+static void PrintMem(u32 *mem, u32 size, u32 wrapping) {
+    printf("--- MEM from: 0x%08x - 0x%08x --- \r\n", mem, mem + size);
 
-// AXI DMA Register Address Map for moving targets
-#define    MT_AXI_DMA_REGISTER_LOCATION          0x40410000
-
-// specified by the kernel boot args
-#define    SCRATCH_MEM_LOCATION                  0x19000000
-#define    SCRATCH_MEM_SIZE                      0x7000000
-
-// We will be using 3 descriptors for the fixed targets pointing to the same memory region
-#define    FT_DESCRIPTOR_REGISTERS_SIZE          0x3
-#define    FT_MM2S_DMA_DESCRIPTORS_OFFSET        0x0
-#define    FT_MM2S_DMA_DESCRIPTORS_SIZE          (FT_DESCRIPTOR_REGISTERS_SIZE * SG_DMA_DESCRIPTORS_WIDTH)
-
-// We will be using 3 descriptors for the moving targets pointing to separate memory regions
-#define    MT_DESCRIPTOR_REGISTERS_SIZE          0x3
-#define    MT_MM2S_DMA_DESCRIPTORS_OFFSET        (FT_MM2S_DMA_DESCRIPTORS_OFFSET + FT_MM2S_DMA_DESCRIPTORS_SIZE + MM_DATA_WIDTH)
-#define    MT_MM2S_DMA_DESCRIPTORS_SIZE          (MT_DESCRIPTOR_REGISTERS_SIZE * SG_DMA_DESCRIPTORS_WIDTH)
-
-// location of simulation data aligned with to MM_DATA_WIDTH address
-#define    RSIM_SOURCE_MEM_OFFSET                (((MT_MM2S_DMA_DESCRIPTORS_OFFSET + MT_MM2S_DMA_DESCRIPTORS_SIZE + MM_DATA_WIDTH) / MM_DATA_WIDTH) * MM_DATA_WIDTH)
-
-/*********************************************************************/
-/*                   define all register locations                   */
-/*               based on "LogiCORE IP Product Guide"                */
-/*********************************************************************/
-
-// MM2S CONTROL
-#define MM2S_CONTROL_REGISTER       0x00    // MM2S_DMACR
-#define MM2S_STATUS_REGISTER        0x04    // MM2S_DMASR
-
-// scatter gather
-#define MM2S_CURDESC                0x08    // must align 0x40 addresses
-#define MM2S_CURDESC_MSB            0x0C    // unused with 32bit addresses
-#define MM2S_TAILDESC               0x10    // must align 0x40 addresses
-#define MM2S_TAILDESC_MSB           0x14    // unused with 32bit addresses
-
-// direct DMA
-#define MM2SA_SA                    0x18    // source address
-#define MM2SA_LENGTH                0x28    // source address
-
-struct rsim {
-    int device_handle;
-    uint scratch_mem_addr;
-
-    uint *ctrl_register_mmap;
-    uint mem_blk_byte_size;
-
-    uint *ft_adma_register_mmap;
-
-    uint ft_mm2s_descriptor_register_addr;
-    uint *ft_mm2s_descriptor_register_mmap;
-
-    uint ft_source_mem_addr;
-    uint *ft_source_mem_map;
-    uint ft_source_mem_blk_cnt;
-
-    uint *mt_adma_register_mmap;
-
-    uint mt_mm2s_descriptor_register_addr;
-    uint *mt_mm2s_descriptor_register_mmap;
-
-    uint mt_source_mem_addr;
-    uint *mt_source_mem_map_1;
-    uint *mt_source_mem_map_2;
-    uint *mt_source_mem_map_3;
-    uint mt_source_mem_blk_cnt;
-
-};
-
-struct rsim_stat {
-    bool calibrated;
-    uint arp_us;
-    uint acp_cnt;
-    uint trig_us;
-    uint acp_idx;
-
-    uint ft_dma_status;
-    uint mt_dma_status;
-};
-
-void print_mem(uint *mem_loc, uint word_count) {
-    for (uint i = 0; i < word_count; i++) {
-        cout << noshowbase << "0x" << setfill('0') << setw(8) << right << hex << mem_loc + i << " ";
-        cout << noshowbase << "0x" << setfill('0') << setw(8) << right << hex << mem_loc[i] << " ";
-        cout << std::bitset < 32 > (mem_loc[i]) << endl;
+    for (int i = 0; i < size; i += wrapping) {
+        printf("0x%08x: ", mem + i);
+        for (int j = 0; j < wrapping; j++) {
+            printf("%08x ", mem[i + j]);
+        }
+        printf("\r\n");
     }
 }
 
-/*********************************************************************/
-/*                 reset and halt all dma operations                 */
-/*********************************************************************/
-void reset_halt_dma(uint *axi_dma_register_mmap) {
-    axi_dma_register_mmap[MM2S_CONTROL_REGISTER >> 2] = 0x4;
-    axi_dma_register_mmap[MM2S_CONTROL_REGISTER >> 2] = 0x0;
-}
-
+/*****************************************************************************/
 /**
- * Disables the simulator output then stops and resets the DMA engine.
- */
-bool stop_rsim(rsim sim) {
+ * Dump the fields of a BD.
+ *
+ * @param   BdPtr is the BD to operate on.
+ *
+ * @return  None
+ *
+ * @note    This function can be used only when DMA is in SG mode
+ *
+ *****************************************************************************/
+void XAxiDma_DumpBd(XAxiDma_Bd* BdPtr, XAxiDma_BdRing *BdRingPtr)
+{
 
-    reset_halt_dma(sim.ft_adma_register_mmap);
-    reset_halt_dma(sim.mt_adma_register_mmap);
+    printf("Dump BD %x:\r\n", (UINTPTR)XAXIDMA_BD_VIRT_TO_PHYS(BdPtr, BdRingPtr));
+    printf("\tNext Bd Ptr: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_NDESC_OFFSET));
+    printf("\tBuff addr: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_BUFA_OFFSET));
+    printf("\tMCDMA Fields: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_MCCTL_OFFSET));
+    printf("\tVSIZE_STRIDE: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr,
+                    XAXIDMA_BD_STRIDE_VSIZE_OFFSET));
+    printf("\tContrl len: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_CTRL_LEN_OFFSET));
+    printf("\tStatus: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_STS_OFFSET));
 
-    sim.ctrl_register_mmap[0x0] = 0;
-    return sim.ctrl_register_mmap[0x0] == 0;
+    printf("\tAPP 0: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR0_OFFSET));
+    printf("\tAPP 1: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR1_OFFSET));
+    printf("\tAPP 2: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR2_OFFSET));
+    printf("\tAPP 3: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR3_OFFSET));
+    printf("\tAPP 4: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_USR4_OFFSET));
+
+    printf("\tSW ID: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_ID_OFFSET));
+    printf("\tStsCtrl: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr,
+               XAXIDMA_BD_HAS_STSCNTRL_OFFSET));
+    printf("\tDRE: %x\r\n",
+        (unsigned int)XAxiDma_BdRead(BdPtr, XAXIDMA_BD_HAS_DRE_OFFSET));
+
+    printf("\r\n");
 }
 
-void prog_exit(int exit_code, rsim sim) {
-    if (sim.ctrl_register_mmap) {
-        // disable simulator
-        sim.ctrl_register_mmap[0x0] = 0;
-    }
-    exit(exit_code);
-}
+static void PrintDmaStatus(XAxiDma *InstancePtr) {
+    u32 statusRegister = XAxiDma_ReadReg(InstancePtr->RegBase + XAXIDMA_TX_OFFSET, XAXIDMA_SR_OFFSET);
 
-rsim setup_rsim(uint ctrl_register_addr, uint ft_adma_register_addr, uint mt_adma_register_addr, uint scratch_addr) {
-
-    rsim sim = { };
-    sim.scratch_mem_addr = scratch_addr;
-
-    sim.device_handle = open("/dev/mem", O_RDWR | O_SYNC);
-
-    uint *scratch_mem_raw =  reinterpret_cast<uint *>(mmap(NULL,
-    SCRATCH_MEM_SIZE,
-    PROT_READ |
-    PROT_WRITE,
-    MAP_SHARED, sim.device_handle, (off_t)
-    SCRATCH_MEM_LOCATION));
-
-    if (scratch_mem_raw == MAP_FAILED) {
-        cerr << "Unable to map to scratch memory" << endl;
-        prog_exit(-1, sim);
-    }
-
-    // clear scratch memory
-    for (uint i = 0; i < SCRATCH_MEM_SIZE / 4; i++) {
-        scratch_mem_raw[i] = 0x00000000;
-    }
-
-    sim.ctrl_register_mmap = reinterpret_cast<uint *>(mmap(NULL,
-    CTRL_REGISTERS_SIZE,
-    PROT_READ | PROT_WRITE,
-    MAP_SHARED, sim.device_handle, (off_t) ctrl_register_addr));
-
-    if (!sim.ctrl_register_mmap[RSIM_CTRL_CALIBRATED]) {
-        cerr << "system is not calibrated" << endl;
-        prog_exit(-2, sim);
-    }
-
-    // disable simulator
-    sim.ctrl_register_mmap[0x0] = 0;
-
-    sim.mem_blk_byte_size = sim.ctrl_register_mmap[RSIM_CTRL_ACP_CNT] * TRIG_BYTE_CNT;
-
-    sim.ft_adma_register_mmap = reinterpret_cast<uint *>(mmap(NULL,
-    DESCRIPTOR_REGISTERS_SIZE,
-    PROT_READ | PROT_WRITE,
-    MAP_SHARED, sim.device_handle, (off_t) ft_adma_register_addr));
-
-    sim.mt_adma_register_mmap = reinterpret_cast<uint *>(mmap(NULL,
-    DESCRIPTOR_REGISTERS_SIZE,
-    PROT_READ | PROT_WRITE,
-    MAP_SHARED, sim.device_handle, (off_t) mt_adma_register_addr));
-
-    sim.ft_mm2s_descriptor_register_addr = scratch_addr + FT_MM2S_DMA_DESCRIPTORS_OFFSET;
-    sim.ft_mm2s_descriptor_register_mmap = scratch_mem_raw + FT_MM2S_DMA_DESCRIPTORS_OFFSET;
-
-    sim.mt_mm2s_descriptor_register_addr = scratch_addr + MT_MM2S_DMA_DESCRIPTORS_OFFSET;
-    sim.mt_mm2s_descriptor_register_mmap = scratch_mem_raw + MT_MM2S_DMA_DESCRIPTORS_OFFSET;
-
-    sim.ft_source_mem_addr = scratch_addr + RSIM_SOURCE_MEM_OFFSET;
-    sim.ft_source_mem_blk_cnt = 1;
-    sim.ft_source_mem_map = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET) / sizeof(uint);
-
-    sim.mt_source_mem_addr = scratch_addr + RSIM_SOURCE_MEM_OFFSET + sim.mem_blk_byte_size;
-    sim.mt_source_mem_blk_cnt = MT_DESCRIPTOR_REGISTERS_SIZE;
-    sim.mt_source_mem_map_1 = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET + sim.mem_blk_byte_size) / sizeof(uint);
-    sim.mt_source_mem_map_2 = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET + 2 * sim.mem_blk_byte_size) / sizeof(uint);
-    sim.mt_source_mem_map_3 = scratch_mem_raw + (RSIM_SOURCE_MEM_OFFSET + 3 * sim.mem_blk_byte_size) / sizeof(uint);
-
-    // SETUP DMA
-    reset_halt_dma(sim.ft_adma_register_mmap);
-    reset_halt_dma(sim.mt_adma_register_mmap);
-
-    return sim;
-
-}
-
-/**
- * Fetches the statistics from the control unit
- */
-rsim_stat get_rsim_stats(rsim sim) {
-    rsim_stat stats = { };
-
-    stats.calibrated = sim.ctrl_register_mmap[RSIM_CTRL_CALIBRATED];
-    stats.arp_us = sim.ctrl_register_mmap[RSIM_CTRL_ARP_US];
-    stats.acp_cnt = sim.ctrl_register_mmap[RSIM_CTRL_ACP_CNT];
-    stats.trig_us = sim.ctrl_register_mmap[RSIM_CTRL_TRIG_US];
-    stats.acp_idx = sim.ctrl_register_mmap[RSIM_CTRL_ACP_IDX];
-
-    stats.ft_dma_status = sim.ft_adma_register_mmap[MM2S_STATUS_REGISTER >> 2];
-    stats.mt_dma_status = sim.mt_adma_register_mmap[MM2S_STATUS_REGISTER >> 2];
-
-    return stats;
-}
-
-bool is_dma_ok(rsim_stat stat) {
-    return ((stat.ft_dma_status & 0x00001000) && (stat.mt_dma_status & 0x00001000));
-}
-
-void print_rsim_stat(rsim_stat stat) {
-    cout << showbase << hex;
-    cout << "Radar simulator stats:" << endl;
-    cout << "1. Calibrated: " << stat.calibrated << endl;
-    cout << "2. ARP [us]: " << stat.arp_us << endl;
-    cout << "3. ACP count (per ARP): " << stat.acp_cnt << endl;
-    cout << "4. TRIG [us]: " << stat.trig_us << endl;
-    cout << "5. ACP index: " << stat.acp_idx << endl;
-
-    cout << "6. FT DMA: ";
-    if (stat.ft_dma_status & 0x00000001) {
-        cout << " halted";
+    printf("Dump DMA %x:\r\n", XAXIDMA_VIRT_TO_PHYS(InstancePtr->RegBase, InstancePtr));
+    printf("\t STATUS ");
+    if (statusRegister & 0x00000001) {
+        printf(" halted");
     } else {
-        cout << " running";
+        printf(" running");
     }
-    if (stat.ft_dma_status & 0x00000002)
-        cout << " idle";
-    if (stat.ft_dma_status & 0x00000008)
-        cout << " SGIncld";
-    if (stat.ft_dma_status & 0x00000010)
-        cout << " DMAIntErr";
-    if (stat.ft_dma_status & 0x00000020)
-        cout << " DMASlvErr";
-    if (stat.ft_dma_status & 0x00000040)
-        cout << " DMADecErr";
-    if (stat.ft_dma_status & 0x00000100)
-        cout << " SGIntErr";
-    if (stat.ft_dma_status & 0x00000200)
-        cout << " SGSlvErr";
-    if (stat.ft_dma_status & 0x00000400)
-        cout << " SGDecErr";
-    if (stat.ft_dma_status & 0x00001000)
-        cout << " IOC_Irq";
-    if (stat.ft_dma_status & 0x00002000)
-        cout << " Dly_Irq";
-    if (stat.ft_dma_status & 0x00004000)
-        cout << " Err_Irq";
-    cout << endl;
-
-    cout << "7. MT DMA: ";
-    if (stat.mt_dma_status & 0x00000001) {
-        cout << " halted";
-    } else {
-        cout << " running";
-    }
-    if (stat.mt_dma_status & 0x00000002)
-        cout << " idle";
-    if (stat.mt_dma_status & 0x00000008)
-        cout << " SGIncld";
-    if (stat.mt_dma_status & 0x00000010)
-        cout << " DMAIntErr";
-    if (stat.mt_dma_status & 0x00000020)
-        cout << " DMASlvErr";
-    if (stat.mt_dma_status & 0x00000040)
-        cout << " DMADecErr";
-    if (stat.mt_dma_status & 0x00000100)
-        cout << " SGIntErr";
-    if (stat.mt_dma_status & 0x00000200)
-        cout << " SGSlvErr";
-    if (stat.mt_dma_status & 0x00000400)
-        cout << " SGDecErr";
-    if (stat.mt_dma_status & 0x00001000)
-        cout << " IOC_Irq";
-    if (stat.mt_dma_status & 0x00002000)
-        cout << " Dly_Irq";
-    if (stat.mt_dma_status & 0x00004000)
-        cout << " Err_Irq";
-    cout << endl;
-
+    if (statusRegister & 0x00000002)
+        printf(" idle");
+    if (statusRegister & 0x00000008)
+        printf(" SGIncld");
+    if (statusRegister & 0x00000010)
+        printf(" DMAIntErr");
+    if (statusRegister & 0x00000020)
+        printf(" DMASlvErr");
+    if (statusRegister & 0x00000040)
+        printf(" DMADecErr");
+    if (statusRegister & 0x00000100)
+        printf(" SGIntErr");
+    if (statusRegister & 0x00000200)
+        printf(" SGSlvErr");
+    if (statusRegister & 0x00000400)
+        printf(" SGDecErr");
+    if (statusRegister & 0x00001000)
+        printf(" IOC_Irq");
+    if (statusRegister & 0x00002000)
+        printf(" Dly_Irq");
+    if (statusRegister & 0x00004000)
+        printf(" Err_Irq");
+    printf("\r\n");
+    printf("\t CDESC: %x\r\n", XAxiDma_ReadReg(InstancePtr->RegBase + XAXIDMA_TX_OFFSET, XAXIDMA_CDESC_OFFSET));
+    printf("\t TDESC: %x\r\n", XAxiDma_ReadReg(InstancePtr->RegBase + XAXIDMA_TX_OFFSET, XAXIDMA_TDESC_OFFSET));
 }
 
+static int XAxiDma_Running(XAxiDma *InstancePtr) {
+    u32 sr = XAxiDma_ReadReg(InstancePtr->RegBase + XAXIDMA_TX_OFFSET, XAXIDMA_SR_OFFSET);
+    return (sr && 0x00000001 == 1) && (sr && 0x00000002 == 0);
+}
+
+/*****************************************************************************/
 /**
- * Fetches the statistics from the control unit
- */
-uint get_rsim_acp_idx(rsim sim) {
-    return sim.ctrl_register_mmap[0x14];
-}
-
+ *
+ * Main function
+ *
+ * This function is the main entry of the tests on DMA core. It sets up
+ * DMA engine to be ready to receive and send packets, then a packet is
+ * transmitted and will be verified after it is received via the DMA loopback
+ * widget.
+ *
+ * @param    None
+ *
+ * @return
+ *       - XST_SUCCESS if test passes
+ *       - XST_FAILURE if test fails.
+ *
+ * @note     None.
+ *
+ ******************************************************************************/
+/*****************************************************************************/
 /**
- * Starts the DMA engine and enables the simulator output
- */
-bool start_rsim(rsim sim) {
+ *
+ * Main function
+ *
+ * This function is the main entry of the tests on DMA core. It sets up
+ * DMA engine to be ready to receive and send packets, then a packet is
+ * transmitted and will be verified after it is received via the DMA loopback
+ * widget.
+ *
+ * @param    None
+ *
+ * @return
+ *       - XST_SUCCESS if test passes
+ *       - XST_FAILURE if test fails.
+ *
+ * @note     None.
+ *
+ ******************************************************************************/
+int main(void) {
+    int Status;
+    XAxiDma_Config *Config;
 
-    /*********************************************************************/
-    /*               build FT MM2S stream and control stream             */
-    /* chains will be filled with next desc, buffer width and registers  */
-    /*                         [0]: next descr                           */
-    /*                         [1]: reserved                             */
-    /*                         [2]: buffer addr                          */
-    /*********************************************************************/
-    uint32_t ft_current_descriptor_address;
-    uint32_t ft_tail_descriptor_address;
+    printf("\r\n--- Entering main() --- \r\n");
 
-    ft_current_descriptor_address = sim.ft_mm2s_descriptor_register_addr;   // save current descriptor address
+    int dh = open("/dev/mem", O_RDWR | O_SYNC);
 
-    sim.ft_mm2s_descriptor_register_mmap[0x0 >> 2] = sim.ft_mm2s_descriptor_register_addr + 0x40;   // set next descriptor address (1st descriptor)
-    sim.ft_mm2s_descriptor_register_mmap[0x8 >> 2] = sim.ft_source_mem_addr;    // set target buffer address
-    sim.ft_mm2s_descriptor_register_mmap[0x18 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
+    printf("--- Disable RSIM --- \r\n");
 
-    sim.ft_mm2s_descriptor_register_mmap[0x40 >> 2] = sim.ft_mm2s_descriptor_register_addr + 0x80;  // set next descriptor address
-    sim.ft_mm2s_descriptor_register_mmap[0x48 >> 2] = sim.ft_source_mem_addr;   // set target buffer address
-    sim.ft_mm2s_descriptor_register_mmap[0x58 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
+    u32 *ctrl_regs = (u32 *) mmap(NULL, DESCRIPTOR_REGISTERS_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, dh, RSIM_CTRL_REGISTER_LOCATION);
+    ctrl_regs[RSIM_CTRL_ENABLED] = 0;
 
-    sim.ft_mm2s_descriptor_register_mmap[0x80 >> 2] = sim.mt_mm2s_descriptor_register_addr; // set next descriptor address (1st descriptor)
-    sim.ft_mm2s_descriptor_register_mmap[0x88 >> 2] = sim.ft_source_mem_addr;   // set target buffer address
-    sim.ft_mm2s_descriptor_register_mmap[0x98 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
+    u32 trig_word_cnt = (3 * 1024 / 8) / sizeof(u32);
+    u32 mem_blk_word_size = 4096 * (3 * 1024 / 8) / sizeof(u32);
+    u32 mem_blk_total_byte_cnt = 4 * mem_blk_word_size * sizeof(u32);
 
-    ft_tail_descriptor_address = sim.ft_mm2s_descriptor_register_addr + 0x50;   // save tail descriptor address
+    // TODO:
+    Packet = (u32 *) mmap(NULL, mem_blk_total_byte_cnt, PROT_READ | PROT_WRITE, MAP_SHARED, dh, TX_BUFFER_BASE);
 
-    /*********************************************************************/
-    /*               build MT MM2S stream and control stream             */
-    /* chains will be filled with next desc, buffer width and registers  */
-    /*                         [0]: next descr                           */
-    /*                         [1]: reserved                             */
-    /*                         [2]: buffer addr                          */
-    /*********************************************************************/
-    uint32_t mt_current_descriptor_address;
-    uint32_t mt_tail_descriptor_address;
+    printf("--- Clean memory --- \r\n");
 
-    mt_current_descriptor_address = sim.mt_mm2s_descriptor_register_addr;   // save current descriptor address
+    // clean
+    for (u32 i = 0; i < 3 * mem_blk_word_size; i++) {
+        Packet[i] = 0x00000000;
+    }
 
-    sim.mt_mm2s_descriptor_register_mmap[0x0 >> 2] = sim.mt_mm2s_descriptor_register_addr + 0x40;   // set next descriptor address
-    sim.mt_mm2s_descriptor_register_mmap[0x8 >> 2] = sim.mt_source_mem_addr + 0x0;  // set target buffer address
-    sim.mt_mm2s_descriptor_register_mmap[0x18 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
+    printf("--- Prepare test data --- \r\n");
 
-    sim.mt_mm2s_descriptor_register_mmap[0x40 >> 2] = sim.mt_mm2s_descriptor_register_addr + 0x80;    // set next descriptor address
-    sim.mt_mm2s_descriptor_register_mmap[0x48 >> 2] = sim.mt_source_mem_addr + (sim.mem_blk_byte_size / sizeof(uint));   // set target buffer address
-    sim.mt_mm2s_descriptor_register_mmap[0x58 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
+    for (u32 i = 0; i < 4096; i++) {
+        u32 pos = (i % 3072);
+        u32 inv_pos = 3072 - pos;
 
-    sim.mt_mm2s_descriptor_register_mmap[0x80 >> 2] = sim.mt_mm2s_descriptor_register_addr; // set next descriptor address (1st descriptor)
-    sim.mt_mm2s_descriptor_register_mmap[0x88 >> 2] = sim.mt_source_mem_addr + (2 * sim.mem_blk_byte_size / sizeof(uint)); // set target buffer address
-    sim.mt_mm2s_descriptor_register_mmap[0x98 >> 2] = sim.mem_blk_byte_size;    // set mm2s/s2mm buffer length to control register
+        u32 word_offset = (pos / 32);
+        u32 bit_offset = 32 - pos % 32 - 1;
 
-    mt_tail_descriptor_address = mt_current_descriptor_address + 0x50;  // save tail descriptor address
+        u32 inv_word_offset = (inv_pos / 32);
+        u32 inv_bit_offset = 32 - inv_pos % 32 - 1;
 
-    /*********************************************************************/
-    /*                 set current descriptor addresses                  */
-    /*           and start dma operations (S2MM_DMACR.RS = 1)            */
-    /*********************************************************************/
+        u8 pattern = 0x7;
 
-    sim.ft_adma_register_mmap[MM2S_CURDESC >> 2] = ft_current_descriptor_address;
-    // Cyclic BD Enable
-    sim.ft_adma_register_mmap[MM2S_CONTROL_REGISTER >> 2] = 1 << 4;
-    // Run / Stop control for controlling running and stopping of the DMA channel.
-    sim.ft_adma_register_mmap[MM2S_CONTROL_REGISTER >> 2] = 1 << 0;
+        Packet[i * trig_word_cnt + word_offset] |= 0x00000000 + (pattern << bit_offset);
+        Packet[i * trig_word_cnt + mem_blk_word_size + inv_word_offset] |= 0x00000000 + (pattern << inv_bit_offset);
+        Packet[i * trig_word_cnt + 2 * mem_blk_word_size + word_offset] |= 0x00000000 + (pattern << bit_offset);
+        Packet[i * trig_word_cnt + 3 * mem_blk_word_size + inv_word_offset] |= 0x00000000 + (pattern << inv_bit_offset);
+    }
 
-    sim.mt_adma_register_mmap[MM2S_CURDESC >> 2] = mt_current_descriptor_address;
-    // Cyclic BD Enable
-    sim.mt_adma_register_mmap[MM2S_CONTROL_REGISTER >> 2] = 1 << 4;
-    // Run / Stop control for controlling running and stopping of the DMA channel.
-    sim.mt_adma_register_mmap[MM2S_CONTROL_REGISTER >> 2] = 1 << 0;
+    //PrintMem(Packet, mem_blk_word_size, 96);
 
-    /*********************************************************************/
-    /*                          start transfer                           */
-    /*                 (by setting the tail descriptors)                 */
-    /*********************************************************************/
+    Config = XAxiDma_LookupConfig(DMA_DEV_ID);
+    if (!Config) {
+        printf("No config found for %d\r\n", DMA_DEV_ID);
 
-    sim.ft_adma_register_mmap[MM2S_TAILDESC >> 2] = ft_tail_descriptor_address;
-    sim.mt_adma_register_mmap[MM2S_TAILDESC >> 2] = mt_tail_descriptor_address;
+        return XST_FAILURE;
+    }
 
-    // ENABLE SIMULATOR OUTPUT
+    /* Initialize DMA engine */
+    Status = XAxiDma_CfgInitialize(&AxiDma, dh, Config);
+    if (Status != XST_SUCCESS) {
+        printf("Initialization failed %d\r\n", Status);
+        return XST_FAILURE;
+    }
 
-    sim.ctrl_register_mmap[0x0] = 1;
-    return sim.ctrl_register_mmap[0x0] == 1;
+    if (!XAxiDma_HasSg(&AxiDma)) {
+        printf("Device configured as Simple mode \r\n");
+
+        return XST_FAILURE;
+    }
+
+    Status = TxSetup(&AxiDma, dh);
+    if (Status != XST_SUCCESS) {
+        return XST_FAILURE;
+    }
+
+    printf("--- RSIM Status  --- \r\n");
+
+    printf("RSIM_CTRL_ENABLED %d\r\n", ctrl_regs[RSIM_CTRL_ENABLED]);
+    printf("RSIM_CTRL_CALIBRATED %d\r\n", ctrl_regs[RSIM_CTRL_CALIBRATED]);
+    printf("RSIM_CTRL_ARP_US %d\r\n", ctrl_regs[RSIM_CTRL_ARP_US]);
+    printf("RSIM_CTRL_ACP_CNT %d\r\n", ctrl_regs[RSIM_CTRL_ACP_CNT]);
+    printf("RSIM_CTRL_TRIG_US %d\r\n", ctrl_regs[RSIM_CTRL_TRIG_US]);
+    printf("RSIM_CTRL_ACP_IDX %d\r\n", ctrl_regs[RSIM_CTRL_ACP_IDX]);
+    printf("RSIM_CTRL_FT_FIFO_CNT %d\r\n", ctrl_regs[RSIM_CTRL_FT_FIFO_CNT]);
+    printf("RSIM_CTRL_FT_FIFO_RD_CNT %d\r\n", ctrl_regs[RSIM_CTRL_FT_FIFO_RD_CNT]);
+    printf("RSIM_CTRL_FT_FIFO_WR_CNT %d\r\n", ctrl_regs[RSIM_CTRL_FT_FIFO_WR_CNT]);
+    printf("RSIM_CTRL_MT_FIFO_CNT %d\r\n", ctrl_regs[RSIM_CTRL_MT_FIFO_CNT]);
+    printf("RSIM_CTRL_MT_FIFO_RD_CNT %d\r\n", ctrl_regs[RSIM_CTRL_MT_FIFO_RD_CNT]);
+    printf("RSIM_CTRL_MT_FIFO_WR_CNT %d\r\n", ctrl_regs[RSIM_CTRL_MT_FIFO_WR_CNT]);
+
+    printf("--- Send a packet --- \r\n");
+
+    /* Send a packet */
+    Status = SendPacket(&AxiDma);
+    if (Status != XST_SUCCESS) {
+        return XST_FAILURE;
+    }
+
+    printf("--- RSIM Status  --- \r\n");
+
+    printf("RSIM_CTRL_ENABLED %d\r\n", ctrl_regs[RSIM_CTRL_ENABLED]);
+    printf("RSIM_CTRL_CALIBRATED %d\r\n", ctrl_regs[RSIM_CTRL_CALIBRATED]);
+    printf("RSIM_CTRL_ARP_US %d\r\n", ctrl_regs[RSIM_CTRL_ARP_US]);
+    printf("RSIM_CTRL_ACP_CNT %d\r\n", ctrl_regs[RSIM_CTRL_ACP_CNT]);
+    printf("RSIM_CTRL_TRIG_US %d\r\n", ctrl_regs[RSIM_CTRL_TRIG_US]);
+    printf("RSIM_CTRL_ACP_IDX %d\r\n", ctrl_regs[RSIM_CTRL_ACP_IDX]);
+    printf("RSIM_CTRL_FT_FIFO_CNT %d\r\n", ctrl_regs[RSIM_CTRL_FT_FIFO_CNT]);
+    printf("RSIM_CTRL_FT_FIFO_RD_CNT %d\r\n", ctrl_regs[RSIM_CTRL_FT_FIFO_RD_CNT]);
+    printf("RSIM_CTRL_FT_FIFO_WR_CNT %d\r\n", ctrl_regs[RSIM_CTRL_FT_FIFO_WR_CNT]);
+    printf("RSIM_CTRL_MT_FIFO_CNT %d\r\n", ctrl_regs[RSIM_CTRL_MT_FIFO_CNT]);
+    printf("RSIM_CTRL_MT_FIFO_RD_CNT %d\r\n", ctrl_regs[RSIM_CTRL_MT_FIFO_RD_CNT]);
+    printf("RSIM_CTRL_MT_FIFO_WR_CNT %d\r\n", ctrl_regs[RSIM_CTRL_MT_FIFO_WR_CNT]);
+
+    ctrl_regs[RSIM_CTRL_ENABLED] = 1;
+    printf("RSIM_CTRL_ENABLED %d\r\n", ctrl_regs[RSIM_CTRL_ENABLED]);
+
+    /* Check DMA transfer result */
+    Status = CheckDmaResult(&AxiDma);
+    if (Status != XST_SUCCESS) {
+        return XST_FAILURE;
+    }
+    printf("AXI DMA SG Polling Test %s\r\n", (Status == XST_SUCCESS) ? "passed" : "failed");
+
+    do {
+
+        printf("--- RSIM Status  --- \r\n");
+
+        printf("RSIM_CTRL_ENABLED %d\r\n", ctrl_regs[RSIM_CTRL_ENABLED]);
+        printf("RSIM_CTRL_CALIBRATED %d\r\n", ctrl_regs[RSIM_CTRL_CALIBRATED]);
+        printf("RSIM_CTRL_ARP_US %d\r\n", ctrl_regs[RSIM_CTRL_ARP_US]);
+        printf("RSIM_CTRL_ACP_CNT %d\r\n", ctrl_regs[RSIM_CTRL_ACP_CNT]);
+        printf("RSIM_CTRL_TRIG_US %d\r\n", ctrl_regs[RSIM_CTRL_TRIG_US]);
+        printf("RSIM_CTRL_ACP_IDX %d\r\n", ctrl_regs[RSIM_CTRL_ACP_IDX]);
+        printf("RSIM_CTRL_FT_FIFO_CNT %d\r\n", ctrl_regs[RSIM_CTRL_FT_FIFO_CNT]);
+        printf("RSIM_CTRL_FT_FIFO_RD_CNT %d\r\n", ctrl_regs[RSIM_CTRL_FT_FIFO_RD_CNT]);
+        printf("RSIM_CTRL_FT_FIFO_WR_CNT %d\r\n", ctrl_regs[RSIM_CTRL_FT_FIFO_WR_CNT]);
+        printf("RSIM_CTRL_MT_FIFO_CNT %d\r\n", ctrl_regs[RSIM_CTRL_MT_FIFO_CNT]);
+        printf("RSIM_CTRL_MT_FIFO_RD_CNT %d\r\n", ctrl_regs[RSIM_CTRL_MT_FIFO_RD_CNT]);
+        printf("RSIM_CTRL_MT_FIFO_WR_CNT %d\r\n", ctrl_regs[RSIM_CTRL_MT_FIFO_WR_CNT]);
+
+        PrintDmaStatus(&AxiDma);
+
+        sleep(10);
+
+    } while (XAxiDma_Running(&AxiDma) == 1);
+
+    ctrl_regs[RSIM_CTRL_ENABLED] = 0;
+    printf("RSIM_CTRL_ENABLED %d\r\n", ctrl_regs[RSIM_CTRL_ENABLED]);
+
+    printf("--- Exiting main() --- \r\n");
+
+    return XST_SUCCESS;
 }
 
+/*****************************************************************************/
 /**
- * Cleans a simulation memory page.
- */
-void clear_mem(uint *mem_loc, uint mem_byte_size) {
-    for (uint i = 0; i < mem_byte_size / sizeof(uint); i++) {
-        mem_loc[i] = 0x00000000;
+ *
+ * This function sets up the TX channel of a DMA engine to be ready for packet
+ * transmission
+ *
+ * @param    AxiDmaInstPtr is the instance pointer to the DMA engine.
+ *
+ * @return   XST_SUCCESS if the setup is successful, XST_FAILURE otherwise.
+ *
+ * @note     None.
+ *
+ ******************************************************************************/
+static int TxSetup(XAxiDma * AxiDmaInstPtr, int devMemHandle) {
+    XAxiDma_BdRing *TxRingPtr;
+    XAxiDma_Bd BdTemplate;
+    int Delay = 0;
+    int Coalesce = 1;
+    int Status;
+    u32 BdCount;
+
+    TxRingPtr = XAxiDma_GetTxRing(&AxiDma);
+
+    /* Disable all TX interrupts before TxBD space setup */
+    XAxiDma_BdRingIntDisable(TxRingPtr, XAXIDMA_IRQ_ALL_MASK);
+
+    /* Set TX delay and coalesce */
+    XAxiDma_BdRingSetCoalesce(TxRingPtr, Coalesce, Delay);
+
+    /* Setup TxBD space  */
+    BdCount = XAxiDma_BdRingCntCalc(XAXIDMA_BD_MINIMUM_ALIGNMENT, TX_BD_SPACE_HIGH - TX_BD_SPACE_BASE + 1);
+
+    Status = XAxiDma_BdRingCreate(TxRingPtr,
+    TX_BD_SPACE_BASE, (UINTPTR) mmap(NULL, TX_BD_SPACE_HIGH - TX_BD_SPACE_BASE + 1, PROT_READ | PROT_WRITE, MAP_SHARED, devMemHandle, TX_BD_SPACE_BASE),
+    XAXIDMA_BD_MINIMUM_ALIGNMENT, BdCount);
+    if (Status != XST_SUCCESS) {
+        printf("failed create BD ring in txsetup\r\n");
+
+        return XST_FAILURE;
     }
+
+    /*
+     * We create an all-zero BD as the template.
+     */
+    XAxiDma_BdClear(&BdTemplate);
+
+    Status = XAxiDma_BdRingClone(TxRingPtr, &BdTemplate);
+    if (Status != XST_SUCCESS) {
+        printf("failed bdring clone in txsetup %d\r\n", Status);
+
+        return XST_FAILURE;
+    }
+
+    /* Start the TX channel */
+    Status = XAxiDma_BdRingStart(TxRingPtr);
+    if (Status != XST_SUCCESS) {
+        printf("failed start bdring txsetup %d\r\n", Status);
+
+        return XST_FAILURE;
+    }
+
+    return XST_SUCCESS;
 }
 
-int main() {
+/*****************************************************************************/
+/**
+ *
+ * This function transmits one packet non-blockingly through the DMA engine.
+ *
+ * @param    AxiDmaInstPtr points to the DMA engine instance
+ *
+ * @return   - XST_SUCCESS if the DMA accepts the packet successfully,
+ *       - XST_FAILURE otherwise.
+ *
+ * @note     None.
+ *
+ ******************************************************************************/
+static int SendPacket(XAxiDma * AxiDmaInstPtr) {
+    XAxiDma_BdRing *TxRingPtr;
+    u8 *TxPacket;
+    XAxiDma_Bd *FirstBdPtr;
+    XAxiDma_Bd *SecondBdPtr;
+    XAxiDma_Bd *ThirdBdPtr;
+    int Status;
+    int Index;
 
-    // setup radar simulator
-    rsim sim = setup_rsim(RSIM_CTRL_REGISTER_LOCATION,
-    FT_AXI_DMA_REGISTER_LOCATION,
-    MT_AXI_DMA_REGISTER_LOCATION,
-    SCRATCH_MEM_LOCATION);
+    TxRingPtr = XAxiDma_GetTxRing(AxiDmaInstPtr);
 
-    cout << showbase << hex;
-    cout << "Memory map:" << endl;
-    cout << "1. Scratch mem addr: " << SCRATCH_MEM_LOCATION << "-" <<
-    SCRATCH_MEM_LOCATION +
-    SCRATCH_MEM_LOCATION << " size:" << SCRATCH_MEM_SIZE << endl;
-    cout << "2. FT descriptors addr: " << sim.ft_mm2s_descriptor_register_addr << "-" << sim.ft_mm2s_descriptor_register_addr +
-    FT_MM2S_DMA_DESCRIPTORS_SIZE << " size: " <<
-    FT_MM2S_DMA_DESCRIPTORS_SIZE << endl;
-    cout << "4. MT descriptors addr: " << sim.mt_mm2s_descriptor_register_addr << "-" << sim.mt_mm2s_descriptor_register_addr +
-    MT_MM2S_DMA_DESCRIPTORS_SIZE << " size: " <<
-    MT_MM2S_DMA_DESCRIPTORS_SIZE << endl;
-    cout << "5. FT mem addr: " << sim.ft_source_mem_addr << "-" << sim.ft_source_mem_addr + sim.ft_source_mem_blk_cnt * sim.mem_blk_byte_size << " size: " << sim.ft_source_mem_blk_cnt * sim.mem_blk_byte_size << endl;
-    cout << "6. MT mem addr: " << sim.mt_source_mem_addr << "-" << sim.mt_source_mem_addr + sim.mt_source_mem_blk_cnt * sim.mem_blk_byte_size << " size: " << sim.mt_source_mem_blk_cnt * sim.mem_blk_byte_size << endl;
+    TxPacket = (u8 *) TX_BUFFER_BASE;
 
-    // get statistics
-    rsim_stat stat = get_rsim_stats(sim);
-    print_rsim_stat(stat);
-
-    // TODO: fill memory with TEST data
-    clear_mem(sim.ft_source_mem_map, sim.mem_blk_byte_size);
-    clear_mem(sim.mt_source_mem_map_1, sim.mem_blk_byte_size);
-    clear_mem(sim.mt_source_mem_map_2, sim.mem_blk_byte_size);
-    clear_mem(sim.mt_source_mem_map_3, sim.mem_blk_byte_size);
-    uint trig_word_cnt = TRIG_BYTE_CNT / sizeof(uint);
-    for (uint i = 0; i < stat.acp_cnt; i++) {
-        uint pos = (i % stat.trig_us);
-        uint inv_pos = stat.trig_us - pos;
-
-        uint word_offset = i * trig_word_cnt + (pos / 32);
-        uint bit_offset = pos % 32;
-
-        uint inv_word_offset = i * trig_word_cnt + (inv_pos / 32);
-        uint inv_bit_offset = inv_pos % 32;
-
-        sim.ft_source_mem_map[word_offset] = 0x00000000 + (1 << bit_offset);
-        sim.mt_source_mem_map_1[inv_word_offset] = 0x00000000 + (1 << inv_bit_offset);
-        sim.mt_source_mem_map_2[word_offset] = 0x00000000 + (1 << bit_offset);
-        sim.mt_source_mem_map_3[inv_word_offset] = 0x00000000 + (1 << inv_bit_offset);
+    /* Flush the SrcBuffer before the DMA transfer, in case the Data Cache
+     * is enabled
+     */
+    //Xil_DCacheFlushRange((UINTPTR) TxPacket, MAX_PKT_U32_LEN);
+    /* Allocate a couple of BD */
+    Status = XAxiDma_BdRingAlloc(TxRingPtr, 3, &FirstBdPtr);
+    if (Status != XST_SUCCESS) {
+        return XST_FAILURE;
     }
 
-    // start simulator
-    start_rsim(sim);
-    cout << " ... FT Descriptor mem ..." << endl;
-    print_mem(sim.ft_mm2s_descriptor_register_mmap, 0x100 >> 2);
-    cout << " ... MT Descriptor mem ..." << endl;
-    print_mem(sim.mt_mm2s_descriptor_register_mmap, 0x100 >> 2);
+    // get the other two descriptors
+    SecondBdPtr = (XAxiDma_Bd *) ((void *) XAxiDma_BdRingNext(TxRingPtr, FirstBdPtr));
+    ThirdBdPtr = (XAxiDma_Bd *) ((void *) XAxiDma_BdRingNext(TxRingPtr, SecondBdPtr));
 
-    cout << " ... waiting for first ARP ..." << endl;
-    this_thread::sleep_for(chrono::microseconds(stat.arp_us));
+    // set up cyclic mode
+    XAxiDma_BdSetNext(ThirdBdPtr, FirstBdPtr, TxRingPtr);
 
-    stat = get_rsim_stats(sim);
-    print_rsim_stat(stat);
-    if (!is_dma_ok(stat)) {
-        cerr << "DMA Not OK" << endl;
-        prog_exit(-3, sim);
+    /* Set up the BD using the information of the packet to transmit */
+    Status = XAxiDma_BdSetBufAddr(FirstBdPtr, (UINTPTR) TxPacket);
+    if (Status != XST_SUCCESS) {
+        printf("Tx set buffer addr %x on BD %x failed %d\r\n", (UINTPTR) TxPacket, (UINTPTR) FirstBdPtr, Status);
+
+        return XST_FAILURE;
     }
 
-    while (is_dma_ok(stat)) {
-        stat = get_rsim_stats(sim);
-        print_rsim_stat(stat);
-        this_thread::sleep_for(chrono::milliseconds(2000));
+    Status = XAxiDma_BdSetBufAddr(SecondBdPtr, (UINTPTR) TxPacket);
+    if (Status != XST_SUCCESS) {
+        printf("Tx set buffer addr %x on BD %x failed %d\r\n", (UINTPTR) TxPacket, (UINTPTR) SecondBdPtr, Status);
+
+        return XST_FAILURE;
     }
 
-    // stop simulator
-    prog_exit(0, sim);
+    Status = XAxiDma_BdSetBufAddr(ThirdBdPtr, (UINTPTR) TxPacket);
+    if (Status != XST_SUCCESS) {
+        printf("Tx set buffer addr %x on BD %x failed %d\r\n", (UINTPTR) TxPacket, (UINTPTR) ThirdBdPtr, Status);
+
+        return XST_FAILURE;
+    }
+
+    Status = XAxiDma_BdSetLength(FirstBdPtr, MAX_PKT_U32_LEN, TxRingPtr->MaxTransferLen);
+    if (Status != XST_SUCCESS) {
+        printf("Tx set length %d on BD %x failed %d\r\n",
+        MAX_PKT_U32_LEN, (UINTPTR) FirstBdPtr, Status);
+
+        return XST_FAILURE;
+    }
+
+    Status = XAxiDma_BdSetLength(SecondBdPtr, MAX_PKT_U32_LEN, TxRingPtr->MaxTransferLen);
+    if (Status != XST_SUCCESS) {
+        printf("Tx set length %d on BD %x failed %d\r\n",
+        MAX_PKT_U32_LEN, (UINTPTR) SecondBdPtr, Status);
+
+        return XST_FAILURE;
+    }
+
+    Status = XAxiDma_BdSetLength(ThirdBdPtr, MAX_PKT_U32_LEN, TxRingPtr->MaxTransferLen);
+    if (Status != XST_SUCCESS) {
+        printf("Tx set length %d on BD %x failed %d\r\n",
+        MAX_PKT_U32_LEN, (UINTPTR) ThirdBdPtr, Status);
+
+        return XST_FAILURE;
+    }
+
+    /* For set SOF/EOF on first and last BD
+     */
+    XAxiDma_BdSetCtrl(FirstBdPtr, XAXIDMA_BD_CTRL_TXSOF_MASK);
+    XAxiDma_BdSetCtrl(ThirdBdPtr, XAXIDMA_BD_CTRL_TXEOF_MASK);
+
+    XAxiDma_BdSetId(FirstBdPtr, (UINTPTR ) TX_BUFFER_BASE);
+    XAxiDma_BdSetId(SecondBdPtr, (UINTPTR ) TX_BUFFER_BASE);
+    XAxiDma_BdSetId(ThirdBdPtr, (UINTPTR ) TX_BUFFER_BASE);
+
+    XAxiDma_DumpBd(FirstBdPtr, TxRingPtr);
+    XAxiDma_DumpBd(SecondBdPtr, TxRingPtr);
+    XAxiDma_DumpBd(ThirdBdPtr, TxRingPtr);
+    PrintDmaStatus(AxiDmaInstPtr);
+
+    /* Give the BD to DMA to kick off the transmission. */
+    Status = XAxiDma_BdRingToHw(TxRingPtr, 3, FirstBdPtr);
+    if (Status != XST_SUCCESS) {
+        printf("to hw failed %d\r\n", Status);
+        return XST_FAILURE;
+    }
+
+    PrintDmaStatus(AxiDmaInstPtr);
+
+    return XST_SUCCESS;
 }
+/*****************************************************************************/
+/**
+ *
+ * This function waits until the DMA transaction is finished, checks data,
+ * and cleans up.
+ *
+ * @param    None
+ *
+ * @return   - XST_SUCCESS if DMA transfer is successful and data is correct,
+ *       - XST_FAILURE if fails.
+ *
+ * @note     None.
+ *
+ ******************************************************************************/
+static int CheckDmaResult(XAxiDma * AxiDmaInstPtr) {
+    XAxiDma_BdRing *TxRingPtr;
+    XAxiDma_Bd *BdPtr;
+    int ProcessedBdCount;
+    int Status;
+
+    TxRingPtr = XAxiDma_GetTxRing(AxiDmaInstPtr);
+
+    /* Wait until the one BD TX transaction is done */
+    while ((ProcessedBdCount = XAxiDma_BdRingFromHw(TxRingPtr,
+    XAXIDMA_ALL_BDS, &BdPtr)) == 0) {
+    }
+
+    /* Free all processed TX BDs for future transmission */
+    Status = XAxiDma_BdRingFree(TxRingPtr, ProcessedBdCount, BdPtr);
+    if (Status != XST_SUCCESS) {
+        printf("Failed to free %d tx BDs %d\r\n", ProcessedBdCount, Status);
+        return XST_FAILURE;
+    }
+
+    return XST_SUCCESS;
+}
+
