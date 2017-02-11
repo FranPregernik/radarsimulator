@@ -1,14 +1,17 @@
 package hr.franp.rsim
 
-import javafx.stage.Stage
-import tornadofx.App
-import tornadofx.importStylesheet
-import tornadofx.reloadStylesheetsOnFocus
+import javafx.stage.*
+import org.controlsfx.glyphfont.*
+import tornadofx.*
 
 class Main : App(DesignerView::class, Styles::class) {
 
     init {
         reloadStylesheetsOnFocus()
+
+        val faStream = Main::class.java.getResourceAsStream("/fontawesome-webfont.ttf")
+        val fa: GlyphFont = FontAwesome(faStream)
+        GlyphFontRegistry.register(fa)
     }
 
     override fun start(stage: Stage) {
