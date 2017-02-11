@@ -124,6 +124,21 @@ class MovingTargetPositionMarker(displayScale: Double, x: Double, y: Double, tex
     }
 }
 
+class MovingTargetPlotMarker(displayScale: Double, x: Double, y: Double, width: Double = 10.0, height: Double = 10.0) : Group() {
+    val marker = Rectangle(
+        x - width / 2.0 / displayScale,
+        y - height / 2.0 / displayScale,
+        width / displayScale,
+        height / displayScale
+    ).apply {
+        addClass(Styles.movingTargetPlotRectangle)
+    }
+
+    init {
+        add(marker)
+    }
+}
+
 class Test1TargetPositionMarker(displayScale: Double, x: Double, y: Double, text: String, color: Color) : Group() {
     val label = Text(
         x,

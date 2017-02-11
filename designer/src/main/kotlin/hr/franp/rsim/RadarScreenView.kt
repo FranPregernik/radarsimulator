@@ -6,17 +6,7 @@ import hr.franp.rsim.models.MovingTargetType
 import hr.franp.rsim.models.PathSegment
 import hr.franp.rsim.models.RadarCoordinate
 import hr.franp.rsim.models.Scenario
-import hr.franp.rsim.shapes.AzimuthMarkerLabel
-import hr.franp.rsim.shapes.AzimuthMarkerLine
-import hr.franp.rsim.shapes.DistanceMarkerCircle
-import hr.franp.rsim.shapes.DistanceMarkerLabel
-import hr.franp.rsim.shapes.MovingTargetCourseLine
-import hr.franp.rsim.shapes.MovingTargetPathMarker
-import hr.franp.rsim.shapes.MovingTargetPositionMarker
-import hr.franp.rsim.shapes.Test1TargetPositionMarker
-import hr.franp.rsim.shapes.Test2TargetPositionMarker
-import hr.franp.rsim.shapes.movingHitMarker
-import hr.franp.rsim.shapes.stationaryHitMarker
+import hr.franp.rsim.shapes.*
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ChangeListener
@@ -56,6 +46,7 @@ import java.util.stream.StreamSupport.stream
 
 
 class RadarScreenView : View() {
+
     val mousePositionProperty = SimpleObjectProperty<RadarCoordinate>()
     val mouseClickProperty = SimpleObjectProperty<RadarCoordinate>()
 
@@ -388,19 +379,19 @@ class RadarScreenView : View() {
                     1.0
                 )
 
-                val ipc = target.initialPosition.toCartesian()
+                val initPosCart = target.initialPosition.toCartesian()
 
                 val group = if (target != controller.selectedMovingTarget) nonSelectedTargetsGroup else selectedTargetGroup
 
                 group.add(
-                    MovingTargetPathMarker(displayScale, factor * ipc.x, factor * ipc.y).apply {
+                    MovingTargetPathMarker(displayScale, factor * initPosCart.x, factor * initPosCart.y).apply {
                         stroke = color
                     }
                 )
 
                 // draw segments and point markers
-                var x1 = ipc.x
-                var y1 = ipc.y
+                var x1 = initPosCart.x
+                var y1 = initPosCart.y
                 target.directions.forEach { d ->
                     val dpc = d.destination.toCartesian()
                     group.add(
@@ -418,7 +409,8 @@ class RadarScreenView : View() {
                 }
 
                 // draw current simulated position marker
-                val currentTimeUs = S_TO_US * (controller.displayParameters.simulatedCurrentTimeSec ?: 0.0)
+                val currentTimeS = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                val currentTimeUs = S_TO_US * currentTimeS
                 val ps = getCurrentPathSegment(target, currentTimeUs)
                 val pt = ps?.getPositionForTime(currentTimeUs)?.toCartesian()
                 if (pt != null) {
@@ -475,6 +467,34 @@ class RadarScreenView : View() {
                     }
                     group.add(movingTarget)
                 }
+
+
+                // TEMP: draw last N plots relative to current time
+                // HACK: not real plot points ....
+                if (ps != null && type == MovingTargetType.Point) {
+                    val n = 6
+                    val fromTimeUs = S_TO_US * controller.radarParameters.seekTimeSec * (floor(currentTimeS / controller.radarParameters.seekTimeSec) - n)
+
+                    val timeIterator = generateSequence(fromTimeUs) { t -> t + S_TO_US * controller.radarParameters.seekTimeSec }
+                        .takeWhile { t -> t < currentTimeUs }
+                        .iterator()
+
+                    stream(spliteratorUnknownSize(timeIterator, Spliterator.ORDERED), false)
+                        .forEach { t ->
+
+                            val plotPathSegment = getCurrentPathSegment(target, t)
+                            val plotPosCart = plotPathSegment?.getPositionForTime(t)?.toCartesian()
+                            if (plotPosCart != null) {
+                                val movingTarget = MovingTargetPlotMarker(
+                                    displayScale = displayScale,
+                                    x = factor * plotPosCart.x,
+                                    y = factor * plotPosCart.y
+                                )
+                                group.add(movingTarget)
+                            }
+                        }
+                }
+
             }
 
         // fade non selected targets

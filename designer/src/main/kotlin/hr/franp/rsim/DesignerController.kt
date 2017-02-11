@@ -53,11 +53,11 @@ class DesignerController : Controller() {
             movingTargets = mutableListOf(
                 MovingTarget().apply {
                     name = "T1"
-                    type = MovingTargetType.Test1
+                    type = MovingTargetType.Point
                     initialPosition = RadarCoordinate.fromCartesian(10.0, -100.0)
                     directions = mutableListOf(
                         Direction().apply {
-                            speedKmh = 200.0
+                            speedKmh = 1100.0
                             destination = RadarCoordinate.fromCartesian(50.0, 50.0)
                         },
                         Direction().apply {
@@ -72,11 +72,11 @@ class DesignerController : Controller() {
                 },
                 MovingTarget().apply {
                     name = "T2"
-                    type = MovingTargetType.Test2
-                    initialPosition = RadarCoordinate.fromCartesian(-300.0, 30.0)
+                    type = MovingTargetType.Point
+                    initialPosition = RadarCoordinate.fromCartesian(-100.0, 10.0)
                     directions = mutableListOf(
                         Direction().apply {
-                            speedKmh = 200.0
+                            speedKmh = 1100.0
                             destination = RadarCoordinate.fromCartesian(55.0, 55.0)
                         },
                         Direction().apply {
@@ -86,6 +86,17 @@ class DesignerController : Controller() {
                         Direction().apply {
                             speedKmh = 400.0
                             destination = RadarCoordinate.fromCartesian(-205.0, 305.0)
+                        }
+                    ).observable()
+                },
+                MovingTarget().apply {
+                    name = "T3"
+                    type = MovingTargetType.Point
+                    initialPosition = RadarCoordinate.fromCartesian(300.0, -150.0)
+                    directions = mutableListOf(
+                        Direction().apply {
+                            speedKmh = 2000.0
+                            destination = RadarCoordinate.fromCartesian(-300.0, -120.0)
                         }
                     ).observable()
                 }

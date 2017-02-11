@@ -4,8 +4,7 @@ import javafx.geometry.VPos
 import javafx.scene.paint.Color
 import javafx.scene.text.FontWeight
 import javafx.scene.text.TextAlignment
-import tornadofx.Stylesheet
-import tornadofx.cssclass
+import tornadofx.*
 
 class Styles : Stylesheet() {
     companion object {
@@ -19,16 +18,22 @@ class Styles : Stylesheet() {
         val movingTargetCourseLine by cssclass()
         val movingTargetPathMarker by cssclass()
         val movingTargetRectangle by cssclass()
+        val movingTargetPlotRectangle by cssclass()
         val imageMovingTargetRectangle by cssclass()
         val movingTargetTestTwoWedge by cssclass()
         val movingTargetTestOneCircle by cssclass()
 
         // Define our colors
-        val radarBgColor = Color.WHITESMOKE
-        val radarFgColor = Color.DARKGRAY
-        val stationaryTargetColor = Color.DARKGRAY
+        val radarBgColor = c("202020")
+        val radarFgColor = Color.GRAY
+        val stationaryTargetColor = Color.YELLOW
         val movingTargetHitFill = Color.BLUE
         val stationaryTargetHitFill = Color.GREEN
+
+        val movingTargetPositionLabelColor = Color.WHITE
+        val movingTargetCourseLineColor = Color.RED
+        val movingTargetPathMarkerFillColor = Color.DARKRED
+
     }
 
     init {
@@ -57,23 +62,23 @@ class Styles : Stylesheet() {
         }
 
         s(movingTargetCourseLine) {
-            stroke = Color.RED
+            stroke = movingTargetCourseLineColor
             fill = Color.TRANSPARENT
         }
 
         s(movingTargetPathMarker) {
-            stroke = Color.RED
-            fill = Color.WHITE
+            stroke = movingTargetCourseLineColor
+            fill = movingTargetPathMarkerFillColor
         }
 
         s(movingTargetPositionLabel) {
-            fill = radarFgColor
+            fill = movingTargetPositionLabelColor
             fontWeight = FontWeight.EXTRA_BOLD
             textAlignment = TextAlignment.CENTER
         }
 
         s(movingTargetRectangle) {
-            stroke = Color.RED
+            stroke = movingTargetCourseLineColor
             fill = Styles.radarBgColor
         }
 
@@ -83,14 +88,18 @@ class Styles : Stylesheet() {
 
         s(movingTargetTestOneCircle) {
             fill = Color.TRANSPARENT
-            stroke = Color.RED
+            stroke = movingTargetCourseLineColor
         }
 
         s(movingTargetTestTwoWedge) {
-            fill = Color.RED
-            stroke = Color.RED
+            fill = movingTargetCourseLineColor
+            stroke = movingTargetCourseLineColor
         }
 
+        s(movingTargetPlotRectangle) {
+            stroke = Color.DARKGREEN
+            fill = Color.TRANSPARENT
+        }
 
     }
 }
