@@ -1,15 +1,19 @@
 group 'hr.franp'
 version '1.0-SNAPSHOT'
 
+kotlin_version = '1.0.6'
+
 buildscript {
-    ext.kotlin_version = '1.0.5-2'
 
     repositories {
         mavenCentral()
     }
+
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "de.dynamicfiles.projects.gradle.plugins:javafx-gradle-plugin:8.8.2"
     }
+
 }
 
 apply plugin: 'kotlin'
@@ -35,4 +39,14 @@ dependencies {
     compile group: 'org.jfxtras', name: 'jfxtras-labs', version: '8.0-r5'
 
     compile group: 'org.fxmisc.easybind', name: 'easybind', version: '1.0.4-SNAPSHOT'
+}
+
+apply plugin: 'javafx-gradle-plugin'
+
+jfx {
+    // minimal requirement for jfxJar-task
+    mainClass = 'hr.franp.rsim.Main'
+
+    // minimal requirement for jfxNative-task
+    vendor = 'Fran Pregernik <fran@franp.com>'
 }
