@@ -196,7 +196,7 @@ class MovingTargetEditorView : View() {
                                 isEditable = true
                                 columnResizePolicy = tornadofx.SmartResize.POLICY
 
-                                column("rKm [km]", Direction::rProperty).apply {
+                                column("r [km]", Direction::rProperty).apply {
                                     useTextField(dcsc) {
                                         radarScreen.drawMovingTargets()
                                     }
