@@ -108,7 +108,7 @@ class MovingTargetPositionMarker(displayScale: Double, x: Double, y: Double, tex
     }
 }
 
-class MovingTargetPlotMarker(displayScale: Double, x: Double, y: Double, r: Double = 5.0) : Circle(x,y,r / displayScale){
+class MovingTargetPlotMarker(displayScale: Double, x: Double, y: Double, r: Double = 2.0) : Circle(x, y, r / displayScale) {
     init {
         addClass(Styles.movingTargetPlotMarker)
     }
