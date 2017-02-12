@@ -12,6 +12,7 @@ import tornadofx.*
 import java.text.*
 import kotlin.Pair
 
+
 const val TWO_PI = 2 * Math.PI
 const val HALF_PI = Math.PI / 2
 const val S_TO_US = 1000.0 * 1000.0
@@ -29,14 +30,6 @@ fun azimuthToAngle(azimuthRadians: Double): Double {
 }
 
 const val LIGHTSPEED_US_TO_ROUNDTRIP_KM = 2.0 / SPEED_OF_LIGHT_KM_US * S_TO_US
-
-fun hitToBitIndex(azimuthChangePulseCount: Int, rotationTimeUs: Double, maxDistanceKm: Double, t: Double, d: Double): Long {
-    val maxSignalTimeUs = Math.ceil(2 * maxDistanceKm / SPEED_OF_LIGHT_KM_US * S_TO_US)
-    val maxSignalBits = 32 * Math.ceil(maxSignalTimeUs / 32.0).toInt()
-    val sweepIdx = Math.floor(azimuthChangePulseCount / rotationTimeUs * t).toLong()
-    val signalTimeUs = Math.round(LIGHTSPEED_US_TO_ROUNDTRIP_KM * d)
-    return maxSignalBits * sweepIdx + signalTimeUs
-}
 
 class Raster(byteArray: ByteArray, width: Int, height: Int) : Iterator<Pair<Int, Int>> {
     val hitIterator: Iterator<Pair<Int, Int>>
@@ -235,10 +228,20 @@ fun processHitMaskImage(inputImage: Image): Image {
     return outputImage
 }
 
+val DECIMAL_SYMBOLS = DecimalFormatSymbols().apply {
+    setDecimalSeparator('.')
+    setGroupingSeparator(',')
+}
+
 class DistanceStringConverter : StringConverter<Double>() {
 
     companion object {
-        val decimalFormat = DecimalFormat(".#")
+        val decimalFormat = DecimalFormat().apply {
+            minimumFractionDigits = 1
+            maximumFractionDigits = 1
+            isGroupingUsed = false
+            decimalFormatSymbols = DECIMAL_SYMBOLS
+        }
     }
 
     /** {@inheritDoc}  */
@@ -249,7 +252,7 @@ class DistanceStringConverter : StringConverter<Double>() {
             return null
         }
 
-        return safeValue.toDouble()
+        return decimalFormat.parse(safeValue).toDouble()
     }
 
     /** {@inheritDoc}  */
@@ -262,8 +265,11 @@ class AngleStringConverter : StringConverter<Double>() {
         val decimalFormat = DecimalFormat().apply {
             minimumFractionDigits = 0
             maximumFractionDigits = 0
+            isGroupingUsed = false
+            decimalFormatSymbols = DECIMAL_SYMBOLS
         }
     }
+
 
     /** {@inheritDoc}  */
     override fun fromString(value: String?): Double? {
@@ -273,17 +279,22 @@ class AngleStringConverter : StringConverter<Double>() {
             return null
         }
 
-        return safeValue.toDouble()
+        return decimalFormat.parse(safeValue).toDouble()
     }
 
     /** {@inheritDoc}  */
-    override fun toString(value: Double?) = if (value == null) "" else decimalFormat.format(value)
+    override fun toString(value: Double?): String = if (value == null) "" else decimalFormat.format(normalizeAngleDeg(value))
 }
 
 class SpeedStringConverter : StringConverter<Double>() {
 
     companion object {
-        val decimalFormat = DecimalFormat(".#")
+        val decimalFormat = DecimalFormat().apply {
+            minimumFractionDigits = 1
+            maximumFractionDigits = 1
+            isGroupingUsed = false
+            decimalFormatSymbols = DECIMAL_SYMBOLS
+        }
     }
 
     /** {@inheritDoc}  */
@@ -294,10 +305,14 @@ class SpeedStringConverter : StringConverter<Double>() {
             return null
         }
 
-        return safeValue.toDouble()
+        return decimalFormat.parse(safeValue).toDouble()
     }
 
     /** {@inheritDoc}  */
     override fun toString(value: Double?) = if (value == null) "" else decimalFormat.format(value)
 
+}
+
+fun normalizeAngleDeg(angle: Double): Double {
+    return ((angle % 360) + 360) % 360
 }

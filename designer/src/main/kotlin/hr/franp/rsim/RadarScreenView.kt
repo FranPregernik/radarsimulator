@@ -61,6 +61,11 @@ class RadarScreenView : View() {
     }
     private val hitsGroup = Pane()
 
+    private val angleStringConverter = AngleStringConverter()
+    private val speedStringConverter = SpeedStringConverter()
+    private val distanceStringConverter = DistanceStringConverter()
+
+
     init {
 
         with(root) {
@@ -393,10 +398,10 @@ class RadarScreenView : View() {
                     val az = toDegrees(angleToAzimuth(atan2(pt.y, pt.x)))
 
                     val text = """${target.name}
-hdg=${AngleStringConverter.decimalFormat.format(ps?.headingDeg)}
-spd=${SpeedStringConverter.decimalFormat.format(ps?.vKmh)}
-r=${DistanceStringConverter.decimalFormat.format(distance)}
-az=${AngleStringConverter.decimalFormat.format(az)}"""
+hdg=${angleStringConverter.toString(ps?.headingDeg)}
+spd=${speedStringConverter.toString(ps?.vKmh)}
+r=${distanceStringConverter.toString(distance)}
+az=${angleStringConverter.toString(az)}"""
 
                     val movingTarget = when (type) {
                         MovingTargetType.Cloud1 -> {
@@ -513,7 +518,6 @@ az=${AngleStringConverter.decimalFormat.format(az)}"""
 
             // calculate stationary target hits
             if (scenarioClone.stationaryTargets != null) {
-
                 stationaryHits.addAll(calculateStationaryHits(scenarioClone))
             }
 
