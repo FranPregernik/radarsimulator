@@ -33,6 +33,7 @@ class DesignerController : Controller() {
             azimuthSteps = 36
             azimuthMarkerType = AzimuthMarkerType.FULL
             coordinateSystem = CoordinateSystem.R_AZ
+            simulatedCurrentTimeSec = 0.0
         }
 
         scenario = Scenario().apply {
