@@ -1,21 +1,9 @@
 package hr.franp.rsim
 
-import hr.franp.rsim.models.MovingTarget
-import javafx.scene.control.ComboBox
-import org.controlsfx.glyphfont.FontAwesome
-import org.controlsfx.glyphfont.GlyphFontRegistry
-import tornadofx.View
-import tornadofx.borderpane
-import tornadofx.button
-import tornadofx.combobox
-import tornadofx.getProperty
-import tornadofx.label
-import tornadofx.property
-import tornadofx.rebind
-import tornadofx.rebindOnChange
-import tornadofx.singleAssign
-import tornadofx.toolbar
-import tornadofx.tooltip
+import hr.franp.rsim.models.*
+import javafx.scene.control.*
+import org.controlsfx.glyphfont.*
+import tornadofx.*
 
 class MovingTargetSelectorView : View() {
     private val controller: DesignerController by inject()

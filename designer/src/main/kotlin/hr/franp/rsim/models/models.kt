@@ -1,35 +1,18 @@
 package hr.franp.rsim.models
 
-import hr.franp.rsim.HOUR_US
+import hr.franp.rsim.*
 import hr.franp.rsim.Raster
-import hr.franp.rsim.angleToAzimuth
-import hr.franp.rsim.azimuthToAngle
-import hr.franp.rsim.processHitMaskImage
-import javafx.collections.FXCollections.observableArrayList
-import javafx.embed.swing.SwingFXUtils
-import javafx.geometry.Bounds
-import javafx.geometry.Point2D
-import javafx.scene.image.Image
-import tornadofx.JsonBuilder
-import tornadofx.JsonModel
-import tornadofx.double
-import tornadofx.getProperty
-import tornadofx.property
-import tornadofx.string
-import tornadofx.toJSON
-import tornadofx.toModel
-import java.awt.image.BufferedImage
-import java.io.File
-import java.lang.Math.atan2
-import java.lang.Math.cos
-import java.lang.Math.pow
-import java.lang.Math.sin
-import java.lang.Math.sqrt
-import java.lang.Math.toDegrees
-import java.lang.Math.toRadians
+import javafx.collections.FXCollections.*
+import javafx.embed.swing.*
+import javafx.geometry.*
+import javafx.scene.image.*
+import tornadofx.*
+import java.awt.image.*
+import java.io.*
+import java.lang.Math.*
 import java.util.*
-import javax.imageio.ImageIO
-import javax.json.JsonObject
+import javax.imageio.*
+import javax.json.*
 
 
 class RadarCoordinate() : JsonModel {

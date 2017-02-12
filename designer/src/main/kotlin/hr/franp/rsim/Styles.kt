@@ -18,7 +18,7 @@ class Styles : Stylesheet() {
         val movingTargetCourseLine by cssclass()
         val movingTargetPathMarker by cssclass()
         val movingTargetRectangle by cssclass()
-        val movingTargetPlotRectangle by cssclass()
+        val movingTargetPlotMarker by cssclass()
         val imageMovingTargetRectangle by cssclass()
         val movingTargetTestTwoWedge by cssclass()
         val movingTargetTestOneCircle by cssclass()
@@ -96,9 +96,9 @@ class Styles : Stylesheet() {
             stroke = movingTargetCourseLineColor
         }
 
-        s(movingTargetPlotRectangle) {
-            stroke = Color.DARKGREEN
-            fill = Color.TRANSPARENT
+        s(movingTargetPlotMarker) {
+            stroke = Color.GREEN
+            fill = Color.GREEN
         }
 
     }

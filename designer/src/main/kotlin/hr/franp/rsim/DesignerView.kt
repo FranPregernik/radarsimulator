@@ -1,35 +1,15 @@
 package hr.franp.rsim
 
-import hr.franp.rsim.models.AzimuthMarkerType
-import hr.franp.rsim.models.DistanceUnit
-import hr.franp.rsim.models.StationaryTarget
-import javafx.geometry.Insets
-import javafx.scene.control.Tooltip
-import javafx.scene.image.ImageView
-import javafx.scene.layout.HBox
-import javafx.scene.layout.Priority
-import javafx.scene.text.Font
-import javafx.stage.FileChooser
-import javafx.util.converter.DoubleStringConverter
-import org.controlsfx.glyphfont.FontAwesome
-import org.controlsfx.glyphfont.GlyphFontRegistry
-import tornadofx.View
-import tornadofx.bind
-import tornadofx.button
-import tornadofx.chooseFile
-import tornadofx.fieldset
-import tornadofx.form
-import tornadofx.hboxConstraints
-import tornadofx.label
-import tornadofx.pane
-import tornadofx.plusAssign
-import tornadofx.slider
-import tornadofx.textfield
-import tornadofx.titledpane
-import tornadofx.togglebutton
-import tornadofx.togglegroup
-import tornadofx.tooltip
-import tornadofx.vbox
+import hr.franp.rsim.models.*
+import javafx.geometry.*
+import javafx.scene.control.*
+import javafx.scene.image.*
+import javafx.scene.layout.*
+import javafx.scene.text.*
+import javafx.stage.*
+import javafx.util.converter.*
+import org.controlsfx.glyphfont.*
+import tornadofx.*
 
 class DesignerView : View() {
     override val root = HBox()

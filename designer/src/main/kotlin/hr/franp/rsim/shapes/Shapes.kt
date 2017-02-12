@@ -1,31 +1,15 @@
 package hr.franp.rsim.shapes
 
-import hr.franp.rsim.HALF_PI
-import hr.franp.rsim.Styles
-import hr.franp.rsim.angleToAzimuth
-import javafx.scene.Group
-import javafx.scene.canvas.GraphicsContext
-import javafx.scene.image.Image
-import javafx.scene.image.ImageView
-import javafx.scene.paint.Color
-import javafx.scene.shape.Arc
-import javafx.scene.shape.ArcType
-import javafx.scene.shape.Circle
-import javafx.scene.shape.Line
-import javafx.scene.shape.Rectangle
-import javafx.scene.text.Font
-import javafx.scene.text.Text
-import javafx.scene.transform.Scale
-import javafx.scene.transform.Translate
-import tornadofx.add
-import tornadofx.addClass
-import java.lang.Math.atan2
-import java.lang.Math.cos
-import java.lang.Math.floor
-import java.lang.Math.pow
-import java.lang.Math.sin
-import java.lang.Math.sqrt
-import java.lang.Math.toDegrees
+import hr.franp.rsim.*
+import javafx.scene.*
+import javafx.scene.canvas.*
+import javafx.scene.image.*
+import javafx.scene.paint.*
+import javafx.scene.shape.*
+import javafx.scene.text.*
+import javafx.scene.transform.*
+import tornadofx.*
+import java.lang.Math.*
 
 class DistanceMarkerCircle(displayScale: Double, r: Double) : Circle(0.0, 0.0, r, Color.TRANSPARENT) {
     init {
@@ -74,7 +58,7 @@ class MovingTargetCourseLine(displayScale: Double, x1: Double, y1: Double, x2: D
     }
 }
 
-class MovingTargetPathMarker(displayScale: Double, x: Double, y: Double) : Circle(x, y, 5.0 / displayScale, Color.TRANSPARENT) {
+class MovingTargetPathMarker(displayScale: Double, x: Double, y: Double) : Circle(x, y, 1.0 / displayScale, Color.TRANSPARENT) {
     init {
         addClass(Styles.movingTargetPathMarker)
         strokeWidth = 1.0 / displayScale
@@ -124,18 +108,9 @@ class MovingTargetPositionMarker(displayScale: Double, x: Double, y: Double, tex
     }
 }
 
-class MovingTargetPlotMarker(displayScale: Double, x: Double, y: Double, width: Double = 10.0, height: Double = 10.0) : Group() {
-    val marker = Rectangle(
-        x - width / 2.0 / displayScale,
-        y - height / 2.0 / displayScale,
-        width / displayScale,
-        height / displayScale
-    ).apply {
-        addClass(Styles.movingTargetPlotRectangle)
-    }
-
+class MovingTargetPlotMarker(displayScale: Double, x: Double, y: Double, r: Double = 5.0) : Circle(x,y,r / displayScale){
     init {
-        add(marker)
+        addClass(Styles.movingTargetPlotMarker)
     }
 }
 
@@ -181,7 +156,7 @@ class Test2TargetPositionMarker(displayScale: Double, x: Double, y: Double, text
         transforms.add(Translate(-boundsInLocal.width / 2, 0.0))
     }
 
-    private val startAngleDeg = 360-floor(toDegrees(atan2(y, x)) / angleResolutionDeg) * angleResolutionDeg
+    private val startAngleDeg = 360 - floor(toDegrees(atan2(y, x)) / angleResolutionDeg) * angleResolutionDeg
 
     val marker = Arc(0.0, 0.0, maxDistance, maxDistance, startAngleDeg, angleResolutionDeg).apply {
         addClass(Styles.movingTargetTestTwoWedge)

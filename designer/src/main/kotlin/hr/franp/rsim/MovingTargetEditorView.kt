@@ -1,42 +1,14 @@
 package hr.franp.rsim
 
-import hr.franp.rsim.models.Direction
-import hr.franp.rsim.models.MovingTargetType
-import hr.franp.rsim.models.RadarCoordinate
-import javafx.beans.value.ChangeListener
-import javafx.geometry.Insets
-import javafx.geometry.Orientation
-import javafx.scene.control.Button
-import javafx.scene.control.ComboBox
-import javafx.scene.control.TableView
-import javafx.scene.control.TextField
-import javafx.scene.layout.VBox
-import javafx.util.StringConverter
-import org.controlsfx.glyphfont.FontAwesome.Glyph.CROSSHAIRS
-import org.controlsfx.glyphfont.FontAwesome.Glyph.MINUS
-import org.controlsfx.glyphfont.FontAwesome.Glyph.PLUS
-import org.controlsfx.glyphfont.GlyphFontRegistry
-import tornadofx.View
-import tornadofx.button
-import tornadofx.column
-import tornadofx.combobox
-import tornadofx.fieldset
-import tornadofx.form
-import tornadofx.gridpane
-import tornadofx.gridpaneConstraints
-import tornadofx.label
-import tornadofx.observable
-import tornadofx.pctWidth
-import tornadofx.property
-import tornadofx.selectedItem
-import tornadofx.singleAssign
-import tornadofx.tableview
-import tornadofx.textfield
-import tornadofx.toolbar
-import tornadofx.tooltip
-import tornadofx.useTextField
-import tornadofx.vbox
-import java.text.DecimalFormat
+import hr.franp.rsim.models.*
+import javafx.beans.value.*
+import javafx.geometry.*
+import javafx.scene.control.*
+import javafx.scene.layout.*
+import org.controlsfx.glyphfont.*
+import org.controlsfx.glyphfont.FontAwesome.Glyph.*
+import tornadofx.*
+
 
 class MovingTargetEditorView : View() {
 

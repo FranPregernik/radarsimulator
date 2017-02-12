@@ -1,16 +1,16 @@
 package hr.franp.rsim
 
-import javafx.event.EventHandler
-import javafx.scene.Parent
-import javafx.scene.image.Image
-import javafx.scene.image.WritableImage
-import javafx.scene.input.MouseEvent
-import javafx.scene.shape.Rectangle
-import javafx.util.StringConverter
-import jfxtras.labs.util.NodeUtil
-import jfxtras.labs.util.event.EventHandlerGroup
-import tornadofx.removeFromParent
-import java.text.DecimalFormat
+import javafx.event.*
+import javafx.scene.*
+import javafx.scene.image.*
+import javafx.scene.input.*
+import javafx.scene.shape.*
+import javafx.util.*
+import jfxtras.labs.util.*
+import jfxtras.labs.util.event.*
+import tornadofx.*
+import java.text.*
+import kotlin.Pair
 
 const val TWO_PI = 2 * Math.PI
 const val HALF_PI = Math.PI / 2

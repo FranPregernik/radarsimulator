@@ -1,48 +1,23 @@
 package hr.franp.rsim
 
-import hr.franp.rsim.models.AzimuthMarkerType
-import hr.franp.rsim.models.MovingTarget
-import hr.franp.rsim.models.MovingTargetType
-import hr.franp.rsim.models.PathSegment
-import hr.franp.rsim.models.RadarCoordinate
-import hr.franp.rsim.models.Scenario
+import hr.franp.rsim.models.*
 import hr.franp.rsim.shapes.*
-import javafx.beans.property.SimpleDoubleProperty
-import javafx.beans.property.SimpleObjectProperty
-import javafx.beans.value.ChangeListener
-import javafx.event.EventHandler
-import javafx.geometry.BoundingBox
-import javafx.geometry.Point2D
-import javafx.scene.Group
-import javafx.scene.Node
-import javafx.scene.canvas.Canvas
-import javafx.scene.image.Image
-import javafx.scene.layout.Pane
-import javafx.scene.paint.Color
-import javafx.scene.shape.Rectangle
-import javafx.scene.transform.Affine
-import javafx.scene.transform.Scale
-import javafx.scene.transform.Translate
-import tornadofx.View
-import tornadofx.add
-import tornadofx.addClass
-import tornadofx.getProperty
-import tornadofx.imageview
-import tornadofx.plusAssign
-import tornadofx.property
-import java.lang.Math.PI
-import java.lang.Math.abs
-import java.lang.Math.atan2
-import java.lang.Math.ceil
-import java.lang.Math.floor
-import java.lang.Math.max
-import java.lang.Math.pow
-import java.lang.Math.round
-import java.lang.Math.sqrt
-import java.lang.Math.toRadians
+import javafx.beans.property.*
+import javafx.beans.value.*
+import javafx.event.*
+import javafx.geometry.*
+import javafx.scene.*
+import javafx.scene.canvas.*
+import javafx.scene.image.*
+import javafx.scene.layout.*
+import javafx.scene.paint.*
+import javafx.scene.shape.*
+import javafx.scene.transform.*
+import tornadofx.*
+import java.lang.Math.*
 import java.util.*
-import java.util.Spliterators.spliteratorUnknownSize
-import java.util.stream.StreamSupport.stream
+import java.util.Spliterators.*
+import java.util.stream.StreamSupport.*
 
 
 class RadarScreenView : View() {
@@ -93,13 +68,13 @@ class RadarScreenView : View() {
             setOnMouseMoved {
                 val factor = 1.0 / getRadarScalingFactor()
                 val displayPoint = staticMarkersGroup.parentToLocal(it.x, it.y)
-                mousePositionProperty.set(RadarCoordinate(factor * displayPoint.x, factor * displayPoint.y))
+                mousePositionProperty.set(RadarCoordinate.fromCartesian(factor * displayPoint.x, factor * displayPoint.y))
             }
 
             setOnMousePressed {
                 val factor = 1.0 / getRadarScalingFactor()
                 val displayPoint = staticMarkersGroup.parentToLocal(it.x, it.y)
-                mouseClickProperty.set(RadarCoordinate(factor * displayPoint.x, factor * displayPoint.y))
+                mouseClickProperty.set(RadarCoordinate.fromCartesian(factor * displayPoint.x, factor * displayPoint.y))
             }
 
             addSelectionRectangleGesture(this, selectionRect, EventHandler {
@@ -415,7 +390,14 @@ class RadarScreenView : View() {
                 val pt = ps?.getPositionForTime(currentTimeUs)?.toCartesian()
                 if (pt != null) {
                     val distance = sqrt(pow(pt.x, 2.0) + pow(pt.y, 2.0))
-                    val text = "${target.name}\nhdg=${AngleStringConverter.decimalFormat.format(ps?.headingDeg)}\ns=${SpeedStringConverter.decimalFormat.format(ps?.vKmh)}\nr=${DistanceStringConverter.decimalFormat.format(distance)}"
+                    val az = toDegrees(angleToAzimuth(atan2(pt.y, pt.x)))
+
+                    val text = """${target.name}
+hdg=${AngleStringConverter.decimalFormat.format(ps?.headingDeg)}
+spd=${SpeedStringConverter.decimalFormat.format(ps?.vKmh)}
+r=${DistanceStringConverter.decimalFormat.format(distance)}
+az=${AngleStringConverter.decimalFormat.format(az)}"""
+
                     val movingTarget = when (type) {
                         MovingTargetType.Cloud1 -> {
                             MovingTargetPositionMarker(
@@ -484,7 +466,15 @@ class RadarScreenView : View() {
 
                             val plotPathSegment = getCurrentPathSegment(target, t)
                             val plotPosCart = plotPathSegment?.getPositionForTime(t)?.toCartesian()
+
                             if (plotPosCart != null) {
+
+                                // range check
+                                val distance = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
+                                if (distance < controller.radarParameters.minRadarDistanceKm || distance > controller.radarParameters.maxRadarDistanceKm) {
+                                    return@forEach
+                                }
+
                                 val movingTarget = MovingTargetPlotMarker(
                                     displayScale = displayScale,
                                     x = factor * plotPosCart.x,

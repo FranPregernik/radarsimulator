@@ -1,19 +1,7 @@
 package hr.franp.rsim
 
-import hr.franp.rsim.models.AzimuthMarkerType
-import hr.franp.rsim.models.CoordinateSystem
-import hr.franp.rsim.models.Direction
-import hr.franp.rsim.models.DisplayParameters
-import hr.franp.rsim.models.DistanceUnit
-import hr.franp.rsim.models.MovingTarget
-import hr.franp.rsim.models.MovingTargetType
-import hr.franp.rsim.models.RadarCoordinate
-import hr.franp.rsim.models.RadarParameters
-import hr.franp.rsim.models.Scenario
-import tornadofx.Controller
-import tornadofx.getProperty
-import tornadofx.observable
-import tornadofx.property
+import hr.franp.rsim.models.*
+import tornadofx.*
 
 class DesignerController : Controller() {
     val radarParameters: RadarParameters
@@ -57,7 +45,7 @@ class DesignerController : Controller() {
                     initialPosition = RadarCoordinate.fromCartesian(10.0, -100.0)
                     directions = mutableListOf(
                         Direction().apply {
-                            speedKmh = 1100.0
+                            speedKmh = 200.0
                             destination = RadarCoordinate.fromCartesian(50.0, 50.0)
                         },
                         Direction().apply {
@@ -76,7 +64,7 @@ class DesignerController : Controller() {
                     initialPosition = RadarCoordinate.fromCartesian(-100.0, 10.0)
                     directions = mutableListOf(
                         Direction().apply {
-                            speedKmh = 1100.0
+                            speedKmh = 200.0
                             destination = RadarCoordinate.fromCartesian(55.0, 55.0)
                         },
                         Direction().apply {
@@ -92,11 +80,11 @@ class DesignerController : Controller() {
                 MovingTarget().apply {
                     name = "T3"
                     type = MovingTargetType.Point
-                    initialPosition = RadarCoordinate.fromCartesian(300.0, -150.0)
+                    initialPosition = RadarCoordinate.fromCartesian(400.0, -350.0)
                     directions = mutableListOf(
                         Direction().apply {
-                            speedKmh = 2000.0
-                            destination = RadarCoordinate.fromCartesian(-300.0, -120.0)
+                            speedKmh = 400.0
+                            destination = RadarCoordinate.fromCartesian(-400.0, -320.0)
                         }
                     ).observable()
                 }
