@@ -12,7 +12,7 @@ import org.controlsfx.glyphfont.*
 import tornadofx.*
 
 class DesignerView : View() {
-    override val root = HBox()
+    override val root = BorderPane()
 
     private var fontAwesome = GlyphFontRegistry.font("FontAwesome")
     private val controller: DesignerController by inject()
@@ -24,21 +24,15 @@ class DesignerView : View() {
 
         with(root) {
 
+            maxWidth = 500.0
+            minWidth = 300.0
+
             // add and ensure radar screen fills the space
-            this += radarScreen.root.apply {
-                hboxConstraints {
-                    hGrow = Priority.ALWAYS
-                }
+            center = radarScreen.root.apply {
+
             }
 
-            vbox {
-
-                hboxConstraints {
-                    maxWidth = 500.0
-                    minWidth = 300.0
-                }
-
-                isFillWidth = true
+            right = vbox {
 
                 titledpane("Control", pane {
 
@@ -248,6 +242,7 @@ class DesignerView : View() {
                     padding = Insets.EMPTY
                     this += movingTargetSelector.root
                     this += movingTargetEditor.root
+                    autosize()
                 })
 
             }

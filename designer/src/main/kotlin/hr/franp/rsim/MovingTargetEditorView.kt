@@ -34,6 +34,8 @@ class MovingTargetEditorView : View() {
     init {
 
         with(root) {
+            maxWidth = 400.0
+            minWidth = 400.0
 
             form {
 
@@ -220,7 +222,7 @@ class MovingTargetEditorView : View() {
                                     }
                                 }
 
-                                column("speed [km/h]", Direction::speedKmhProperty).apply {
+                                column("spd [km/h]", Direction::speedKmhProperty).apply {
                                     useTextField(scsc) {
                                         radarScreen.drawMovingTargets()
                                     }
