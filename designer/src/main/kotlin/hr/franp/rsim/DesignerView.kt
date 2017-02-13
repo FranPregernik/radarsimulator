@@ -197,20 +197,40 @@ class DesignerView : View() {
                                         controller.displayParameters.simulatedCurrentTimeSec = 0.0
                                     }
                                 }
-                                button("", fontAwesome.create(BACKWARD)) {
+                                button("", fontAwesome.create(FAST_BACKWARD)) {
                                     disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0))
+                                    minWidth = Font.getDefault().size * 3
                                     setOnAction {
                                         val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
                                         val newTime = simulatedCurrentTimeSec - 10 * controller.radarParameters.seekTimeSec
                                         controller.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
                                     }
                                 }
+                                button("", fontAwesome.create(BACKWARD)) {
+                                    disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0))
+                                    setOnAction {
+                                        val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val newTime = simulatedCurrentTimeSec - controller.radarParameters.seekTimeSec
+                                        controller.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
+                                    }
+                                }
+
                                 textfield {
                                     textProperty().bindBidirectional(controller.displayParameters.simulatedCurrentTimeSecProperty(), DoubleStringConverter())
                                     minWidth = Font.getDefault().size * 5
                                 }
+
                                 button("", fontAwesome.create(FORWARD)) {
                                     disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(controller.scenario.simulationDurationMin * MIN_TO_S))
+                                    setOnAction {
+                                        val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val newTime = simulatedCurrentTimeSec + controller.radarParameters.seekTimeSec
+                                        controller.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, controller.scenario.simulationDurationMin * MIN_TO_S)
+                                    }
+                                }
+                                button("", fontAwesome.create(FAST_FORWARD)) {
+                                    disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(controller.scenario.simulationDurationMin * MIN_TO_S))
+                                    minWidth = Font.getDefault().size * 3
                                     setOnAction {
                                         val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
                                         val newTime = simulatedCurrentTimeSec + 10 * controller.radarParameters.seekTimeSec
@@ -223,6 +243,7 @@ class DesignerView : View() {
                                         controller.displayParameters.simulatedCurrentTimeSec = controller.scenario.simulationDurationMin * MIN_TO_S
                                     }
                                 }
+
                             }
                             field {
                                 button("Calculate") {
