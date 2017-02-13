@@ -141,7 +141,10 @@ class MovingTargetEditorView : View() {
                                     disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
 
                                     setOnAction {
-                                        controller.selectedMovingTarget.directionsProperty().value.add(hr.franp.rsim.models.Direction())
+                                        controller.selectedMovingTarget.directionsProperty().value.add(hr.franp.rsim.models.Direction(
+                                            destination = RadarCoordinate(0.0, 0.0),
+                                            speedKmh = 0.0
+                                        ))
                                         radarScreen.drawMovingTargets()
                                     }
                                 }
