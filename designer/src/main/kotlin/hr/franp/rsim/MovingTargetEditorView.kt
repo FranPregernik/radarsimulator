@@ -145,7 +145,7 @@ class MovingTargetEditorView : View() {
                                         radarScreen.drawMovingTargets()
                                     }
                                 }
-                                removeDirectionItemButton = button("", fontAwesome.create(MINUS)) {
+                                removeDirectionItemButton = button("", fontAwesome.create(TRASH)) {
                                     tooltip("Remove the selected course to the list")
 
                                     setOnAction {
@@ -205,33 +205,42 @@ class MovingTargetEditorView : View() {
                                     pctWidth(25.0)
                                     isSortable = false
 
-                                    setOnEditStart {
-                                        radarScreen.drawMovingTargets()
+                                    setOnEditCommit {
+                                        it.rowValue.rProperty().value = it.newValue
+                                        radarScreen.draw()
                                     }
                                 }
 
                                 column("az [deg]", Direction::azProperty).apply {
-                                    useTextField(acsc) {
-                                        radarScreen.drawMovingTargets()
-                                    }
-                                    pctWidth(25.0)
-                                    isSortable = false
 
-                                    setOnEditStart {
-                                        radarScreen.drawMovingTargets()
-                                    }
-                                }
-
-                                column("spd [km/h]", Direction::speedKmhProperty).apply {
-                                    useTextField(scsc) {
-                                        radarScreen.drawMovingTargets()
-                                    }
+                                    useTextField(acsc)
                                     pctWidth(25.0)
                                     isSortable = false
 
                                     setOnEditCommit {
-                                        radarScreen.drawMovingTargets()
+                                        it.rowValue.azProperty().value = it.newValue
+                                        radarScreen.draw()
                                     }
+                                }
+
+                                column("spd [km/h]", Direction::speedKmhProperty).apply {
+
+                                    useTextField(scsc)
+                                    pctWidth(25.0)
+
+                                    isSortable = false
+
+                                    setOnEditCommit {
+                                        it.rowValue.speedKmhProperty().value = it.newValue
+                                        radarScreen.draw()
+                                    }
+                                }
+
+                                column("hdg [deg]", Direction::speedKmhProperty).apply {
+                                    isEditable = false
+                                    isSortable = false
+
+                                    pctWidth(25.0)
                                 }
 
                             }

@@ -3,6 +3,7 @@ package hr.franp.rsim
 import hr.franp.rsim.models.*
 import javafx.scene.control.*
 import org.controlsfx.glyphfont.*
+import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 
 class MovingTargetSelectorView : View() {
@@ -40,7 +41,7 @@ class MovingTargetSelectorView : View() {
             }
         }
 
-        button("", fontAwesome.create(FontAwesome.Glyph.MINUS)) {
+        button("", fontAwesome.create(TRASH)) {
             tooltip("Removes the currently selected target")
 
             disableProperty().bind(controller.selectedMovingTargetProperty.isNull)

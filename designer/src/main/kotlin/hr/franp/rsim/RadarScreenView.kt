@@ -306,6 +306,9 @@ class RadarScreenView : View() {
 
         // helper calculated constants
         val factor = getRadarScalingFactor()
+        if (factor <= 0.0) {
+            return
+        }
 
         // draw stationary targets
         val width = (factor * 2.0 * controller.radarParameters.maxRadarDistanceKm).toInt()
