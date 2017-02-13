@@ -229,8 +229,8 @@ fun processHitMaskImage(inputImage: Image): Image {
 }
 
 val DECIMAL_SYMBOLS = DecimalFormatSymbols().apply {
-    setDecimalSeparator('.')
-    setGroupingSeparator(',')
+    decimalSeparator = '.'
+    groupingSeparator = ','
 }
 
 class DistanceStringConverter : StringConverter<Double>() {
