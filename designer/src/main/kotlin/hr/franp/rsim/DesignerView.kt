@@ -176,7 +176,7 @@ class DesignerView : View() {
                                         if (files.isNotEmpty()) {
                                             controller.scenario.stationaryTargets = StationaryTarget(files.first())
                                             radarScreen.drawStationaryTargets()
-                                            this.tooltip = Tooltip("Select target map").apply {
+                                            this.tooltip = Tooltip("Select clutter map").apply {
                                                 graphic = ImageView(controller.scenario.stationaryTargets.getImage(100, 100))
                                             }
                                         }
