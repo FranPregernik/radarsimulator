@@ -168,7 +168,7 @@ class DesignerView : View() {
                                 }
                             }
 
-                            field("Clutter target map") {
+                            field("Clutter map") {
                                 button("", fontAwesome.create(FontAwesome.Glyph.FILE_PHOTO_ALT)) {
                                     setOnAction {
                                         val files = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg")))
