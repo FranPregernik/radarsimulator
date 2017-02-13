@@ -1,6 +1,8 @@
 package hr.franp.rsim
 
 import hr.franp.rsim.models.*
+import hr.franp.rsim.models.AzimuthMarkerType.*
+import hr.franp.rsim.models.DistanceUnit.*
 import javafx.geometry.*
 import javafx.scene.control.*
 import javafx.scene.image.*
@@ -9,6 +11,7 @@ import javafx.scene.text.*
 import javafx.stage.*
 import javafx.util.converter.*
 import org.controlsfx.glyphfont.*
+import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 
 class DesignerView : View() {
@@ -44,16 +47,16 @@ class DesignerView : View() {
                                 }
 
                                 togglegroup {
-                                    togglebutton(DistanceUnit.Km.toString()) {
+                                    togglebutton(Km.toString()) {
                                         isSelected = true
                                         setOnAction {
-                                            controller.displayParameters.distanceUnit = DistanceUnit.Km
+                                            controller.displayParameters.distanceUnit = Km
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
-                                    togglebutton(DistanceUnit.NM.toString()) {
+                                    togglebutton(NM.toString()) {
                                         setOnAction {
-                                            controller.displayParameters.distanceUnit = DistanceUnit.NM
+                                            controller.displayParameters.distanceUnit = NM
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
@@ -85,16 +88,16 @@ class DesignerView : View() {
                                 }
 
                                 togglegroup {
-                                    togglebutton(AzimuthMarkerType.FULL.toString()) {
+                                    togglebutton(FULL.toString()) {
                                         isSelected = true
                                         setOnAction {
-                                            controller.displayParameters.azimuthMarkerType = AzimuthMarkerType.FULL
+                                            controller.displayParameters.azimuthMarkerType = FULL
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
-                                    togglebutton(AzimuthMarkerType.MIN.toString()) {
+                                    togglebutton(MIN.toString()) {
                                         setOnAction {
-                                            controller.displayParameters.azimuthMarkerType = AzimuthMarkerType.MIN
+                                            controller.displayParameters.azimuthMarkerType = MIN
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
@@ -169,7 +172,7 @@ class DesignerView : View() {
                             }
 
                             field("Clutter map") {
-                                button("", fontAwesome.create(FontAwesome.Glyph.FILE_PHOTO_ALT)) {
+                                button("", fontAwesome.create(FILE_PHOTO_ALT)) {
                                     setOnAction {
                                         val files = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg")))
                                         println("The user chose $files")
@@ -188,13 +191,13 @@ class DesignerView : View() {
                         fieldset {
                             field("Tsim") {
 
-                                button("", fontAwesome.create(FontAwesome.Glyph.STEP_BACKWARD)) {
+                                button("", fontAwesome.create(STEP_BACKWARD)) {
                                     disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0))
                                     setOnAction {
                                         controller.displayParameters.simulatedCurrentTimeSec = 0.0
                                     }
                                 }
-                                button("", fontAwesome.create(FontAwesome.Glyph.BACKWARD)) {
+                                button("", fontAwesome.create(BACKWARD)) {
                                     disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0))
                                     setOnAction {
                                         val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
@@ -206,7 +209,7 @@ class DesignerView : View() {
                                     textProperty().bindBidirectional(controller.displayParameters.simulatedCurrentTimeSecProperty(), DoubleStringConverter())
                                     minWidth = Font.getDefault().size * 5
                                 }
-                                button("", fontAwesome.create(FontAwesome.Glyph.FORWARD)) {
+                                button("", fontAwesome.create(FORWARD)) {
                                     disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(controller.scenario.simulationDurationMin * MIN_TO_S))
                                     setOnAction {
                                         val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
@@ -214,7 +217,7 @@ class DesignerView : View() {
                                         controller.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, controller.scenario.simulationDurationMin * MIN_TO_S)
                                     }
                                 }
-                                button("", fontAwesome.create(FontAwesome.Glyph.STEP_FORWARD)) {
+                                button("", fontAwesome.create(STEP_FORWARD)) {
                                     disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(controller.scenario.simulationDurationMin * MIN_TO_S))
                                     setOnAction {
                                         controller.displayParameters.simulatedCurrentTimeSec = controller.scenario.simulationDurationMin * MIN_TO_S
