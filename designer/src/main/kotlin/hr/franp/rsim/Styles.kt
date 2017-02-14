@@ -26,7 +26,6 @@ class Styles : Stylesheet() {
         // Define our colors
         val radarBgColor = c("202020")
         val radarFgColor = Color.GRAY
-        val stationaryTargetColor = Color.YELLOW
         val movingTargetHitFill = Color.BLUE
         val stationaryTargetHitFill = Color.GREEN
 

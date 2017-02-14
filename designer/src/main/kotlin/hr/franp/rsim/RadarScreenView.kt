@@ -19,8 +19,10 @@ import java.util.*
 import java.util.Spliterators.*
 import java.util.stream.StreamSupport.*
 
-
 class RadarScreenView : View() {
+
+    val cloudOneImage = processHitMaskImage(Image(resources["/cloud1.png"]))
+    val cloudTwoImage = processHitMaskImage(Image(resources["/cloud2.png"]))
 
     val mousePositionProperty = SimpleObjectProperty<RadarCoordinate>()
     val mouseClickProperty = SimpleObjectProperty<RadarCoordinate>()
@@ -416,7 +418,7 @@ az=${angleStringConverter.toString(az)}"""
                                 width = 300.0,
                                 height = 300.0,
                                 color = color,
-                                image = processHitMaskImage(Image(resources["/cloud1.png"]))
+                                image = cloudOneImage
                             )
                         }
                         MovingTargetType.Cloud2 -> {
@@ -428,7 +430,7 @@ az=${angleStringConverter.toString(az)}"""
                                 width = 300.0,
                                 height = 300.0,
                                 color = color,
-                                image = processHitMaskImage(Image(resources["/cloud2.png"]))
+                                image = cloudTwoImage
                             )
                         }
                         MovingTargetType.Point -> MovingTargetPositionMarker(

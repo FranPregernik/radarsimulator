@@ -4,6 +4,7 @@ import javafx.event.*
 import javafx.scene.*
 import javafx.scene.image.*
 import javafx.scene.input.*
+import javafx.scene.paint.*
 import javafx.scene.shape.*
 import javafx.util.*
 import jfxtras.labs.util.*
@@ -202,26 +203,15 @@ fun processHitMaskImage(inputImage: Image): Image {
     val reader = inputImage.pixelReader
     val writer = outputImage.pixelWriter
 
-    val hitColor = Styles.stationaryTargetColor
-    val intColor = ((255 * hitColor.red).toInt() shl 16) + ((255 * hitColor.green).toInt() shl 8) + (255 * hitColor.blue).toInt()
-
     for (y in 0..(inputImage.height - 1).toInt()) {
         for (x in 0..(inputImage.width - 1).toInt()) {
-            var argb = reader.getArgb(x, y)
+            var color = reader.getColor(x, y)
 
-            val r = argb shr 16 and 0xFF
-            val g = argb shr 8 and 0xFF
-            val b = argb and 0xFF
-
-            if (r <= 127
-                && g <= 127
-                && b <= 127) {
-                argb = 0x00000000
-            } else {
-                argb = 0xFF000000.toInt() + intColor
+            if (color.red == 0.0 && color.green == 0.0 && color.blue == 0.0) {
+                color = Color.TRANSPARENT
             }
 
-            writer.setArgb(x, y, argb)
+            writer.setColor(x, y, color)
         }
     }
 
