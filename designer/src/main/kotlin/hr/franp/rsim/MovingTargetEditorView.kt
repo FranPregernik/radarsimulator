@@ -239,12 +239,13 @@ class MovingTargetEditorView : View() {
                                     }
                                 }
 
-                                column("hdg [deg]", Direction::speedKmhProperty).apply {
-                                    isEditable = false
-                                    isSortable = false
-
-                                    pctWidth(25.0)
-                                }
+                                // TODO: add virtual column
+//                                column("hdg [deg]", Direction::speedKmhProperty).apply {
+//                                    isEditable = false
+//                                    isSortable = false
+//
+//                                    pctWidth(25.0)
+//                                }
 
                             }
                         }
