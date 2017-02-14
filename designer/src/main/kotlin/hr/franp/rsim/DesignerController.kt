@@ -45,18 +45,18 @@ class DesignerController : Controller() {
                     type = MovingTargetType.Point
                     initialPosition = RadarCoordinate.fromCartesian(10.0, -100.0)
                     directions = mutableListOf(
-                        Direction().apply {
-                            speedKmh = 750.0
+                        Direction(
+                            speedKmh = 750.0,
                             destination = RadarCoordinate.fromCartesian(50.0, 50.0)
-                        },
-                        Direction().apply {
-                            speedKmh = 750.0
+                        ),
+                        Direction(
+                            speedKmh = 750.0,
                             destination = RadarCoordinate.fromCartesian(300.0, 300.0)
-                        },
-                        Direction().apply {
-                            speedKmh = 750.0
+                        ),
+                        Direction(
+                            speedKmh = 750.0,
                             destination = RadarCoordinate.fromCartesian(-200.0, 300.0)
-                        }
+                        )
                     ).observable()
                 },
                 MovingTarget().apply {
@@ -64,18 +64,18 @@ class DesignerController : Controller() {
                     type = MovingTargetType.Point
                     initialPosition = RadarCoordinate.fromCartesian(-100.0, 10.0)
                     directions = mutableListOf(
-                        Direction().apply {
-                            speedKmh = 1200.0
+                        Direction(
+                            speedKmh = 1200.0,
                             destination = RadarCoordinate.fromCartesian(55.0, 55.0)
-                        },
-                        Direction().apply {
-                            speedKmh = 1200.0
+                        ),
+                        Direction(
+                            speedKmh = 1200.0,
                             destination = RadarCoordinate.fromCartesian(305.0, 305.0)
-                        },
-                        Direction().apply {
-                            speedKmh = 1200.0
+                        ),
+                        Direction(
+                            speedKmh = 1200.0,
                             destination = RadarCoordinate.fromCartesian(-205.0, 305.0)
-                        }
+                        )
                     ).observable()
                 },
                 MovingTarget().apply {
@@ -83,10 +83,14 @@ class DesignerController : Controller() {
                     type = MovingTargetType.Point
                     initialPosition = RadarCoordinate.fromCartesian(400.0, -350.0)
                     directions = mutableListOf(
-                        Direction().apply {
-                            speedKmh = 900.0
+                        Direction(
+                            speedKmh = 900.0,
                             destination = RadarCoordinate.fromCartesian(-400.0, -320.0)
-                        }
+                        ),
+                        Direction(
+                            speedKmh = 900.0,
+                            destination = RadarCoordinate.fromCartesian(-320.0, -100.0)
+                        )
                     ).observable()
                 }
             ).observable()
