@@ -29,7 +29,7 @@ dependencies {
     compile fileTree(dir: "${System.properties['java.home']}", include: '**/jfxrt.jar')
 
     // https://mvnrepository.com/artifact/no.tornado/tornadofx
-    compile group: 'no.tornado', name: 'tornadofx', version: '1.5.8'
+    compile group: 'no.tornado', name: 'tornadofx', version: '1.6.2'
 
     // https://mvnrepository.com/artifact/org.controlsfx/controlsfx
     compile group: 'org.controlsfx', name: 'controlsfx', version: '8.40.12'
@@ -37,7 +37,6 @@ dependencies {
     // https://mvnrepository.com/artifact/org.jfxtras/jfxtras-labs
     compile group: 'org.jfxtras', name: 'jfxtras-labs', version: '8.0-r5'
 
-    compile group: 'org.fxmisc.easybind', name: 'easybind', version: '1.0.4-SNAPSHOT'
 }
 
 apply plugin: 'javafx-gradle-plugin'
