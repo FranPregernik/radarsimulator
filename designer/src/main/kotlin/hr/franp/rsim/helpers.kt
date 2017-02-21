@@ -1,5 +1,6 @@
 package hr.franp.rsim
 
+import hr.franp.rsim.models.*
 import javafx.event.*
 import javafx.scene.*
 import javafx.scene.image.*
@@ -11,6 +12,7 @@ import jfxtras.labs.util.*
 import jfxtras.labs.util.event.*
 import tornadofx.*
 import java.text.*
+import java.util.*
 import kotlin.Pair
 
 
@@ -18,8 +20,8 @@ const val TWO_PI = 2 * Math.PI
 const val HALF_PI = Math.PI / 2
 const val S_TO_US = 1000.0 * 1000.0
 const val MIN_TO_S = 60
-const val MIN_US = 60.0 * S_TO_US
-const val HOUR_US = 60.0 * MIN_US
+const val MIN_TO_US = 60.0 * S_TO_US
+const val HOUR_TO_US = 60.0 * MIN_TO_US
 const val SPEED_OF_LIGHT_KM_US = 300000.0
 
 fun angleToAzimuth(angleRadians: Double): Double {
@@ -32,30 +34,21 @@ fun azimuthToAngle(azimuthRadians: Double): Double {
 
 const val LIGHTSPEED_US_TO_ROUNDTRIP_KM = 2.0 / SPEED_OF_LIGHT_KM_US * S_TO_US
 
-class Raster(byteArray: ByteArray, width: Int, height: Int) : Iterator<Pair<Int, Int>> {
-    val hitIterator: Iterator<Pair<Int, Int>>
+class Raster(val bitSet: BitSet, val width: Int, val height: Int) : Iterator<Pair<Int, Int>> {
 
-    init {
-        val zeroByte = 0.toByte()
+    var bitIndex = bitSet.nextSetBit(0)
 
-        @Suppress("UNCHECKED_CAST")
-        hitIterator = byteArray
-            .mapIndexed { i, byte ->
-                val x = i % width
-                val y = height - i / width // image(computer screen) y coordinate is the opposite if the math/geometry definition
-                if (byte == zeroByte)
-                    null
-                else
-                    Pair(x, y)
-            }
-            .filter { it != null }
-            .iterator() as Iterator<Pair<Int, Int>>
-    }
-
-    override fun hasNext(): Boolean = hitIterator.hasNext()
+    override fun hasNext(): Boolean = (bitIndex >= 0)
 
     override fun next(): Pair<Int, Int> {
-        return hitIterator.next()
+
+        val x = bitIndex % width
+        val y = height - bitIndex / width
+
+        bitIndex = bitSet.nextSetBit(bitIndex + 1)
+
+        return Pair(x, y)
+
     }
 
 }
@@ -305,4 +298,46 @@ class SpeedStringConverter : StringConverter<Double>() {
 
 fun normalizeAngleDeg(angle: Double): Double {
     return ((angle % 360) + 360) % 360
+}
+
+fun calculatePointTargetHits(hits: BitSet, ps: PathSegment, tUs: Double, radarParameters: RadarParameters) {
+
+    val maxRadarDistanceKm = radarParameters.maxRadarDistanceKm
+    val minRadarDistanceKm = radarParameters.minRadarDistanceKm
+    val horizontalAngleBeamWidthRad = Math.toRadians(radarParameters.horizontalAngleBeamWidthDeg)
+    val rotationTimeUs = radarParameters.seekTimeSec * S_TO_US
+    val sweepHeadingRad = TWO_PI / rotationTimeUs * tUs
+    val azimuthChangePulseCount = radarParameters.azimuthChangePulse
+    val c1 = TWO_PI / azimuthChangePulseCount
+    val maxSignalTimeUs = Math.ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+    val minSignalTimeUs = Math.ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+
+    val position =  ps.getPositionForTime(tUs) ?: return
+
+    // get the angle of the target (center point)
+    val radarDistanceKm = position.rKm
+    if (radarDistanceKm < minRadarDistanceKm || radarDistanceKm > maxRadarDistanceKm) {
+        return
+    }
+
+    val targetHeadingRad = Math.toRadians(position.azDeg)
+    val diff = Math.abs(((Math.abs(targetHeadingRad - sweepHeadingRad) + Math.PI) % TWO_PI) - Math.PI)
+    if (diff > horizontalAngleBeamWidthRad / 2.0) {
+        return
+    }
+
+    val sweepIdx = Math.round(sweepHeadingRad / c1).toInt()
+    val signalTimeUs = Math.round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
+    if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
+        // set signal hit
+        hits.set((sweepIdx % radarParameters.azimuthChangePulse) * radarParameters.impulsePeriodUs.toInt() + signalTimeUs, true)
+    }
+
+}
+
+fun calculateTestTargetHits(hits: BitSet, pathSegment: PathSegment, tUs: Double, radarParameters: RadarParameters) {
+}
+
+fun calculateCloudTargetHits(hits: BitSet, pathSegment: PathSegment, tUs: Double, radarParameters: RadarParameters) {
+
 }

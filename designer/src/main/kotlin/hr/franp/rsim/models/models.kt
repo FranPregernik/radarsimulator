@@ -167,7 +167,7 @@ class StationaryTarget() : JsonModel {
         bytes = imageFile.readBytes()
     }
 
-    fun getImage(minWidth: Int, minHeight: Int): Image? {
+    fun getImage(minWidth: Int, minHeight: Int): Image {
         val img = ImageIO.read(bytes.inputStream())
 
         // find the right scale factor to preserve ration as well as stretch
@@ -186,24 +186,18 @@ class StationaryTarget() : JsonModel {
     }
 
     fun getRasterHitMap(minWidth: Int, minHeight: Int): Raster {
-        val img = ImageIO.read(bytes.inputStream())
-
-        // find the right scale factor to preserve ration as well as stretch
-        // the image so it is at least minW x minH
-        val scale = Math.max(minWidth.toDouble() / img.width.toDouble(), minHeight.toDouble() / img.height.toDouble())
-        val width = (img.width * scale).toInt()
-        val height = (img.height * scale).toInt()
+        val img = SwingFXUtils.fromFXImage(getImage(minWidth, minHeight), null)
 
         // create a BW version with the specified size
-        val bw = BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
+        val bw = BufferedImage(img.width, img.height, BufferedImage.TYPE_BYTE_BINARY)
         val g = bw.createGraphics()
-        g.drawImage(img, 0, 0, width, height, null)
+        g.drawImage(img, 0, 0, img.width, img.height, null)
 
         // store bytes
         return Raster(
-            bw.raster.getDataElements(0, 0, width, width, null) as ByteArray,
-            width,
-            width
+            BitSet.valueOf(bw.raster.getDataElements(0, 0, bw.width, bw.height, null) as ByteArray),
+            bw.width,
+            bw.height
         )
     }
 
@@ -270,7 +264,7 @@ data class PathSegment(
 
     val headingDeg = ((720 + toDegrees(angleToAzimuth(atan2(dy, dx)))) % 360)
 
-    val vKmh = sqrt(pow(vxKmUs, 2.0) + pow(vyKmUs, 2.0)) * HOUR_US
+    val vKmh = sqrt(pow(vxKmUs, 2.0) + pow(vyKmUs, 2.0)) * HOUR_TO_US
 
     fun getPositionForTime(timeUs: Double): RadarCoordinate? {
         if (timeUs < t1Us && timeUs > t2Us) {

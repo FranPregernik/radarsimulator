@@ -13,6 +13,9 @@ import javafx.util.converter.*
 import org.controlsfx.glyphfont.*
 import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
+import java.io.*
+import java.util.*
+import java.util.zip.*
 
 class DesignerView : View() {
     override val root = BorderPane()
@@ -247,12 +250,47 @@ class DesignerView : View() {
                             }
                             field {
                                 button("Calculate") {
-                                    disableProperty().bind(radarScreen.calculatingHitsProperty())
 
                                     tooltip("Calculate and display all hits")
 
                                     setOnAction {
-                                        radarScreen.calculate()
+                                        this.disableProperty().set(true)
+
+                                        runAsync {
+
+                                            FileOutputStream("clutter.bin.gz").use { clutterFile ->
+                                                GZIPOutputStream(clutterFile).use { stream ->
+                                                    stream.write(controller.radarParameters.seekTimeSec.toInt())
+                                                    stream.write(controller.radarParameters.azimuthChangePulse.toInt())
+                                                    stream.write(controller.radarParameters.impulsePeriodUs.toInt())
+
+                                                    val clutterHits = controller.calculateClutterHits()
+                                                    radarScreen.clutterHitsProperty.set(clutterHits)
+                                                    stream.write(clutterHits.toByteArray())
+                                                }
+                                            }
+
+                                            FileOutputStream("targets.bin.gz").use { targetFile ->
+                                                GZIPOutputStream(targetFile).use { stream ->
+                                                    stream.write(controller.radarParameters.seekTimeSec.toInt())
+                                                    stream.write(controller.radarParameters.azimuthChangePulse.toInt())
+                                                    stream.write(controller.radarParameters.impulsePeriodUs.toInt())
+
+                                                    var targetHits = BitSet()
+
+                                                    controller.calculateTargets().forEach {
+                                                        targetHits.or(it)
+                                                        stream.write(it.toByteArray())
+                                                    }
+
+                                                    radarScreen.targetHitsProperty.set(targetHits)
+                                                }
+                                            }
+                                        } ui {
+                                            this.disableProperty().set(false)
+                                            radarScreen.drawHits()
+                                        }
+
                                     }
                                 }
 

@@ -24,6 +24,9 @@ class RadarScreenView : View() {
     val cloudOneImage = processHitMaskImage(Image(resources["/cloud1.png"]))
     val cloudTwoImage = processHitMaskImage(Image(resources["/cloud2.png"]))
 
+    val clutterHitsProperty = SimpleObjectProperty<BitSet>()
+    val targetHitsProperty = SimpleObjectProperty<BitSet>()
+
     val mousePositionProperty = SimpleObjectProperty<RadarCoordinate>()
     val mouseClickProperty = SimpleObjectProperty<RadarCoordinate>()
 
@@ -47,9 +50,6 @@ class RadarScreenView : View() {
         root.clip = Rectangle(0.0, 0.0, root.width, root.height)
         draw()
     }
-
-    private var movingHits by property<LinkedHashSet<Pair<Long, Long>>>(LinkedHashSet())
-    private var stationaryHits by property<LinkedHashSet<Pair<Long, Long>>>(LinkedHashSet())
 
     private val controller: DesignerController by inject()
 
@@ -192,7 +192,7 @@ class RadarScreenView : View() {
 
         movingTarget.directions.forEachIndexed { i, direction ->
             val p2 = direction.destination
-            val speedKmUs = direction.speedKmh / HOUR_US
+            val speedKmUs = direction.speedKmh / HOUR_TO_US
 
             // distance from last course change point
             val p1c = p1.toCartesian()
@@ -315,7 +315,7 @@ class RadarScreenView : View() {
         // draw stationary targets
         val width = (factor * 2.0 * controller.radarParameters.maxRadarDistanceKm).toInt()
         val height = (factor * 2.0 * controller.radarParameters.maxRadarDistanceKm).toInt()
-        val rasterMapImage = controller.scenario.stationaryTargets.getImage(width, height) ?: return
+        val rasterMapImage = controller.scenario.stationaryTargets.getImage(width, height)
 
         stationaryTargetsGroup += imageview {
             image = rasterMapImage
@@ -509,195 +509,6 @@ az=${angleStringConverter.toString(az)}"""
             .forEach(Node::toFront)
     }
 
-    fun calculate() {
-        runAsync {
-
-            calculatingHits = true
-
-            val stationaryHits = LinkedHashSet<Pair<Long, Long>>()
-            val movingHits = LinkedHashSet<Pair<Long, Long>>()
-
-            // (deep)clone for background processing
-            val scenarioClone = controller.scenario.copy<Scenario>()
-            val radarParameters = controller.radarParameters
-
-            // calculate stationary target hits
-            if (scenarioClone.stationaryTargets != null) {
-                stationaryHits.addAll(calculateStationaryHits(scenarioClone))
-            }
-
-            val targetPathSegments = scenarioClone.movingTargets
-                .flatMap { movingTarget ->
-                    var p1 = movingTarget.initialPosition
-                    var t1 = 0.0
-
-                    movingTarget.directions.map { direction ->
-                        val p2 = direction.destination
-                        val speedKmUs = direction.speedKmh / HOUR_US
-
-                        // distance from last course change point
-                        val p1c = p1.toCartesian()
-                        val p2c = p2.toCartesian()
-                        val dx = p2c.x - p1c.x
-                        val dy = p2c.y - p1c.y
-                        val distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0))
-                        val dt = distance / speedKmUs
-
-
-                        val pathSegment = PathSegment(
-                            p1 = p1,
-                            p2 = p2,
-                            t1Us = t1,
-                            t2Us = t1 + dt,
-                            vxKmUs = speedKmUs * dx / distance,
-                            vyKmUs = speedKmUs * dy / distance,
-                            type = movingTarget.type
-                        )
-
-                        p1 = p2
-                        t1 += dt
-
-                        pathSegment
-                    }
-                }
-
-            // calculate moving target hits for the complete simulation
-            val simulationDurationUs = scenarioClone.simulationDurationMin * MIN_US
-            val minTime = if (controller.displayParameters.simulatedCurrentTimeSec != null)
-                S_TO_US * (controller.displayParameters.simulatedCurrentTimeSec - radarParameters.seekTimeSec)
-            else 0.0
-            val maxTime = if (controller.displayParameters.simulatedCurrentTimeSec != null)
-                S_TO_US * controller.displayParameters.simulatedCurrentTimeSec
-            else simulationDurationUs
-
-            val timeIterator = generateSequence(minTime) { t -> t + scenarioClone.simulationStepUs }
-                .takeWhile { t -> t < maxTime }
-                .iterator()
-
-            stream(spliteratorUnknownSize(timeIterator, Spliterator.ORDERED), false)
-                .parallel()
-                .forEach { t ->
-                    targetPathSegments.forEach {
-                        movingHits.addAll(
-                            when (it.type) {
-                                MovingTargetType.Point ->
-                                    calculatePointTargetHits(it, t)
-                                MovingTargetType.Cloud1 ->
-                                    calculateCloudTargetHits(it, t)
-                                MovingTargetType.Cloud2 ->
-                                    calculateCloudTargetHits(it, t)
-                                MovingTargetType.Test1 ->
-                                    calculateTestTargetHits(it, t)
-                                MovingTargetType.Test2 ->
-                                    calculateTestTargetHits(it, t)
-                            }
-                        )
-                    }
-                }
-
-            calculatingHits = false
-
-            Pair(movingHits, stationaryHits)
-
-        } ui {
-            movingHits = it.first
-            stationaryHits = it.second
-            drawHits()
-        }
-    }
-
-    private fun calculateTestTargetHits(pathSegment: PathSegment, t: Double): Collection<Pair<Long, Long>> {
-        val hits = mutableListOf<Pair<Long, Long>>()
-
-        return hits
-    }
-
-    private fun calculateCloudTargetHits(pathSegment: PathSegment, t: Double): Collection<Pair<Long, Long>> {
-        val hits = mutableListOf<Pair<Long, Long>>()
-
-        return hits
-    }
-
-    private fun calculateStationaryHits(scenario: Scenario): Collection<Pair<Long, Long>> {
-        val hits = mutableListOf<Pair<Long, Long>>()
-
-        val maxRadarDistanceKm = controller.radarParameters.maxRadarDistanceKm
-        val minRadarDistanceKm = controller.radarParameters.minRadarDistanceKm
-        val maxSignalTimeUs = ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-        val minSignalTimeUs = ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-        val distanceResolutionKm = controller.radarParameters.distanceResolutionKm
-        val azimuthChangePulseCount = controller.radarParameters.azimuthChangePulse
-        val horizontalAngleBeamWidthRad = toRadians(controller.radarParameters.horizontalAngleBeamWidthDeg)
-        val c1 = TWO_PI / azimuthChangePulseCount
-
-        val width = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
-        val height = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
-
-        val raster = scenario.stationaryTargets.getRasterHitMap(width, height)
-
-        for (hit in raster) {
-            val dx = (hit.first - width / 2.0) * distanceResolutionKm
-            val dy = (hit.second - height / 2.0) * distanceResolutionKm
-            val radarDistanceKm = sqrt(pow(dx, 2.0) + pow(dy, 2.0))
-            if (radarDistanceKm < minRadarDistanceKm || radarDistanceKm > maxRadarDistanceKm) {
-                continue
-            }
-
-            val cartesianAngleRad = atan2(dy, dx)
-            val sweepHeadingRad = angleToAzimuth(cartesianAngleRad)
-
-            val minSweepIndex = floor((sweepHeadingRad - horizontalAngleBeamWidthRad) / c1).toLong()
-            val maxSweepIndex = ceil((sweepHeadingRad + horizontalAngleBeamWidthRad) / c1).toLong()
-
-            for (sweepIdx in minSweepIndex..maxSweepIndex) {
-                val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-                if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
-                    hits.add(Pair(sweepIdx, signalTimeUs))
-                }
-            }
-        }
-
-        return hits
-    }
-
-    private fun calculatePointTargetHits(ps: PathSegment, t: Double): Collection<Pair<Long, Long>> {
-        val hits = mutableListOf<Pair<Long, Long>>()
-
-        val maxRadarDistanceKm = controller.radarParameters.maxRadarDistanceKm
-        val minRadarDistanceKm = controller.radarParameters.minRadarDistanceKm
-        val horizontalAngleBeamWidthRad = toRadians(controller.radarParameters.horizontalAngleBeamWidthDeg)
-        val rotationTimeUs = controller.radarParameters.seekTimeSec * S_TO_US
-        val sweepHeadingRad = TWO_PI / rotationTimeUs * t
-        val azimuthChangePulseCount = controller.radarParameters.azimuthChangePulse
-        val c1 = TWO_PI / azimuthChangePulseCount
-        val maxSignalTimeUs = ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-        val minSignalTimeUs = ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-
-        val pos = ps.getPositionForTime(t)
-        val position = pos ?: return hits
-
-        // get the angle of the target (center point)
-        val radarDistanceKm = position.rKm
-        if (radarDistanceKm < minRadarDistanceKm || radarDistanceKm > maxRadarDistanceKm) {
-            return hits
-        }
-
-        val targetHeadingRad = toRadians(position.azDeg)
-        val diff = abs(((abs(targetHeadingRad - sweepHeadingRad) + PI) % TWO_PI) - PI)
-        if (diff > horizontalAngleBeamWidthRad / 2.0) {
-            return hits
-        }
-
-        val sweepIdx = round(sweepHeadingRad / c1)
-        val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-        if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
-            // set signal hit
-            hits.add(Pair(sweepIdx, signalTimeUs))
-        }
-
-        return hits
-    }
-
     fun drawHits() {
 
         // helper calculated constants
@@ -722,9 +533,12 @@ az=${angleStringConverter.toString(az)}"""
         setupViewPort(movingHitsCanvas)
         setupViewPort(stationaryHitsCanvas)
 
-        for (i in movingHits) {
-            val sweepIdx = i.first
-            val signalTimeUs = i.second
+        val targetHits = targetHitsProperty.get() ?: BitSet()
+        var idx = targetHits.nextSetBit(0)
+        while (idx >= 0 && idx < targetHits.size()) {
+
+            val sweepIdx = idx / controller.radarParameters.impulsePeriodUs.toInt()
+            val signalTimeUs = idx % controller.radarParameters.impulsePeriodUs.toInt()
 
             val sweepHeadingRad = sweepIdx * c1
             val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM
@@ -735,11 +549,17 @@ az=${angleStringConverter.toString(az)}"""
                 azimuthToAngle(sweepHeadingRad),
                 spreadRad
             )
+
+            idx = targetHits.nextSetBit(idx + 1)
+
         }
 
-        for (i in stationaryHits) {
-            val sweepIdx = i.first
-            val signalTimeUs = i.second
+        val clutterHits = clutterHitsProperty.get() ?: BitSet()
+        idx = clutterHits.nextSetBit(0)
+        while (idx >= 0 && idx < clutterHits.size()) {
+
+            val sweepIdx = idx / controller.radarParameters.impulsePeriodUs.toInt()
+            val signalTimeUs = idx % controller.radarParameters.impulsePeriodUs.toInt()
 
             val sweepHeadingRad = sweepIdx * c1
             val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM
@@ -750,6 +570,9 @@ az=${angleStringConverter.toString(az)}"""
                 azimuthToAngle(sweepHeadingRad),
                 spreadRad
             )
+
+            idx = clutterHits.nextSetBit(idx + 1)
+
         }
 
     }
