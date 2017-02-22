@@ -213,8 +213,8 @@ class DesignerController : Controller() {
         val raster = scenario.stationaryTargets?.getRasterHitMap(width, height) ?: return BitSet()
 
         for (hit in raster) {
-            val dx = (hit.first - width / 2.0) * distanceResolutionKm
-            val dy = (hit.second - height / 2.0) * distanceResolutionKm
+            val dx = (hit.x - width / 2.0) * distanceResolutionKm
+            val dy = (hit.y - height / 2.0) * distanceResolutionKm
             val radarDistanceKm = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0))
             if (radarDistanceKm < minRadarDistanceKm || radarDistanceKm > maxRadarDistanceKm) {
                 continue
@@ -229,7 +229,9 @@ class DesignerController : Controller() {
             for (sweepIdx in minSweepIndex..maxSweepIndex) {
                 val signalTimeUs = Math.round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
                 if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
-                    hits.set(sweepIdx * radarParameters.impulsePeriodUs.toInt() + signalTimeUs, true)
+                    val normSweepIdx = ((sweepIdx % radarParameters.impulsePeriodUs) + radarParameters.impulsePeriodUs) % radarParameters.impulsePeriodUs
+                    val bitIdx = normSweepIdx.toInt() * radarParameters.impulsePeriodUs.toInt() + signalTimeUs
+                    hits.set(bitIdx, true)
                 }
             }
         }

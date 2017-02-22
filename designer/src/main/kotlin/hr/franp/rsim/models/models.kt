@@ -1,7 +1,7 @@
 package hr.franp.rsim.models
 
 import hr.franp.rsim.*
-import hr.franp.rsim.Raster
+import hr.franp.rsim.RasterIterator
 import javafx.collections.FXCollections.*
 import javafx.embed.swing.*
 import javafx.geometry.*
@@ -185,20 +185,31 @@ class StationaryTarget() : JsonModel {
         return processHitMaskImage(SwingFXUtils.toFXImage(bwImage, null))
     }
 
-    fun getRasterHitMap(minWidth: Int, minHeight: Int): Raster {
-        val img = SwingFXUtils.fromFXImage(getImage(minWidth, minHeight), null)
+    fun getRasterHitMap(minWidth: Int, minHeight: Int): RasterIterator {
+        val img = ImageIO.read(bytes.inputStream())
+
+        // find the right scale factor to preserve ration as well as stretch
+        // the image so it is at least minW x minH
+        val scale = Math.max(minWidth.toDouble() / img.width.toDouble(), minHeight.toDouble() / img.height.toDouble())
+        val width = (img.width * scale).toInt()
+        val height = (img.height * scale).toInt()
 
         // create a BW version with the specified size
-        val bw = BufferedImage(img.width, img.height, BufferedImage.TYPE_BYTE_BINARY)
-        val g = bw.createGraphics()
-        g.drawImage(img, 0, 0, img.width, img.height, null)
+        val bwImage = BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
+        val g = bwImage.createGraphics()
+        g.drawImage(img, 0, 0, width, height, null)
+        g.dispose()
+
+        val r = RasterIterator(SwingFXUtils.toFXImage(bwImage, null))
+
+        val bw2 = BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
+        for (h in r) {
+            bw2.setRGB(h.x.toInt(), h.y.toInt(), 0xFFFFFF)
+        }
+        ImageIO.write(bw2, "png", File("test2.png"))
 
         // store bytes
-        return Raster(
-            BitSet.valueOf(bw.raster.getDataElements(0, 0, bw.width, bw.height, null) as ByteArray),
-            bw.width,
-            bw.height
-        )
+        return RasterIterator(SwingFXUtils.toFXImage(bwImage, null))
     }
 
     override fun toJSON(json: JsonBuilder) {

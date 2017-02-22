@@ -2,6 +2,7 @@ package hr.franp.rsim
 
 import hr.franp.rsim.models.*
 import javafx.event.*
+import javafx.geometry.*
 import javafx.scene.*
 import javafx.scene.image.*
 import javafx.scene.input.*
@@ -13,7 +14,6 @@ import jfxtras.labs.util.event.*
 import tornadofx.*
 import java.text.*
 import java.util.*
-import kotlin.Pair
 
 
 const val TWO_PI = 2 * Math.PI
@@ -34,20 +34,26 @@ fun azimuthToAngle(azimuthRadians: Double): Double {
 
 const val LIGHTSPEED_US_TO_ROUNDTRIP_KM = 2.0 / SPEED_OF_LIGHT_KM_US * S_TO_US
 
-class Raster(val bitSet: BitSet, val width: Int, val height: Int) : Iterator<Pair<Int, Int>> {
+class RasterIterator(image : Image) : Iterator<Point2D> {
 
+    val width = image.width.toInt()
+    val height = image.height.toInt()
+    val bitSet = processBitSetImage(image)
+
+    // iterator state
     var bitIndex = bitSet.nextSetBit(0)
 
     override fun hasNext(): Boolean = (bitIndex >= 0)
 
-    override fun next(): Pair<Int, Int> {
+    override fun next(): Point2D {
 
         val x = bitIndex % width
+        // invert Y to convert to geometric coordinate system
         val y = height - bitIndex / width
 
         bitIndex = bitSet.nextSetBit(bitIndex + 1)
 
-        return Pair(x, y)
+        return Point2D(x.toDouble(), y.toDouble())
 
     }
 
@@ -211,6 +217,28 @@ fun processHitMaskImage(inputImage: Image): Image {
     return outputImage
 }
 
+fun processBitSetImage(inputImage: Image): BitSet {
+    val reader = inputImage.pixelReader
+
+    val bs = BitSet((inputImage.height * inputImage.width).toInt())
+
+    for (y in 0..(inputImage.height - 1).toInt()) {
+        for (x in 0..(inputImage.width - 1).toInt()) {
+            var color = reader.getColor(x, y)
+
+            val idx = (x + y * inputImage.width).toInt()
+            if (color.red == 0.0 && color.green == 0.0 && color.blue == 0.0) {
+                bs.set(idx, false)
+            } else {
+                bs.set(idx, true)
+            }
+
+        }
+    }
+
+    return bs
+}
+
 val DECIMAL_SYMBOLS = DecimalFormatSymbols().apply {
     decimalSeparator = '.'
     groupingSeparator = ','
@@ -327,8 +355,9 @@ fun calculatePointTargetHits(hits: BitSet, position: RadarCoordinate, tUs: Doubl
     val sweepIdx = Math.round(sweepHeadingRad / c1).toInt()
     val signalTimeUs = Math.round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
     if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
+        val normSweepIdx = ((sweepIdx % radarParameters.impulsePeriodUs) + radarParameters.impulsePeriodUs) % radarParameters.impulsePeriodUs
         // set signal hit
-        hits.set((sweepIdx % radarParameters.azimuthChangePulse) * radarParameters.impulsePeriodUs.toInt() + signalTimeUs, true)
+        hits.set(normSweepIdx.toInt() * radarParameters.impulsePeriodUs.toInt() + signalTimeUs, true)
     }
 
 }
