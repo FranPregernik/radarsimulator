@@ -267,7 +267,7 @@ data class PathSegment(
     val vKmh = sqrt(pow(vxKmUs, 2.0) + pow(vyKmUs, 2.0)) * HOUR_TO_US
 
     fun getPositionForTime(timeUs: Double): RadarCoordinate? {
-        if (timeUs < t1Us && timeUs > t2Us) {
+        if (timeUs < t1Us || timeUs > t2Us) {
             return null
         }
 
