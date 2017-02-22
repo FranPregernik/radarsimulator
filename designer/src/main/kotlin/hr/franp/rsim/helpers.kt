@@ -300,7 +300,7 @@ fun normalizeAngleDeg(angle: Double): Double {
     return ((angle % 360) + 360) % 360
 }
 
-fun calculatePointTargetHits(hits: BitSet, ps: PathSegment, tUs: Double, radarParameters: RadarParameters) {
+fun calculatePointTargetHits(hits: BitSet, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
 
     val maxRadarDistanceKm = radarParameters.maxRadarDistanceKm
     val minRadarDistanceKm = radarParameters.minRadarDistanceKm
@@ -311,8 +311,6 @@ fun calculatePointTargetHits(hits: BitSet, ps: PathSegment, tUs: Double, radarPa
     val c1 = TWO_PI / azimuthChangePulseCount
     val maxSignalTimeUs = Math.ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
     val minSignalTimeUs = Math.ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-
-    val position =  ps.getPositionForTime(tUs) ?: return
 
     // get the angle of the target (center point)
     val radarDistanceKm = position.rKm
@@ -335,9 +333,9 @@ fun calculatePointTargetHits(hits: BitSet, ps: PathSegment, tUs: Double, radarPa
 
 }
 
-fun calculateTestTargetHits(hits: BitSet, pathSegment: PathSegment, tUs: Double, radarParameters: RadarParameters) {
+fun calculateTestTargetHits(hits: BitSet, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
 }
 
-fun calculateCloudTargetHits(hits: BitSet, pathSegment: PathSegment, tUs: Double, radarParameters: RadarParameters) {
+fun calculateCloudTargetHits(hits: BitSet, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
 
 }

@@ -168,18 +168,20 @@ class DesignerController : Controller() {
                 // iterate in one ARP rotation every simulation step time period
                 stream(spliteratorUnknownSize(simTimeIterator, Spliterator.ORDERED), false)
                     .forEach { tUs ->
-                        targetPathSegments.forEach { pathSegment ->
+                        targetPathSegments.forEach tps@ { pathSegment ->
+                            val position = pathSegment.getPositionForTime(tUs) ?: return@tps
+
                             when (pathSegment.type) {
                                 MovingTargetType.Point ->
-                                    calculatePointTargetHits(hits, pathSegment, tUs, radarParameters)
+                                    calculatePointTargetHits(hits, position, tUs, radarParameters)
                                 MovingTargetType.Cloud1 ->
-                                    calculateCloudTargetHits(hits, pathSegment, tUs, radarParameters)
+                                    calculateCloudTargetHits(hits, position, tUs, radarParameters)
                                 MovingTargetType.Cloud2 ->
-                                    calculateCloudTargetHits(hits, pathSegment, tUs, radarParameters)
+                                    calculateCloudTargetHits(hits, position, tUs, radarParameters)
                                 MovingTargetType.Test1 ->
-                                    calculateTestTargetHits(hits, pathSegment, tUs, radarParameters)
+                                    calculateTestTargetHits(hits, position, tUs, radarParameters)
                                 MovingTargetType.Test2 ->
-                                    calculateTestTargetHits(hits, pathSegment, tUs, radarParameters)
+                                    calculateTestTargetHits(hits, position, tUs, radarParameters)
                             }
                         }
                     }
