@@ -278,7 +278,7 @@ class DesignerView : View() {
 
                                                     var targetHits = BitSet()
 
-                                                    controller.calculateTargets().forEach {
+                                                    controller.calculateTargetHits().forEach {
                                                         targetHits.or(it)
                                                         stream.write(it.toByteArray())
                                                     }

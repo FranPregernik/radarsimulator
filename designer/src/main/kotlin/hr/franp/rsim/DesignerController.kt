@@ -102,7 +102,7 @@ class DesignerController : Controller() {
 
     }
 
-    fun calculateTargets(): Stream<BitSet> {
+    fun calculateTargetHits(): Stream<BitSet> {
 
         // (deep)clone for background processing
         val scenarioClone = scenario.copy<Scenario>()
