@@ -53,7 +53,7 @@ module azimuth_signal_generator #
       end
     endfunction
 
-    localparam BITS = clogb2(SIZE-1);
+    localparam BITS = clogb2(SIZE);
 
     reg [BITS-1:0] clk_idx = 1'bx;
 
@@ -65,7 +65,7 @@ module azimuth_signal_generator #
                 if (clk_idx < SIZE) begin
                     clk_idx = clk_idx + 1;
                 end
-                if (clk_idx > SIZE) begin
+                if (clk_idx >= SIZE) begin
                     clk_idx = SIZE;
                 end
             end
@@ -75,6 +75,6 @@ module azimuth_signal_generator #
     end
 
     // generates the signal (0/1) based on the memory register for the current time (clk_idx in DATA)
-    assign GEN_SIGNAL = EN && DATA[clk_idx];
+    assign GEN_SIGNAL = EN && (clk_idx < SIZE) && DATA[clk_idx];
 
 endmodule

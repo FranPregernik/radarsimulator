@@ -49,13 +49,9 @@ module radar_sim_ctrl_axi #
 
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_TRIG_US,
 
-        input [C_S_AXI_DATA_WIDTH-1:0] FT_BUFF_CNT,
-        input [C_S_AXI_DATA_WIDTH-1:0] FT_BUFF_WR_CNT,
-        input [C_S_AXI_DATA_WIDTH-1:0] FT_BUFF_RD_CNT,
+        input [C_S_AXI_DATA_WIDTH-1:0] FT_FIFO_BUFF_CNT,
 
-        input [C_S_AXI_DATA_WIDTH-1:0] MT_BUFF_CNT,
-        input [C_S_AXI_DATA_WIDTH-1:0] MT_BUFF_WR_CNT,
-        input [C_S_AXI_DATA_WIDTH-1:0] MT_BUFF_RD_CNT,
+        input [C_S_AXI_DATA_WIDTH-1:0] MT_FIFO_BUFF_CNT,
 
 
         // User ports ends
@@ -395,12 +391,8 @@ module radar_sim_ctrl_axi #
             4'h3   : reg_data_out <= RADAR_ACP_CNT;
             4'h4   : reg_data_out <= RADAR_TRIG_US;
             4'h5   : reg_data_out <= ACP_IDX;
-            4'h6   : reg_data_out <= FT_BUFF_CNT;
-            4'h7   : reg_data_out <= FT_BUFF_RD_CNT;
-            4'h8   : reg_data_out <= FT_BUFF_WR_CNT;
-            4'h9   : reg_data_out <= MT_BUFF_CNT;
-            4'hA   : reg_data_out <= MT_BUFF_RD_CNT;
-            4'hB   : reg_data_out <= MT_BUFF_WR_CNT;
+            4'h6   : reg_data_out <= FT_FIFO_BUFF_CNT;
+            4'h7   : reg_data_out <= MT_FIFO_BUFF_CNT;
             default : reg_data_out <= 0;
           endcase
     end

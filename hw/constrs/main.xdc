@@ -22,10 +22,6 @@ set_property PACKAGE_PIN AA11 [get_ports ACP_OUT]
 set_property PACKAGE_PIN Y10 [get_ports TRIG_OUT]
 # JA4
 set_property PACKAGE_PIN AA9 [get_ports USEC_CLK]
-# JA7
-set_property PACKAGE_PIN AB11 [get_ports TEST_FT_SIG]
-# JA8
-set_property PACKAGE_PIN AB10 [get_ports TEST_MT_SIG]
 
 
 set_property IOSTANDARD LVCMOS33 [get_ports RADAR_TRIG]
@@ -39,9 +35,6 @@ set_property IOSTANDARD LVCMOS33 [get_ports USEC_CLK]
 
 set_property IOSTANDARD LVCMOS33 [get_ports SIM_FT_SIG]
 set_property IOSTANDARD LVCMOS33 [get_ports SIM_MT_SIG]
-
-set_property IOSTANDARD LVCMOS33 [get_ports TEST_FT_SIG]
-set_property IOSTANDARD LVCMOS33 [get_ports TEST_MT_SIG]
 
 ############################
 # On-board LED             #
@@ -71,8 +64,3 @@ set_property IOSTANDARD LVCMOS33 [get_ports {LEDS[7]}]
 set_property PACKAGE_PIN M15 [get_ports SW_7]
 set_property IOSTANDARD LVCMOS33 [get_ports SW_7]
 
-
-
-############################
-# DEBUG                    #
-############################

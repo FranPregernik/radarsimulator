@@ -47,6 +47,10 @@ module radar_sim_target_axis #
 
         // time based signal that specifies a target is present or not
         output GEN_SIGNAL,
+        
+        output DBG_PKT_CNT,
+        
+        output wire [C_S_AXIS_TDATA_WIDTH-1 : 0] DBG_BANK,
 
         // User ports ends
         // Do not modify the ports beyond this line
@@ -67,6 +71,10 @@ module radar_sim_target_axis #
 
     // temporary register to store the current azimuth radar response data
     reg [C_S_AXIS_TDATA_WIDTH-1:0] bank;
+    
+    reg [C_S_AXIS_TDATA_WIDTH-1:0] DBG_PKT_CNT;
+    
+    assign DBG_BANK = bank;
 
     // initialize the radar signal response generator
     azimuth_signal_generator #(C_S_AXIS_TDATA_WIDTH) asg(
@@ -84,9 +92,11 @@ module radar_sim_target_axis #
     always @(posedge S_AXIS_ACLK) begin
         if (!S_AXIS_ARESETN) begin
             // Synchronous reset (active low)
+            DBG_PKT_CNT <= 0;
             bank <= 0;
-        end else if (RADAR_ACP_PE) begin
+        end else if (RADAR_ACP_PE && S_AXIS_TVALID) begin
             // on next RADAR_ACP_PE load fresh data
+            DBG_PKT_CNT <= DBG_PKT_CNT + 1;
             bank <= S_AXIS_TDATA;
        end
     end

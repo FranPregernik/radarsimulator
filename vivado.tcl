@@ -148,6 +148,7 @@ set_property top clk_divider_sim [get_filesets clk_divider]
 set_property top_lib xil_defaultlib [get_filesets clk_divider]
 
 # Create block design
+source $origin_dir/hw/bd/axi_target_test.tcl
 source $origin_dir/hw/bd/design_1.tcl
 
 # Generate the wrapper
