@@ -1,5 +1,6 @@
 package hr.franp.rsim
 
+import hr.franp.*
 import hr.franp.rsim.models.*
 import hr.franp.rsim.shapes.*
 import javafx.beans.property.*
@@ -24,8 +25,8 @@ class RadarScreenView : View() {
     val cloudOneImage = processHitMaskImage(Image(resources["/cloud1.png"]))
     val cloudTwoImage = processHitMaskImage(Image(resources["/cloud2.png"]))
 
-    val clutterHitsProperty = SimpleObjectProperty<BitSet>()
-    val targetHitsProperty = SimpleObjectProperty<BitSet>()
+    val clutterHitsProperty = SimpleObjectProperty<Bits>()
+    val targetHitsProperty = SimpleObjectProperty<Bits>()
 
     val mousePositionProperty = SimpleObjectProperty<RadarCoordinate>()
     val mouseClickProperty = SimpleObjectProperty<RadarCoordinate>()
@@ -302,7 +303,7 @@ class RadarScreenView : View() {
     fun drawStationaryTargets() {
 
         stationaryTargetsGroup.children.clear()
-        if (controller.scenario.stationaryTargets == null) {
+        if (controller.scenario.clutter == null) {
             return
         }
 
@@ -315,7 +316,7 @@ class RadarScreenView : View() {
         // draw stationary targets
         val width = (factor * 2.0 * controller.radarParameters.maxRadarDistanceKm).toInt()
         val height = (factor * 2.0 * controller.radarParameters.maxRadarDistanceKm).toInt()
-        val rasterMapImage = controller.scenario.stationaryTargets.getImage(width, height)
+        val rasterMapImage = controller.scenario.clutter.getImage(width, height)
 
         stationaryTargetsGroup += imageview {
             image = rasterMapImage
@@ -533,12 +534,12 @@ az=${angleStringConverter.toString(az)}"""
         setupViewPort(movingHitsCanvas)
         setupViewPort(stationaryHitsCanvas)
 
-        val targetHits = targetHitsProperty.get() ?: BitSet()
+        val targetHits = targetHitsProperty.get() ?: Bits(0)
         var idx = targetHits.nextSetBit(0)
         while (idx >= 0 && idx < targetHits.size()) {
 
-            val sweepIdx = idx / controller.radarParameters.impulsePeriodUs.toInt()
-            val signalTimeUs = idx % controller.radarParameters.impulsePeriodUs.toInt()
+            val sweepIdx = idx / controller.radarParameters.maxImpulsePeriodUs.toInt()
+            val signalTimeUs = idx % controller.radarParameters.maxImpulsePeriodUs.toInt()
 
             val sweepHeadingRad = sweepIdx * c1
             val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM
@@ -554,12 +555,12 @@ az=${angleStringConverter.toString(az)}"""
 
         }
 
-        val clutterHits = clutterHitsProperty.get() ?: BitSet()
+        val clutterHits = clutterHitsProperty.get() ?: Bits(0)
         idx = clutterHits.nextSetBit(0)
         while (idx >= 0 && idx < clutterHits.size()) {
 
-            val sweepIdx = idx / controller.radarParameters.impulsePeriodUs.toInt()
-            val signalTimeUs = idx % controller.radarParameters.impulsePeriodUs.toInt()
+            val sweepIdx = idx / controller.radarParameters.maxImpulsePeriodUs.toInt()
+            val signalTimeUs = idx % controller.radarParameters.maxImpulsePeriodUs.toInt()
 
             val sweepHeadingRad = sweepIdx * c1
             val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM

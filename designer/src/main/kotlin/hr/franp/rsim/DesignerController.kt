@@ -1,5 +1,6 @@
 package hr.franp.rsim
 
+import hr.franp.*
 import hr.franp.rsim.models.*
 import tornadofx.*
 import java.util.*
@@ -8,11 +9,85 @@ import java.util.stream.*
 import java.util.stream.StreamSupport.*
 
 class DesignerController : Controller() {
-    val radarParameters: RadarParameters
+    val radarParameters: RadarParameters = RadarParameters().apply {
+        impulsePeriodUs = 3003.0
+        maxImpulsePeriodUs = 3072.0
+        seekTimeSec = 12.0
+        azimuthChangePulse = 4096
+        horizontalAngleBeamWidthDeg = 1.4
+        distanceResolutionKm = 0.150
+        maxRadarDistanceKm = 400.0
+        minRadarDistanceKm = 5.0
+    }
 
-    val displayParameters: DisplayParameters
+    val displayParameters: DisplayParameters = DisplayParameters().apply {
+        distanceStepKm = 50.0
+        distanceUnit = DistanceUnit.Km
+        azimuthSteps = 36
+        azimuthMarkerType = AzimuthMarkerType.FULL
+        coordinateSystem = CoordinateSystem.R_AZ
+        simulatedCurrentTimeSec = 0.0
+    }
 
-    val scenario: Scenario
+    val scenario: Scenario = Scenario().apply {
+        simulationDurationMin = 120.0
+        simulationStepUs = 1000.0
+        movingTargets = mutableListOf(
+            MovingTarget().apply {
+                name = "T1"
+                type = MovingTargetType.Point
+                initialPosition = RadarCoordinate.fromCartesian(10.0, -100.0)
+                directions = mutableListOf(
+                    Direction(
+                        speedKmh = 750.0,
+                        destination = RadarCoordinate.fromCartesian(50.0, 50.0)
+                    ),
+                    Direction(
+                        speedKmh = 750.0,
+                        destination = RadarCoordinate.fromCartesian(300.0, 300.0)
+                    ),
+                    Direction(
+                        speedKmh = 750.0,
+                        destination = RadarCoordinate.fromCartesian(-200.0, 300.0)
+                    )
+                ).observable()
+            },
+            MovingTarget().apply {
+                name = "T2"
+                type = MovingTargetType.Point
+                initialPosition = RadarCoordinate.fromCartesian(-100.0, 10.0)
+                directions = mutableListOf(
+                    Direction(
+                        speedKmh = 1200.0,
+                        destination = RadarCoordinate.fromCartesian(55.0, 55.0)
+                    ),
+                    Direction(
+                        speedKmh = 1200.0,
+                        destination = RadarCoordinate.fromCartesian(305.0, 305.0)
+                    ),
+                    Direction(
+                        speedKmh = 1200.0,
+                        destination = RadarCoordinate.fromCartesian(-205.0, 305.0)
+                    )
+                ).observable()
+            },
+            MovingTarget().apply {
+                name = "T3"
+                type = MovingTargetType.Point
+                initialPosition = RadarCoordinate.fromCartesian(400.0, -350.0)
+                directions = mutableListOf(
+                    Direction(
+                        speedKmh = 900.0,
+                        destination = RadarCoordinate.fromCartesian(-400.0, -320.0)
+                    ),
+                    Direction(
+                        speedKmh = 900.0,
+                        destination = RadarCoordinate.fromCartesian(-320.0, -100.0)
+                    )
+                ).observable()
+            }
+        ).observable()
+    }
 
     /**
      * Selected moving target name
@@ -20,89 +95,7 @@ class DesignerController : Controller() {
     var selectedMovingTarget by property<MovingTarget>(null)
     val selectedMovingTargetProperty = getProperty(DesignerController::selectedMovingTarget)
 
-    init {
-        radarParameters = RadarParameters().apply {
-            impulsePeriodUs = 3000.0
-            seekTimeSec = 12.0
-            azimuthChangePulse = 4096
-            horizontalAngleBeamWidthDeg = 1.4
-            distanceResolutionKm = 0.150
-            maxRadarDistanceKm = 400.0
-            minRadarDistanceKm = 5.0
-        }
-
-        displayParameters = DisplayParameters().apply {
-            distanceStepKm = 50.0
-            distanceUnit = DistanceUnit.Km
-            azimuthSteps = 36
-            azimuthMarkerType = AzimuthMarkerType.FULL
-            coordinateSystem = CoordinateSystem.R_AZ
-            simulatedCurrentTimeSec = 0.0
-        }
-
-        scenario = Scenario().apply {
-            simulationDurationMin = 120.0
-            simulationStepUs = 1000.0
-            movingTargets = mutableListOf(
-                MovingTarget().apply {
-                    name = "T1"
-                    type = MovingTargetType.Point
-                    initialPosition = RadarCoordinate.fromCartesian(10.0, -100.0)
-                    directions = mutableListOf(
-                        Direction(
-                            speedKmh = 750.0,
-                            destination = RadarCoordinate.fromCartesian(50.0, 50.0)
-                        ),
-                        Direction(
-                            speedKmh = 750.0,
-                            destination = RadarCoordinate.fromCartesian(300.0, 300.0)
-                        ),
-                        Direction(
-                            speedKmh = 750.0,
-                            destination = RadarCoordinate.fromCartesian(-200.0, 300.0)
-                        )
-                    ).observable()
-                },
-                MovingTarget().apply {
-                    name = "T2"
-                    type = MovingTargetType.Point
-                    initialPosition = RadarCoordinate.fromCartesian(-100.0, 10.0)
-                    directions = mutableListOf(
-                        Direction(
-                            speedKmh = 1200.0,
-                            destination = RadarCoordinate.fromCartesian(55.0, 55.0)
-                        ),
-                        Direction(
-                            speedKmh = 1200.0,
-                            destination = RadarCoordinate.fromCartesian(305.0, 305.0)
-                        ),
-                        Direction(
-                            speedKmh = 1200.0,
-                            destination = RadarCoordinate.fromCartesian(-205.0, 305.0)
-                        )
-                    ).observable()
-                },
-                MovingTarget().apply {
-                    name = "T3"
-                    type = MovingTargetType.Point
-                    initialPosition = RadarCoordinate.fromCartesian(400.0, -350.0)
-                    directions = mutableListOf(
-                        Direction(
-                            speedKmh = 900.0,
-                            destination = RadarCoordinate.fromCartesian(-400.0, -320.0)
-                        ),
-                        Direction(
-                            speedKmh = 900.0,
-                            destination = RadarCoordinate.fromCartesian(-320.0, -100.0)
-                        )
-                    ).observable()
-                }
-            ).observable()
-        }
-
-    }
-
-    fun calculateTargetHits(): Stream<BitSet> {
+    fun calculateTargetHits(): Stream<Bits> {
 
         // (deep)clone for background processing
         val scenarioClone = scenario.copy<Scenario>()
@@ -156,7 +149,7 @@ class DesignerController : Controller() {
 
                 println("$minTimeSec/$simulationDurationSec")
 
-                val hits = BitSet((radarParameters.azimuthChangePulse * radarParameters.impulsePeriodUs).toInt())
+                val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
 
                 val minTimeUs = minTimeSec * S_TO_US
                 val maxTimeUs = (minTimeSec + radarParameters.seekTimeSec) * S_TO_US
@@ -192,49 +185,21 @@ class DesignerController : Controller() {
     }
 
 
-    fun calculateClutterHits(): BitSet {
+    fun calculateClutterHits(): Bits {
         // (deep)clone for background processing
         val scenario = this.scenario.copy<Scenario>()
 
-        val hits = BitSet((radarParameters.azimuthChangePulse * radarParameters.impulsePeriodUs).toInt())
+        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
 
         val maxRadarDistanceKm = radarParameters.maxRadarDistanceKm
-        val minRadarDistanceKm = radarParameters.minRadarDistanceKm
-        val maxSignalTimeUs = Math.ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-        val minSignalTimeUs = Math.ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
         val distanceResolutionKm = radarParameters.distanceResolutionKm
-        val azimuthChangePulseCount = radarParameters.azimuthChangePulse
-        val horizontalAngleBeamWidthRad = Math.toRadians(radarParameters.horizontalAngleBeamWidthDeg)
-        val c1 = TWO_PI / azimuthChangePulseCount
 
         val width = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
         val height = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
 
-        val raster = scenario.stationaryTargets?.getRasterHitMap(width, height) ?: return BitSet()
+        val raster = scenario.clutter?.getRasterHitMap(width, height) ?: return hits
 
-        for (hit in raster) {
-            val dx = (hit.x - width / 2.0) * distanceResolutionKm
-            val dy = (hit.y - height / 2.0) * distanceResolutionKm
-            val radarDistanceKm = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0))
-            if (radarDistanceKm < minRadarDistanceKm || radarDistanceKm > maxRadarDistanceKm) {
-                continue
-            }
-
-            val cartesianAngleRad = Math.atan2(dy, dx)
-            val sweepHeadingRad = angleToAzimuth(cartesianAngleRad)
-
-            val minSweepIndex = Math.floor((sweepHeadingRad - horizontalAngleBeamWidthRad) / c1).toInt()
-            val maxSweepIndex = Math.ceil((sweepHeadingRad + horizontalAngleBeamWidthRad) / c1).toInt()
-
-            for (sweepIdx in minSweepIndex..maxSweepIndex) {
-                val signalTimeUs = Math.round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
-                if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
-                    val normSweepIdx = ((sweepIdx % radarParameters.impulsePeriodUs) + radarParameters.impulsePeriodUs) % radarParameters.impulsePeriodUs
-                    val bitIdx = normSweepIdx.toInt() * radarParameters.impulsePeriodUs.toInt() + signalTimeUs
-                    hits.set(bitIdx, true)
-                }
-            }
-        }
+        calculateClutterHits(hits, raster, radarParameters)
 
         return hits
     }

@@ -1,5 +1,6 @@
 package hr.franp.rsim
 
+import hr.franp.*
 import hr.franp.rsim.models.*
 import hr.franp.rsim.models.AzimuthMarkerType.*
 import hr.franp.rsim.models.DistanceUnit.*
@@ -14,7 +15,7 @@ import org.controlsfx.glyphfont.*
 import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 import java.io.*
-import java.util.*
+import java.nio.*
 import java.util.zip.*
 
 class DesignerView : View() {
@@ -180,10 +181,10 @@ class DesignerView : View() {
                                         val files = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg")))
                                         println("The user chose $files")
                                         if (files.isNotEmpty()) {
-                                            controller.scenario.stationaryTargets = StationaryTarget(files.first())
+                                            controller.scenario.clutter = Clutter(files.first())
                                             radarScreen.drawStationaryTargets()
                                             this.tooltip = Tooltip("Select clutter map").apply {
-                                                graphic = ImageView(controller.scenario.stationaryTargets.getImage(100, 100))
+                                                graphic = ImageView(controller.scenario.clutter.getImage(100, 100))
                                             }
                                         }
                                     }
@@ -258,33 +259,74 @@ class DesignerView : View() {
 
                                         runAsync {
 
-                                            FileOutputStream("clutter.bin.gz").use { clutterFile ->
-                                                GZIPOutputStream(clutterFile).use { stream ->
-                                                    stream.write(controller.radarParameters.seekTimeSec.toInt())
-                                                    stream.write(controller.radarParameters.azimuthChangePulse.toInt())
-                                                    stream.write(controller.radarParameters.impulsePeriodUs.toInt())
+                                            FileOutputStream("clutter.bin.gz").use { stream ->
+                                                GZIPOutputStream(stream).use {
+                                                    stream.write(
+                                                        ByteBuffer.allocate(4)
+                                                            .order(ByteOrder.LITTLE_ENDIAN)
+                                                            .putInt((controller.radarParameters.seekTimeSec * S_TO_US).toInt())
+                                                            .array()
+                                                    )
+                                                    stream.write(
+                                                        ByteBuffer.allocate(4)
+                                                            .order(ByteOrder.LITTLE_ENDIAN)
+                                                            .putInt(controller.radarParameters.azimuthChangePulse.toInt())
+                                                            .array()
+                                                    )
+                                                    stream.write(
+                                                        ByteBuffer.allocate(4)
+                                                            .order(ByteOrder.LITTLE_ENDIAN)
+                                                            .putInt(controller.radarParameters.impulsePeriodUs.toInt())
+                                                            .array()
+                                                    )
+                                                    stream.write(
+                                                        ByteBuffer.allocate(4)
+                                                            .order(ByteOrder.LITTLE_ENDIAN)
+                                                            .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
+                                                            .array()
+                                                    )
 
                                                     val clutterHits = controller.calculateClutterHits()
                                                     radarScreen.clutterHitsProperty.set(clutterHits)
-                                                    stream.write(clutterHits.toByteArray())
+                                                    clutterHits.writeTo(stream)
                                                 }
                                             }
 
-                                            FileOutputStream("targets.bin.gz").use { targetFile ->
-                                                GZIPOutputStream(targetFile).use { stream ->
-                                                    stream.write(controller.radarParameters.seekTimeSec.toInt())
-                                                    stream.write(controller.radarParameters.azimuthChangePulse.toInt())
-                                                    stream.write(controller.radarParameters.impulsePeriodUs.toInt())
+                                            FileOutputStream("targets.bin.gz").use { fileStream ->
+                                                GZIPOutputStream(fileStream).use { stream ->
+                                                    stream.write(
+                                                        ByteBuffer.allocate(4)
+                                                            .order(ByteOrder.LITTLE_ENDIAN)
+                                                            .putInt((controller.radarParameters.seekTimeSec * S_TO_US).toInt())
+                                                            .array()
+                                                    )
+                                                    stream.write(
+                                                        ByteBuffer.allocate(4)
+                                                            .order(ByteOrder.LITTLE_ENDIAN)
+                                                            .putInt(controller.radarParameters.azimuthChangePulse.toInt())
+                                                            .array()
+                                                    )
+                                                    stream.write(
+                                                        ByteBuffer.allocate(4)
+                                                            .order(ByteOrder.LITTLE_ENDIAN)
+                                                            .putInt(controller.radarParameters.impulsePeriodUs.toInt())
+                                                            .array()
+                                                    )
+                                                    stream.write(
+                                                        ByteBuffer.allocate(4)
+                                                            .order(ByteOrder.LITTLE_ENDIAN)
+                                                            .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
+                                                            .array()
+                                                    )
 
-                                                    var targetHits = BitSet()
-
+                                                    val mergedHits = Bits(0)
                                                     controller.calculateTargetHits().forEach {
-                                                        targetHits.or(it)
-                                                        stream.write(it.toByteArray())
+                                                        mergedHits.or(it)
+                                                        it.writeTo(stream)
                                                     }
-
-                                                    radarScreen.targetHitsProperty.set(targetHits)
+                                                    radarScreen.targetHitsProperty.set(mergedHits)
                                                 }
+
                                             }
                                         } ui {
                                             this.disableProperty().set(false)

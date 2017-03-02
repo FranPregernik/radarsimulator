@@ -1,5 +1,6 @@
 package hr.franp.rsim
 
+import hr.franp.*
 import hr.franp.rsim.models.*
 import javafx.event.*
 import javafx.geometry.*
@@ -12,12 +13,12 @@ import javafx.util.*
 import jfxtras.labs.util.*
 import jfxtras.labs.util.event.*
 import tornadofx.*
+import java.lang.Math.*
 import java.text.*
-import java.util.*
 
 
-const val TWO_PI = 2 * Math.PI
-const val HALF_PI = Math.PI / 2
+const val TWO_PI = 2 * PI
+const val HALF_PI = PI / 2
 const val S_TO_US = 1000.0 * 1000.0
 const val MIN_TO_S = 60
 const val MIN_TO_US = 60.0 * S_TO_US
@@ -34,26 +35,33 @@ fun azimuthToAngle(azimuthRadians: Double): Double {
 
 const val LIGHTSPEED_US_TO_ROUNDTRIP_KM = 2.0 / SPEED_OF_LIGHT_KM_US * S_TO_US
 
-class RasterIterator(image : Image) : Iterator<Point2D> {
+class RasterIterator(val img: Image) : Iterator<Point2D> {
 
-    val width = image.width.toInt()
-    val height = image.height.toInt()
-    val bitSet = processBitSetImage(image)
+    val reader: PixelReader = img.pixelReader
+    val pixelCnt = (img.width * img.height).toInt()
+    var idx = 0
 
-    // iterator state
-    var bitIndex = bitSet.nextSetBit(0)
-
-    override fun hasNext(): Boolean = (bitIndex >= 0)
+    override fun hasNext(): Boolean = (idx >= 0 && idx < pixelCnt)
 
     override fun next(): Point2D {
 
-        val x = bitIndex % width
-        // invert Y to convert to geometric coordinate system
-        val y = height - bitIndex / width
+        while (hasNext()) {
 
-        bitIndex = bitSet.nextSetBit(bitIndex + 1)
+            val x = idx % img.width
+            // invert Y to convert to geometric coordinate system
+            val y = img.height - 1 - idx / img.width
 
-        return Point2D(x.toDouble(), y.toDouble())
+            idx += 1
+
+            val color = reader.getColor(x.toInt(), y.toInt())
+            if (!(color.red == 0.0 && color.green == 0.0 && color.blue == 0.0)) {
+                return Point2D(x, y)
+            }
+
+        }
+
+        return Point2D.ZERO
+
 
     }
 
@@ -152,17 +160,17 @@ class RectangleSelectionController(private val root: Parent,
         secondX = event.sceneX
         secondY = event.sceneY
 
-        firstX = Math.max(firstX, 0.0)
-        firstY = Math.max(firstY, 0.0)
+        firstX = max(firstX, 0.0)
+        firstY = max(firstY, 0.0)
 
-        secondX = Math.max(secondX, 0.0)
-        secondY = Math.max(secondY, 0.0)
+        secondX = max(secondX, 0.0)
+        secondY = max(secondY, 0.0)
 
-        val x = Math.min(firstX, secondX)
-        val y = Math.min(firstY, secondY)
+        val x = min(firstX, secondX)
+        val y = min(firstY, secondY)
 
-        val width = Math.abs(secondX - firstX)
-        val height = Math.abs(secondY - firstY)
+        val width = abs(secondX - firstX)
+        val height = abs(secondY - firstY)
 
         rectangle.x = x / parentScaleX
         rectangle.y = y / parentScaleY
@@ -197,13 +205,14 @@ class RectangleSelectionController(private val root: Parent,
 }
 
 
-fun processHitMaskImage(inputImage: Image): Image {
-    val outputImage = WritableImage(inputImage.width.toInt(), inputImage.height.toInt())
-    val reader = inputImage.pixelReader
+fun processHitMaskImage(img: Image): Image {
+
+    val outputImage = WritableImage(img.width.toInt(), img.height.toInt())
+    val reader = img.pixelReader
     val writer = outputImage.pixelWriter
 
-    for (y in 0..(inputImage.height - 1).toInt()) {
-        for (x in 0..(inputImage.width - 1).toInt()) {
+    for (y in 0..(img.height - 1).toInt()) {
+        for (x in 0..(img.width - 1).toInt()) {
             var color = reader.getColor(x, y)
 
             if (color.red == 0.0 && color.green == 0.0 && color.blue == 0.0) {
@@ -215,28 +224,6 @@ fun processHitMaskImage(inputImage: Image): Image {
     }
 
     return outputImage
-}
-
-fun processBitSetImage(inputImage: Image): BitSet {
-    val reader = inputImage.pixelReader
-
-    val bs = BitSet((inputImage.height * inputImage.width).toInt())
-
-    for (y in 0..(inputImage.height - 1).toInt()) {
-        for (x in 0..(inputImage.width - 1).toInt()) {
-            var color = reader.getColor(x, y)
-
-            val idx = (x + y * inputImage.width).toInt()
-            if (color.red == 0.0 && color.green == 0.0 && color.blue == 0.0) {
-                bs.set(idx, false)
-            } else {
-                bs.set(idx, true)
-            }
-
-        }
-    }
-
-    return bs
 }
 
 val DECIMAL_SYMBOLS = DecimalFormatSymbols().apply {
@@ -328,17 +315,59 @@ fun normalizeAngleDeg(angle: Double): Double {
     return ((angle % 360) + 360) % 360
 }
 
-fun calculatePointTargetHits(hits: BitSet, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
+fun calculateClutterHits(hits: Bits, hitRaster: RasterIterator, radarParameters: RadarParameters) {
+    val maxRadarDistanceKm = radarParameters.maxRadarDistanceKm
+    val minRadarDistanceKm = radarParameters.minRadarDistanceKm
+    val distanceResolutionKm = radarParameters.distanceResolutionKm
+
+    val width = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
+    val height = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
+
+    val azimuthChangePulseCount = radarParameters.azimuthChangePulse
+    val horizontalAngleBeamWidthRad = Math.toRadians(radarParameters.horizontalAngleBeamWidthDeg)
+    val c1 = TWO_PI / azimuthChangePulseCount
+    val maxSignalTimeUs = ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+    val minSignalTimeUs = ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+
+    for (hit in hitRaster) {
+        val x = (hit.x - width / 2.0) * distanceResolutionKm
+        val y = (hit.y - height / 2.0) * distanceResolutionKm
+
+        val radarDistanceKm = sqrt(pow(x, 2.0) + pow(y, 2.0))
+        if (radarDistanceKm < minRadarDistanceKm || radarDistanceKm > maxRadarDistanceKm) {
+            continue
+        }
+
+        val cartesianAngleRad = Math.atan2(y, x)
+        val sweepHeadingRad = angleToAzimuth(cartesianAngleRad)
+
+        val minSweepIndex = floor((sweepHeadingRad - horizontalAngleBeamWidthRad) / c1).toInt()
+        val maxSweepIndex = ceil((sweepHeadingRad + horizontalAngleBeamWidthRad) / c1).toInt()
+
+        for (sweepIdx in minSweepIndex..maxSweepIndex) {
+            val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
+            if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
+                val normSweepIdx = ((sweepIdx % radarParameters.maxImpulsePeriodUs) + radarParameters.maxImpulsePeriodUs) % radarParameters.maxImpulsePeriodUs
+                val bitIdx = normSweepIdx.toInt() * radarParameters.maxImpulsePeriodUs.toInt() + signalTimeUs
+
+                // set signal hit
+                hits.setBit(bitIdx, true)
+            }
+        }
+    }
+}
+
+fun calculatePointTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
 
     val maxRadarDistanceKm = radarParameters.maxRadarDistanceKm
     val minRadarDistanceKm = radarParameters.minRadarDistanceKm
-    val horizontalAngleBeamWidthRad = Math.toRadians(radarParameters.horizontalAngleBeamWidthDeg)
+    val horizontalAngleBeamWidthRad = toRadians(radarParameters.horizontalAngleBeamWidthDeg)
     val rotationTimeUs = radarParameters.seekTimeSec * S_TO_US
     val sweepHeadingRad = TWO_PI / rotationTimeUs * tUs
     val azimuthChangePulseCount = radarParameters.azimuthChangePulse
     val c1 = TWO_PI / azimuthChangePulseCount
-    val maxSignalTimeUs = Math.ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-    val minSignalTimeUs = Math.ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+    val maxSignalTimeUs = ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+    val minSignalTimeUs = ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
 
     // get the angle of the target (center point)
     val radarDistanceKm = position.rKm
@@ -346,25 +375,27 @@ fun calculatePointTargetHits(hits: BitSet, position: RadarCoordinate, tUs: Doubl
         return
     }
 
-    val targetHeadingRad = Math.toRadians(position.azDeg)
-    val diff = Math.abs(((Math.abs(targetHeadingRad - sweepHeadingRad) + Math.PI) % TWO_PI) - Math.PI)
+    val targetHeadingRad = toRadians(position.azDeg)
+    val diff = abs(((abs(targetHeadingRad - sweepHeadingRad) + PI) % TWO_PI) - PI)
     if (diff > horizontalAngleBeamWidthRad / 2.0) {
         return
     }
 
-    val sweepIdx = Math.round(sweepHeadingRad / c1).toInt()
-    val signalTimeUs = Math.round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
+    val sweepIdx = round(sweepHeadingRad / c1).toInt()
+    val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
     if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
-        val normSweepIdx = ((sweepIdx % radarParameters.impulsePeriodUs) + radarParameters.impulsePeriodUs) % radarParameters.impulsePeriodUs
+        val normSweepIdx = ((sweepIdx % radarParameters.maxImpulsePeriodUs) + radarParameters.maxImpulsePeriodUs) % radarParameters.maxImpulsePeriodUs
+        val bitIdx = normSweepIdx.toInt() * radarParameters.maxImpulsePeriodUs.toInt() + signalTimeUs
+
         // set signal hit
-        hits.set(normSweepIdx.toInt() * radarParameters.impulsePeriodUs.toInt() + signalTimeUs, true)
+        hits.setBit(bitIdx, true)
     }
 
 }
 
-fun calculateTestTargetHits(hits: BitSet, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
+fun calculateTestTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
 }
 
-fun calculateCloudTargetHits(hits: BitSet, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
+fun calculateCloudTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
 
 }

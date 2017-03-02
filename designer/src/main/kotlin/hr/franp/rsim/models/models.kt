@@ -1,7 +1,7 @@
 package hr.franp.rsim.models
 
+import hr.franp.*
 import hr.franp.rsim.*
-import hr.franp.rsim.RasterIterator
 import javafx.collections.FXCollections.*
 import javafx.embed.swing.*
 import javafx.geometry.*
@@ -159,57 +159,59 @@ class MovingTarget : JsonModel {
     }
 }
 
-class StationaryTarget() : JsonModel {
+class Clutter() : JsonModel {
+
     var bytes by property<ByteArray>()
-    fun bytesProperty() = getProperty(StationaryTarget::bytes)
+    fun bytesProperty() = getProperty(Clutter::bytes)
 
     constructor(imageFile: File) : this() {
         bytes = imageFile.readBytes()
     }
 
-    fun getImage(minWidth: Int, minHeight: Int): Image {
-        val img = ImageIO.read(bytes.inputStream())
+    private fun scaleStoredImage(minHeight: Int, minWidth: Int): Image {
+
+        val img: BufferedImage?
+        val originalWidth: Double
+        val originalHeight: Double
+
+        if (bytes != null) {
+            img = ImageIO.read(bytes.inputStream())
+            originalWidth = img.width.toDouble()
+            originalHeight = img.height.toDouble()
+        } else {
+            img = null
+            originalWidth = minWidth.toDouble()
+            originalHeight = minHeight.toDouble()
+        }
 
         // find the right scale factor to preserve ration as well as stretch
         // the image so it is at least minW x minH
-        val scale = Math.max(minWidth.toDouble() / img.width.toDouble(), minHeight.toDouble() / img.height.toDouble())
-        val width = (img.width * scale).toInt()
-        val height = (img.height * scale).toInt()
+        val scale = max(minWidth.toDouble() / originalWidth, minHeight.toDouble() / originalHeight)
+        val width = (originalWidth * scale).toInt()
+        val height = (originalHeight * scale).toInt()
 
         // create a BW version with the specified size
         val bwImage = BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
-        val g = bwImage.createGraphics()
-        g.drawImage(img, 0, 0, width, height, null)
-        g.dispose()
 
-        return processHitMaskImage(SwingFXUtils.toFXImage(bwImage, null))
+        // draw image if it exists
+        if (img != null) {
+            val g = bwImage.createGraphics()
+            g.drawImage(img, 0, 0, width, height, null)
+            g.dispose()
+        }
+
+        val fxImage = SwingFXUtils.toFXImage(bwImage, null)
+        return fxImage
+    }
+
+    fun getImage(minWidth: Int, minHeight: Int): Image {
+        val fxImage = scaleStoredImage(minHeight, minWidth)
+        return processHitMaskImage(fxImage)
     }
 
     fun getRasterHitMap(minWidth: Int, minHeight: Int): RasterIterator {
-        val img = ImageIO.read(bytes.inputStream())
-
-        // find the right scale factor to preserve ration as well as stretch
-        // the image so it is at least minW x minH
-        val scale = Math.max(minWidth.toDouble() / img.width.toDouble(), minHeight.toDouble() / img.height.toDouble())
-        val width = (img.width * scale).toInt()
-        val height = (img.height * scale).toInt()
-
-        // create a BW version with the specified size
-        val bwImage = BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
-        val g = bwImage.createGraphics()
-        g.drawImage(img, 0, 0, width, height, null)
-        g.dispose()
-
-        val r = RasterIterator(SwingFXUtils.toFXImage(bwImage, null))
-
-        val bw2 = BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
-        for (h in r) {
-            bw2.setRGB(h.x.toInt(), h.y.toInt(), 0xFFFFFF)
-        }
-        ImageIO.write(bw2, "png", File("test2.png"))
-
-        // store bytes
-        return RasterIterator(SwingFXUtils.toFXImage(bwImage, null))
+        val fxImage = scaleStoredImage(minHeight, minWidth)
+        return RasterIterator(fxImage)
     }
 
     override fun toJSON(json: JsonBuilder) {
@@ -237,8 +239,8 @@ class Scenario : JsonModel {
     fun movingTargetsProperty() = getProperty(Scenario::movingTargets)
 
 
-    var stationaryTargets by property<StationaryTarget>()
-    fun stationaryTargetsProperty() = getProperty(Scenario::stationaryTargets)
+    var clutter by property<Clutter>(Clutter())
+    fun clutterProperty() = getProperty(Scenario::clutter)
 
 
     override fun toJSON(json: JsonBuilder) {
@@ -246,7 +248,7 @@ class Scenario : JsonModel {
             add("simulationDurationMin", simulationDurationMin)
             add("simulationStepUs", simulationStepUs)
             add("movingTargets", movingTargets?.toJSON())
-            add("stationaryTargets", stationaryTargets?.toJSON())
+            add("clutter", clutter?.toJSON())
         }
     }
 
@@ -255,7 +257,7 @@ class Scenario : JsonModel {
             simulationDurationMin = double("simulationDurationMin")
             simulationStepUs = double("simulationStepUs")
             movingTargets = getJsonArray("movingTargets")?.toModel()
-            stationaryTargets = getJsonObject("stationaryTargets")?.toModel()
+            clutter = getJsonObject("clutter")?.toModel() ?: Clutter()
         }
     }
 }
@@ -302,6 +304,14 @@ class RadarParameters {
     var impulsePeriodUs by property<Double>()
 
     fun impulsePeriodUsProperty() = getProperty(RadarParameters::impulsePeriodUs)
+
+    /**
+     * TRIG impulse period - Ti
+     */
+    var maxImpulsePeriodUs by property<Double>()
+
+    fun maxImpulsePeriodUsProperty() = getProperty(RadarParameters::maxImpulsePeriodUs)
+
 
     /**
      * Time between two ARP pulses - Tpr
