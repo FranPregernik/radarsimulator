@@ -1,6 +1,13 @@
 group 'hr.franp'
 version '1.0-SNAPSHOT'
 
+repositories {
+    mavenCentral()
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+    maven { url "http://dl.bintray.com/jetbrains/spek" }
+    maven { url "http://dl.bintray.com/markusamshove/maven" }
+}
+
 buildscript {
     ext.kotlin_version = '1.0.6'
 
@@ -11,16 +18,19 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "de.dynamicfiles.projects.gradle.plugins:javafx-gradle-plugin:8.8.2"
+        classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.0-M3'
     }
 
 }
 
 apply plugin: 'kotlin'
+apply plugin: 'org.junit.platform.gradle.plugin'
 
-repositories {
-    mavenCentral()
-    maven {
-        url 'https://oss.sonatype.org/content/repositories/snapshots/'
+junitPlatform {
+    filters {
+        engines {
+            include 'spek'
+        }
     }
 }
 
@@ -29,14 +39,18 @@ dependencies {
     compile fileTree(dir: "${System.properties['java.home']}", include: '**/jfxrt.jar')
 
     // https://mvnrepository.com/artifact/no.tornado/tornadofx
-    compile group: 'no.tornado', name: 'tornadofx', version: '1.6.2'
+    compile 'no.tornado:tornadofx:1.6.2'
 
     // https://mvnrepository.com/artifact/org.controlsfx/controlsfx
-    compile group: 'org.controlsfx', name: 'controlsfx', version: '8.40.12'
+    compile 'org.controlsfx:controlsfx:8.40.12'
 
     // https://mvnrepository.com/artifact/org.jfxtras/jfxtras-labs
-    compile group: 'org.jfxtras', name: 'jfxtras-labs', version: '8.0-r5'
+    compile 'org.jfxtras:jfxtras-labs:8.0-r5'
 
+    testCompile 'org.jetbrains.spek:spek-api:1.1.0-beta3'
+    testRuntime 'org.jetbrains.spek:spek-junit-platform-engine:1.1.0-beta3'
+    testCompile 'org.junit.platform:junit-platform-runner:1.0.0-M3'
+    testCompile 'org.amshove.kluent:kluent:1.14'
 }
 
 apply plugin: 'javafx-gradle-plugin'
