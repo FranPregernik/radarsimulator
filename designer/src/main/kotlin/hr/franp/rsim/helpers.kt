@@ -226,6 +226,42 @@ fun processHitMaskImage(img: Image): Image {
     return outputImage
 }
 
+/**
+ * Helper debug function to convert radar hits format to an image for easier viewing.
+ */
+fun generateRadarHitImage(hits: Bits, radarParameters: RadarParameters): WritableImage {
+
+    val outputImage = WritableImage(
+        2 * radarParameters.maxRadarDistanceKm.toInt(),
+        2 * radarParameters.maxRadarDistanceKm.toInt()
+    )
+    val writer = outputImage.pixelWriter
+
+    val c1 = TWO_PI / radarParameters.azimuthChangePulse
+    val maxImpulsePeriodUs = radarParameters.maxImpulsePeriodUs.toInt()
+
+    var idx = hits.nextSetBit(0)
+    while (idx >= 0 && idx < hits.size()) {
+
+        val sweepIdx = idx / maxImpulsePeriodUs
+        val signalTimeUs = idx % maxImpulsePeriodUs
+
+        val sweepHeadingRad = sweepIdx * c1
+        val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM
+
+        val angle = azimuthToAngle(sweepHeadingRad)
+        val x = (radarParameters.maxRadarDistanceKm + distanceKm * cos(angle)).toInt()
+        val y = (2 * radarParameters.maxRadarDistanceKm - (radarParameters.maxRadarDistanceKm + distanceKm * sin(angle))).toInt()
+
+        writer.setColor(x, y, Color.RED)
+
+        idx = hits.nextSetBit(idx + 1)
+
+    }
+
+    return outputImage
+}
+
 val DECIMAL_SYMBOLS = DecimalFormatSymbols().apply {
     decimalSeparator = '.'
     groupingSeparator = ','
