@@ -16,33 +16,40 @@
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 				<configuration artifactName="${ProjName}" buildProperties="" description="" id="xilinx.gnu.arm.toolchain.345016263" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
 					<folderInfo id="xilinx.gnu.arm.toolchain.345016263.1383927011" name="/" resourcePath="">
-						<toolChain id="xilinx.gnu.armv7.linux.toolchain.1241327773" name="Xilinx ARM v7 GNU/Linux Toolchain" superClass="xilinx.gnu.armv7.linux.toolchain">
-							<targetPlatform binaryParser="com.xilinx.sdk.managedbuilder.XELF.arm.a53.x32.linux" id="xilinx.armv7.linux.target.gnu.base.695598087" isAbstract="false" name="Debug Platform" superClass="xilinx.armv7.linux.target.gnu.base"/>
-							<builder id="xilinx.gnu.armv7.linux.toolchain.builder.844645617" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="GNU make" superClass="xilinx.gnu.armv7.linux.toolchain.builder"/>
-							<tool id="xilinx.gnu.armv7.linux.c.toolchain.assembler.331352507" name="ARM v7 Linux gcc assembler" superClass="xilinx.gnu.armv7.linux.c.toolchain.assembler">
-								<inputType id="xilinx.gnu.assembler.input.1983935326" superClass="xilinx.gnu.assembler.input"/>
+						<toolChain id="xilinx.gnu.armv7.linux.toolchain.620832383" name="Xilinx ARM v7 GNU/Linux Toolchain" superClass="xilinx.gnu.armv7.linux.toolchain">
+							<targetPlatform binaryParser="com.xilinx.sdk.managedbuilder.XELF.arm.a53.x32.linux" id="xilinx.armv7.linux.target.gnu.base.626842841" isAbstract="false" name="Debug Platform" superClass="xilinx.armv7.linux.target.gnu.base"/>
+							<builder buildPath="${workspace_loc:/radar-sim-test}" enableAutoBuild="true" id="xilinx.gnu.armv7.linux.toolchain.builder.1280499138" keepEnvironmentInBuildfile="true" managedBuildOn="true" name="GNU make" parallelBuildOn="true" parallelizationNumber="optimal" superClass="xilinx.gnu.armv7.linux.toolchain.builder"/>
+							<tool id="xilinx.gnu.armv7.linux.c.toolchain.assembler.1655126670" name="ARM v7 Linux gcc assembler" superClass="xilinx.gnu.armv7.linux.c.toolchain.assembler">
+								<inputType id="xilinx.gnu.assembler.input.116368677" superClass="xilinx.gnu.assembler.input"/>
 							</tool>
-							<tool id="xilinx.gnu.armv7.linux.c.toolchain.compiler.679608981" name="ARM v7 Linux gcc compiler" superClass="xilinx.gnu.armv7.linux.c.toolchain.compiler"/>
-							<tool id="xilinx.gnu.armv7.linux.cxx.toolchain.compiler.197612671" name="ARM v7 Linux g++ compiler" superClass="xilinx.gnu.armv7.linux.cxx.toolchain.compiler">
-								<option id="xilinx.gnu.compiler.dircategory.includes.426798733" name="Include Paths" superClass="xilinx.gnu.compiler.dircategory.includes" valueType="includePath">
+							<tool id="xilinx.gnu.armv7.linux.c.toolchain.compiler.363628894" name="ARM v7 Linux gcc compiler" superClass="xilinx.gnu.armv7.linux.c.toolchain.compiler"/>
+							<tool id="xilinx.gnu.armv7.linux.cxx.toolchain.compiler.1085257046" name="ARM v7 Linux g++ compiler" superClass="xilinx.gnu.armv7.linux.cxx.toolchain.compiler">
+								<option id="xilinx.gnu.compiler.dircategory.includes.594146001" name="Include Paths" superClass="xilinx.gnu.compiler.dircategory.includes" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/fpregernik/Documents/003/petalinux/build/tmp/sysroots/plnx_arm/usr/include"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/SDK/2016.4/gnu/arm/lin/arm-xilinx-linux-gnueabi/include/c++/4.9.2"/>
 								</option>
-								<inputType id="xilinx.gnu.armv7.linux.cxx.compiler.input.796243342" name="C++ source files" superClass="xilinx.gnu.armv7.linux.cxx.compiler.input"/>
+								<option id="xilinx.gnu.compiler.misc.other.55539102" name="Other flags" superClass="xilinx.gnu.compiler.misc.other" value="-c -fmessage-length=0 -MT&quot;$@&quot; -std=c++11" valueType="string"/>
+								<option id="xilinx.gnu.compiler.option.debugging.level.1897914343" name="Debug Level" superClass="xilinx.gnu.compiler.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
+								<option id="xilinx.gnu.compiler.symbols.defined.188293325" name="Defined symbols (-D)" superClass="xilinx.gnu.compiler.symbols.defined"/>
+								<inputType id="xilinx.gnu.armv7.linux.cxx.compiler.input.1476520817" name="C++ source files" superClass="xilinx.gnu.armv7.linux.cxx.compiler.input"/>
 							</tool>
-							<tool id="xilinx.gnu.armv7.linux.toolchain.archiver.836904488" name="ARM v7 Linux archiver" superClass="xilinx.gnu.armv7.linux.toolchain.archiver"/>
-							<tool id="xilinx.gnu.armv7.linux.c.toolchain.linker.841779024" name="ARM v7 Linux gcc linker" superClass="xilinx.gnu.armv7.linux.c.toolchain.linker"/>
-							<tool id="xilinx.gnu.armv7.linux.cxx.toolchain.linker.1481342859" name="ARM v7 Linux g++ linker" superClass="xilinx.gnu.armv7.linux.cxx.toolchain.linker">
-								<option id="xilinx.gnu.c.link.option.paths.1441396516" name="Library search path (-L)" superClass="xilinx.gnu.c.link.option.paths" valueType="libPaths">
+							<tool id="xilinx.gnu.armv7.linux.toolchain.archiver.1284241190" name="ARM v7 Linux archiver" superClass="xilinx.gnu.armv7.linux.toolchain.archiver"/>
+							<tool id="xilinx.gnu.armv7.linux.c.toolchain.linker.454791634" name="ARM v7 Linux gcc linker" superClass="xilinx.gnu.armv7.linux.c.toolchain.linker"/>
+							<tool id="xilinx.gnu.armv7.linux.cxx.toolchain.linker.149232571" name="ARM v7 Linux g++ linker" superClass="xilinx.gnu.armv7.linux.cxx.toolchain.linker">
+								<option id="xilinx.gnu.c.link.option.paths.1391251191" name="Library search path (-L)" superClass="xilinx.gnu.c.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/fpregernik/Documents/003/petalinux/build/tmp/sysroots/plnx_arm/usr/lib"/>
 									<listOptionValue builtIn="false" value="/home/fpregernik/Documents/003/petalinux/build/tmp/sysroots/plnx_arm/lib"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/SDK/2016.4/gnu/arm/lin/arm-xilinx-linux-gnueabi/lib"/>
 								</option>
-								<inputType id="xilinx.gnu.linker.input.108794312" superClass="xilinx.gnu.linker.input">
+								<option id="xilinx.gnu.c.link.option.libs.1889402250" name="Libraries (-l)" superClass="xilinx.gnu.c.link.option.libs" valueType="libs"/>
+								<option id="xilinx.gnu.c.link.option.ldflags.916204301" name="Linker Flags" superClass="xilinx.gnu.c.link.option.ldflags" value="" valueType="string"/>
+								<option id="xilinx.gnu.c.link.option.userobjs.64762194" name="Other Objects" superClass="xilinx.gnu.c.link.option.userobjs"/>
+								<option id="xilinx.gnu.c.link.option.other.649458044" name="Other options (-XLinker [option])" superClass="xilinx.gnu.c.link.option.other"/>
+								<inputType id="xilinx.gnu.linker.input.1868682285" superClass="xilinx.gnu.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
 								</inputType>
-								<inputType id="xilinx.gnu.linker.input.lscript.1414785857" name="Linker Script" superClass="xilinx.gnu.linker.input.lscript"/>
+								<inputType id="xilinx.gnu.linker.input.lscript.1746168675" name="Linker Script" superClass="xilinx.gnu.linker.input.lscript"/>
 							</tool>
 						</toolChain>
 					</folderInfo>

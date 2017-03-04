@@ -91,4 +91,5 @@ vivado
 *.iml
 /Packages
 /workspace
-/petalinux/components/plnx_workspace/.metadata
+/petalinux/components/plnx_workspace
+/vivado.bak

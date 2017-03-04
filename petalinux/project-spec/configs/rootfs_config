@@ -98,12 +98,12 @@
 # elfutils 
 #
 # CONFIG_elfutils is not set
-# CONFIG_libelf is not set
 # CONFIG_libasm is not set
 # CONFIG_elfutils-binutils is not set
 # CONFIG_elfutils-dev is not set
 # CONFIG_libdw is not set
 # CONFIG_elfutils-dbg is not set
+# CONFIG_libelf is not set
 
 #
 # formfactor 
@@ -414,10 +414,10 @@ CONFIG_openssh-sftp-server=y
 #
 # bzip2 
 #
-# CONFIG_bzip2 is not set
-# CONFIG_bzip2-dev is not set
-# CONFIG_bzip2-dbg is not set
-# CONFIG_libbz2 is not set
+CONFIG_bzip2=y
+CONFIG_bzip2-dev=y
+CONFIG_bzip2-dbg=y
+CONFIG_libbz2=y
 
 #
 # file 
@@ -567,7 +567,6 @@ CONFIG_pciutils=y
 # CONFIG_python-multiprocessing is not set
 # CONFIG_python-lang is not set
 # CONFIG_python-pkgutil is not set
-# CONFIG_python-textutils is not set
 # CONFIG_python-dbg is not set
 # CONFIG_python-compression is not set
 # CONFIG_python-unixadmin is not set
@@ -594,6 +593,7 @@ CONFIG_pciutils=y
 # CONFIG_python-re is not set
 # CONFIG_python-math is not set
 # CONFIG_python-subprocess is not set
+# CONFIG_python-textutils is not set
 # CONFIG_python-tests is not set
 # CONFIG_python-curses is not set
 # CONFIG_python-ctypes is not set
@@ -647,8 +647,8 @@ CONFIG_pciutils=y
 # python-scons 
 #
 # CONFIG_python-scons is not set
-# CONFIG_python-scons-dev is not set
 # CONFIG_python-scons-dbg is not set
+# CONFIG_python-scons-dev is not set
 
 #
 # python-setuptools 
@@ -746,6 +746,29 @@ CONFIG_run-postinsts=y
 # CONFIG_libasound-module-bluez is not set
 # CONFIG_bluez5-dbg is not set
 # CONFIG_bluez5-testtools is not set
+
+#
+# boost 
+#
+CONFIG_boost=y
+CONFIG_boost-timer=y
+CONFIG_boost-atomic=y
+CONFIG_boost-program-options=y
+CONFIG_boost-signals=y
+CONFIG_boost-date-time=y
+CONFIG_boost-dbg=y
+CONFIG_boost-test=y
+CONFIG_boost-iostreams=y
+CONFIG_boost-log=y
+CONFIG_boost-filesystem=y
+CONFIG_boost-system=y
+CONFIG_boost-regex=y
+CONFIG_boost-dev=y
+CONFIG_boost-chrono=y
+CONFIG_boost-graph=y
+CONFIG_boost-serialization=y
+CONFIG_boost-thread=y
+CONFIG_boost-random=y
 
 #
 # cairo 
@@ -923,6 +946,13 @@ CONFIG_run-postinsts=y
 # CONFIG_libevdev-dbg is not set
 
 #
+# libevent 
+#
+# CONFIG_libevent is not set
+# CONFIG_libevent-dev is not set
+# CONFIG_libevent-dbg is not set
+
+#
 # libexif 
 #
 # CONFIG_libexif is not set
@@ -933,8 +963,8 @@ CONFIG_run-postinsts=y
 # libffi 
 #
 # CONFIG_libffi is not set
-# CONFIG_libffi-dev is not set
 # CONFIG_libffi-dbg is not set
+# CONFIG_libffi-dev is not set
 
 #
 # libfontenc 
@@ -1483,9 +1513,9 @@ CONFIG_run-postinsts=y
 #
 # zlib 
 #
-# CONFIG_zlib is not set
-# CONFIG_zlib-dbg is not set
-# CONFIG_zlib-dev is not set
+CONFIG_zlib=y
+CONFIG_zlib-dbg=y
+CONFIG_zlib-dev=y
 
 #
 # misc 
@@ -1794,8 +1824,15 @@ CONFIG_packagegroup-core-ssh-dropbear=y
 # pixman 
 #
 # CONFIG_pixman is not set
-# CONFIG_pixman-dbg is not set
 # CONFIG_pixman-dev is not set
+# CONFIG_pixman-dbg is not set
+
+#
+# pps-tools 
+#
+# CONFIG_pps-tools is not set
+# CONFIG_pps-tools-dbg is not set
+# CONFIG_pps-tools-dev is not set
 
 #
 # ptest-runner 
@@ -1887,7 +1924,6 @@ CONFIG_packagegroup-core-ssh-dropbear=y
 # CONFIG_qtimageformats is not set
 # CONFIG_qtimageformats-examples-dbg is not set
 # CONFIG_qtimageformats-dev is not set
-# CONFIG_qtimageformats-mkspecs is not set
 # CONFIG_qtimageformats-dbg is not set
 # CONFIG_qtimageformats-plugins is not set
 # CONFIG_qtimageformats-plugins-dbg is not set
@@ -1897,6 +1933,7 @@ CONFIG_packagegroup-core-ssh-dropbear=y
 # CONFIG_qtimageformats-examples is not set
 # CONFIG_qtimageformats-qmldesigner is not set
 # CONFIG_qtimageformats-tools is not set
+# CONFIG_qtimageformats-mkspecs is not set
 # CONFIG_qtimageformats-qmlplugins-dbg is not set
 
 #
@@ -2354,8 +2391,8 @@ CONFIG_tcf-agent=y
 # xcb-util-wm 
 #
 # CONFIG_xcb-util-wm is not set
-# CONFIG_xcb-util-wm-dbg is not set
 # CONFIG_xcb-util-wm-dev is not set
+# CONFIG_xcb-util-wm-dbg is not set
 
 #
 # xcmiscproto 
@@ -2562,6 +2599,17 @@ CONFIG_bridge-utils=y
 # CONFIG_netcat is not set
 # CONFIG_netcat-dev is not set
 # CONFIG_netcat-dbg is not set
+
+#
+# ntp 
+#
+CONFIG_ntp=y
+# CONFIG_ntpdate is not set
+# CONFIG_ntp-utils is not set
+# CONFIG_sntp is not set
+# CONFIG_ntp-dev is not set
+# CONFIG_ntp-dbg is not set
+# CONFIG_ntp-tickadj is not set
 
 #
 # tcpdump 
@@ -2925,8 +2973,8 @@ CONFIG_bridge-utils=y
 # xserver-nodm-init 
 #
 # CONFIG_xserver-nodm-init is not set
-# CONFIG_xserver-nodm-init-dbg is not set
 # CONFIG_xserver-nodm-init-dev is not set
+# CONFIG_xserver-nodm-init-dbg is not set
 
 #
 # apps 

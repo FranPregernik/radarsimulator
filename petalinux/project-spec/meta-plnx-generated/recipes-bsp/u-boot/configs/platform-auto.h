@@ -63,7 +63,7 @@
 #define CONFIG_NET_MULTI
 #define CONFIG_BOOTP_MAY_FAIL
 #define CONFIG_NETCONSOLE	1
-#define CONFIG_SERVERIP	192.168.67.128
+#define CONFIG_SERVERIP	192.168.0.115
 #define CONFIG_IPADDR
 
 /* spi_flash - ps7_qspi_0 */
@@ -185,13 +185,14 @@
 	"cp_kernel2ram=mmcinfo && fatload mmc 0 ${netstart} ${kernel_img}\0" \ 
 	"dtb_img=system.dtb\0" \ 
 	"load_dtb=tftpboot ${clobstart} ${dtb_img}\0" \ 
-	"update_dtb=setenv img dtb; setenv psize ${dtbsize}; setenv installcmd \"install_dtb\"; run load_dtb test_img; setenv img; setenv psize; setenv installcmd\0" \ 
-	"sd_update_dtb=echo Updating dtb from SD; mmcinfo && fatload mmc 0:1 ${clobstart} ${dtb_img} && run install_dtb\0" \ 
+	"update_dtb=setenv img dtb; setenv psize ${dtbsize}; setenv installcmd \"install_dtb\"; run load_dtb ${installcmd}; setenv img; setenv psize; setenv installcmd\0" \ 
+	"install_dtb=mmcinfo && fatwrite mmc 0 ${clobstart} ${dtb_img} ${filesize}\0" \ 
+	"cp_dtb2ram=mmcinfo && fatload mmc 0:1 ${dtbnetstart} ${dtb_img}\0" \ 
 	"fault=echo ${img} image size is greater than allocated place - partition ${img} is NOT UPDATED\0" \ 
 	"test_crc=if imi ${clobstart}; then run test_img; else echo ${img} Bad CRC - ${img} is NOT UPDATED; fi\0" \ 
 	"test_img=setenv var \"if test ${filesize} -gt ${psize}\\; then run fault\\; else run ${installcmd}\\; fi\"; run var; setenv var\0" \ 
 	"netboot=tftpboot ${netstart} ${kernel_img} && bootm\0" \ 
-	"default_bootcmd=run cp_kernel2ram && bootm ${netstart}\0" \ 
+	"default_bootcmd=run cp_kernel2ram && run cp_dtb2ram && bootm ${netstart} - ${dtbnetstart}\0" \ 
 ""
 
 /* BOOTCOMMAND */

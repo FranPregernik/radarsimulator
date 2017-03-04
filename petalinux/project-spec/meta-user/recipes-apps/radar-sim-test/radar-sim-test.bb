@@ -6,9 +6,13 @@ SUMMARY = "Simple radar-sim-test application"
 SECTION = "PETALINUX/apps"
 LICENSE = "APACHE"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
+DEPENDS = "bzip2 zlib boost"
 
 SRC_URI = "file://xilinx \
-           file://radar-sim-test.cpp \
+           file://inc \
+           file://radar_simulator.hpp \
+           file://radar_simulator.cpp \
+           file://main.cpp \
            file://Makefile \
 		  "
 

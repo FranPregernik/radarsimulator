@@ -148,13 +148,17 @@ module radar_sim_ctrl_axi #
     // replaced by RADAR_ARP_US - reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg2;
     // replaced by RADAR_ACP_CNT - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg3;
     // replaced by RADAR_TRIG_US - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg4;
+    
     // ACP_IDX - rotational position since the beginning of the simulation
+    // replaced by ACP_IDX - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg5;
     reg [C_S_AXI_DATA_WIDTH-1:0]    ACP_IDX;
+    
+    // ACP_ARP_IDX - rotational position since ARP
+    // replaced by ACP_ARP_IDX - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg6;
+    reg [C_S_AXI_DATA_WIDTH-1:0]    ACP_ARP_IDX;
 
-    // replaced by FT_BUFF_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]   slv_reg6;
-    // replaced by FT_BUFF_RD_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]    slv_reg7;
-    // replaced by FT_BUFF_WR CNT -reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg8;
-    // replaced by MT_BUFF_CNT -reg [C_S_AXI_DATA_WIDTH-1:0]    slv_reg9;
+    // replaced by FT_BUFF_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]   slv_reg7;
+    // replaced by MT_BUFF_CNT -reg [C_S_AXI_DATA_WIDTH-1:0]    slv_reg8;
 
     wire     slv_reg_rden;
     wire     slv_reg_wren;
@@ -391,8 +395,9 @@ module radar_sim_ctrl_axi #
             4'h3   : reg_data_out <= RADAR_ACP_CNT;
             4'h4   : reg_data_out <= RADAR_TRIG_US;
             4'h5   : reg_data_out <= ACP_IDX;
-            4'h6   : reg_data_out <= FT_FIFO_BUFF_CNT;
-            4'h7   : reg_data_out <= MT_FIFO_BUFF_CNT;
+            4'h6   : reg_data_out <= ACP_ARP_IDX;
+            4'h7   : reg_data_out <= FT_FIFO_BUFF_CNT;
+            4'h8   : reg_data_out <= MT_FIFO_BUFF_CNT;
             default : reg_data_out <= 0;
           endcase
     end
@@ -433,6 +438,18 @@ module radar_sim_ctrl_axi #
         end else if (sim_en_req && RADAR_CAL && first_arp && RADAR_ACP_PE) begin
             // find first ARP since sim_en_req and enable counting
             ACP_IDX <= ACP_IDX + 1;
+        end
+    end
+    
+    always @(posedge S_AXI_ACLK) begin
+        if (~RADAR_ARP_PE) begin
+            ACP_ARP_IDX <= 0;
+            
+            if (RADAR_ACP_PE) begin
+                ACP_ARP_IDX <= 1;
+            end
+        end else if (RADAR_ACP_PE) begin
+            ACP_ARP_IDX <= ACP_ARP_IDX + 1;
         end
     end
 
