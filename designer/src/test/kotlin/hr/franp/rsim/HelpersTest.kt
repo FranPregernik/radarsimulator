@@ -101,6 +101,65 @@ class HelpersTest : Spek({
 
     }
 
+    given("Targets in all quadrants") {
+
+        on("calculating the 1st quadrant") {
+
+            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+            val position = RadarCoordinate(100.0, 45.0)
+
+            (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
+                calculatePointTargetHits(hits, position, it.toDouble(), radarParameters)
+            }
+
+            it("should result in detection") {
+                hits.nextSetBit(0) shouldNotEqual -1
+            }
+        }
+
+        on("calculating the 2nd quadrant") {
+
+            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+            val position = RadarCoordinate(100.0, 135.0)
+
+            (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
+                calculatePointTargetHits(hits, position, it.toDouble(), radarParameters)
+            }
+
+            it("should result in detection") {
+                hits.nextSetBit(0) shouldNotEqual -1
+            }
+        }
+
+        on("calculating the 3rd quadrant") {
+
+            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+            val position = RadarCoordinate(100.0, 225.0)
+
+            (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
+                calculatePointTargetHits(hits, position, it.toDouble(), radarParameters)
+            }
+
+            it("should result in detection") {
+                hits.nextSetBit(0) shouldNotEqual -1
+            }
+        }
+
+        on("calculating the 4th quadrant") {
+
+            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+            val position = RadarCoordinate(100.0, 315.0)
+
+            (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
+                calculatePointTargetHits(hits, position, it.toDouble(), radarParameters)
+            }
+
+            it("should result in detection") {
+                hits.nextSetBit(0) shouldNotEqual -1
+            }
+        }
+    }
+
     given("A clutter map in detection range with hdg in [270, 90]") {
 
         val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())

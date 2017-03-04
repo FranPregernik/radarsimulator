@@ -347,8 +347,8 @@ fun calculateClutterHits(hits: Bits, hitRaster: RasterIterator, radarParameters:
         for (sweepIdx in minSweepIndex..maxSweepIndex) {
             val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
             if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
-                val normSweepIdx = ((sweepIdx % radarParameters.maxImpulsePeriodUs) + radarParameters.maxImpulsePeriodUs) % radarParameters.maxImpulsePeriodUs
-                val bitIdx = normSweepIdx.toInt() * radarParameters.maxImpulsePeriodUs.toInt() + signalTimeUs
+                val normSweepIdx = ((sweepIdx % radarParameters.azimuthChangePulse) + radarParameters.azimuthChangePulse) % radarParameters.azimuthChangePulse
+                val bitIdx = normSweepIdx * radarParameters.maxImpulsePeriodUs.toInt() + signalTimeUs
 
                 // set signal hit
                 hits.setBit(bitIdx, true)
@@ -384,8 +384,8 @@ fun calculatePointTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double,
     val sweepIdx = round(sweepHeadingRad / c1).toInt()
     val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
     if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
-        val normSweepIdx = ((sweepIdx % radarParameters.maxImpulsePeriodUs) + radarParameters.maxImpulsePeriodUs) % radarParameters.maxImpulsePeriodUs
-        val bitIdx = normSweepIdx.toInt() * radarParameters.maxImpulsePeriodUs.toInt() + signalTimeUs
+        val normSweepIdx = ((sweepIdx % radarParameters.azimuthChangePulse) + radarParameters.azimuthChangePulse) % radarParameters.azimuthChangePulse
+        val bitIdx = normSweepIdx * radarParameters.maxImpulsePeriodUs.toInt() + signalTimeUs
 
         // set signal hit
         hits.setBit(bitIdx, true)
