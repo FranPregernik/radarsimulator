@@ -41,7 +41,7 @@ class RasterIterator(val img: Image) : Iterator<Point2D> {
     val pixelCnt = (img.width * img.height).toInt()
     var idx = 0
 
-    override fun hasNext(): Boolean = (idx >= 0 && idx < pixelCnt)
+    override fun hasNext(): Boolean = idx in 0..(pixelCnt - 1)
 
     override fun next(): Point2D {
 
@@ -49,13 +49,13 @@ class RasterIterator(val img: Image) : Iterator<Point2D> {
 
             val x = idx % img.width
             // invert Y to convert to geometric coordinate system
-            val y = img.height - 1 - idx / img.width
+            val y = idx / img.width
 
             idx += 1
 
             val color = reader.getColor(x.toInt(), y.toInt())
             if (!(color.red == 0.0 && color.green == 0.0 && color.blue == 0.0)) {
-                return Point2D(x, y)
+                return Point2D(x, img.height - 1 - y)
             }
 
         }
