@@ -174,13 +174,12 @@ void RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 
     XAxiDma_BdSetCtrl(PrevBdPtr, XAXIDMA_BD_CTRL_TXEOF_MASK);
 
     /*  debug print */
-    CurrBdPtr = FirstBdPtr;
-    for (int i = 0; i < bdCount; i++) {
-        FXAxiDma_DumpBd(CurrBdPtr);
-        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
-    }
-    PrintDmaStatus(dmaPtr);
-
+//    CurrBdPtr = FirstBdPtr;
+//    for (int i = 0; i < bdCount; i++) {
+//        FXAxiDma_DumpBd(CurrBdPtr);
+//        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
+//    }
+//    PrintDmaStatus(dmaPtr);
     /* Give the BD to DMA to kick off the transmission. */
     Status = XAxiDma_BdRingToHw(TxRingPtr, bdCount, FirstBdPtr);
     if (Status != XST_SUCCESS) {
@@ -283,9 +282,6 @@ void RadarSimulator::initMapMemory() {
     clutterMemPtr = scratchMem + dataOffset;
     targetMemPtr = scratchMem + dataOffset + clutterMapWordSize;
 
-    // Reset target queue indices to start over
-    targetQueueHead = targetQueueTail = -1;
-
 }
 
 RadarSimulator::RadarSimulator() {
@@ -380,11 +376,11 @@ void RadarSimulator::initTargetMap(istream& input) {
         RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
     }
 
-    while (!isTargetQueueFull()) {
-        targetQueueTail++;
-        int idx = targetQueueTail % MT_BLK_CNT;
-        input.read((char*) (targetMemPtr + idx * blockByteSize), blockByteSize);
+    for (int i = 0; i < MT_BLK_CNT; i++) {
+        input.read((char*) (targetMemPtr + i * blockByteSize), blockByteSize);
     }
+
+    targetMemLoadIdx = MT_BLK_CNT - 1;
 }
 
 void RadarSimulator::loadNextTargetMaps(istream& input) {
@@ -392,21 +388,27 @@ void RadarSimulator::loadNextTargetMaps(istream& input) {
     u32 currAcpIdx = ctrl->simAcpIdx;
     u32 currArp = currAcpIdx / ctrl->acpCnt;
 
-    // shift the read part to just before the current ARP
-    targetQueueHead = currArp - 1;
-
-    if (isTargetQueueFull() == TRUE) {
+    // allow only up to current
+    if (targetMemLoadIdx - currArp >= MT_BLK_CNT - 1) {
         return;
     }
 
-    // rewind the file past the headers to correct position of next block to load
-    int nextArp = currArp + 1;
-    input.seekg(4 * sizeof(u32) + nextArp * blockByteSize);
+    cout << "CURR_MT_ARP_MAP=" << currArp << "/" << (currArp % MT_BLK_CNT) << endl;
 
-    while (!isTargetQueueFull()) {
-        targetQueueTail++;
-        int idx = targetQueueTail % MT_BLK_CNT;
-        input.read((char*) (targetMemPtr + idx * blockByteSize), blockByteSize);
+    // time to load the next block
+    targetMemLoadIdx++;
+
+    // block index to write - should be the one before where the currArp is located in (circular buffer)
+    int i = targetMemLoadIdx % MT_BLK_CNT;
+
+    // rewind the file past the headers to correct position of next block to load
+    input.seekg(4 * sizeof(u32) + targetMemLoadIdx * blockByteSize);
+
+    if (!input.eof()) {
+        input.read((char*) (targetMemPtr + i * blockByteSize), blockByteSize);
+        cout << "LOAD_MT_ARP_MAP=" << targetMemLoadIdx << "/" << i << endl;
+    } else {
+        memset((u8*) (targetMemPtr + i * blockByteSize), 0x0, blockByteSize);
     }
 
 }

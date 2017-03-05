@@ -16,13 +16,14 @@ using namespace std;
 #include "inc/cxxopts.hpp"
 #include "radar_simulator.hpp"
 
-auto rsim = RadarSimulator();
+RadarSimulator rsim;
 
-std::chrono::seconds sleepDuration(2);
+std::chrono::seconds sleepDuration(1);
 
 void signalHandler(int signum) {
-    cout << "Interrupt signal (" << signum << ") received.\n";
+    cout << "INTR=" << signum << endl;
     rsim.disable();
+
     exit(signum);
 }
 
@@ -57,64 +58,89 @@ int main(int argc, char* argv[]) {
 
     if (options.count("ct")) {
         rsim.clearTargetMap();
-        cout << "Cleared the target map." << endl;
+        cout << "CLR_MT_MAP" << endl;
     }
 
     if (options.count("ct")) {
         rsim.clearClutterMap();
-        cout << "Cleared the clutter map." << endl;
+        cout << "CLR_CL_MAP" << endl;
     }
 
     if (options.count("ltf")) {
         auto& ff = options["ltf"].as<string>();
-        cout << "Moving target file: " << ff << " ... ";
 
         ifstream mtFile(ff, ios_base::in | ios_base::binary);
+        if (!mtFile || !mtFile.is_open()) {
+            cerr << "ERR=Unable to open file " << ff << endl;
+            exit(2);
+        }
         rsim.initTargetMap(mtFile);
 
-        cout << " initialized " << endl;
+        cout << "INIT_MT_FILE" << endl;
     }
 
-    ifstream clFile;
     if (options.count("lcf")) {
         auto& ff = options["lcf"].as<string>();
-        cout << "Clutter file: " << ff << " ... ";
 
         ifstream clFile(ff, ios_base::in | ios_base::binary);
+        if (!clFile || !clFile.is_open()) {
+            cerr << "ERR=Unable to open file " << ff << endl;
+            exit(3);
+        }
         rsim.initClutterMap(clFile);
 
-        cout << " initialized " << endl;
+        cout << "INIT_CL_FILE" << endl;
     }
 
     if (options.count("r")) {
         rsim.enable();
-        cout << "Enabled the simulator." << endl;
+        cout << "EN_SIM" << endl;
     }
 
-    auto lastStatTime = chrono::steady_clock::now();
+    auto startTime = chrono::steady_clock::now();
+    auto lastStatTime = startTime;
+    auto status = rsim.getStatus();
+    chrono::milliseconds timeSinceEpoch = chrono::duration_cast < chrono::milliseconds > (startTime.time_since_epoch());
+
+    cout << "SIM_EN=" << status.enabled << endl;
+    cout << "SIM_CAL=" << status.calibrated << endl;
+    cout << "SIM_ARP_US=" << dec << status.arpUs << endl;
+    cout << "SIM_ACP_CNT=" << dec << status.acpCnt << endl;
+    cout << "SIM_TRIG_US=" << dec << status.trigUs << endl;
+    cout << "SIM_MT_FIFO_CNT=" << dec << status.targetFifoCnt << endl;
+    cout << "SIM_CL_FIFO_CNT=" << dec << status.clutterFifoCnt << endl;
+    cout << "SIM_ACP_IDX=" << dec << status.simAcpIdx << "/" << timeSinceEpoch.count() << endl;
+    cout << "SIM_CURR_ACP=" << dec << status.currAcpIdx << "/" << timeSinceEpoch.count() << endl;
+
+    // notify caller of progress
     while (true) {
 
-        chrono::duration<double> diff = chrono::steady_clock::now() - lastStatTime;
-        if (diff.count() > 5 /* [s] */) {
+        status = rsim.getStatus();
+
+        auto secSinceFullStat = chrono::duration_cast < chrono::seconds > (chrono::steady_clock::now() - lastStatTime);
+        if (secSinceFullStat.count() > 5 /* [s] */) {
             lastStatTime = chrono::steady_clock::now();
-            Simulator status = rsim.getStatus();
-            cout << "Simulator enabled: " << status.enabled << endl;
-            cout << "Simulator calibrated: " << status.calibrated << endl;
-            cout << "Simulator ARP [us]: " << dec << status.arpUs << endl;
-            cout << "Simulator ACP cnt: " << dec << status.acpCnt << endl;
-            cout << "Simulator TRIG [us]: " << dec << status.trigUs << endl;
-            cout << "Simulator target FIFO count: " << dec << status.targetFifoCnt << endl;
-            cout << "Simulator clutter FIFO count: " << dec << status.clutterFifoCnt << endl;
-            cout << "Simulator ACP index: " << dec << status.simAcpIdx << endl;
-            cout << "Simulator ACP: " << dec << status.currAcpIdx << endl;
+            cout << "SIM_EN=" << status.enabled << endl;
+            cout << "SIM_CAL=" << status.calibrated << endl;
+            cout << "SIM_ARP_US=" << dec << status.arpUs << endl;
+            cout << "SIM_ACP_CNT=" << dec << status.acpCnt << endl;
+            cout << "SIM_TRIG_US=" << dec << status.trigUs << endl;
+            cout << "SIM_MT_FIFO_CNT=" << dec << status.targetFifoCnt << endl;
+            cout << "SIM_CL_FIFO_CNT=" << dec << status.clutterFifoCnt << endl;
         }
+
+        chrono::milliseconds timeSinceEpoch = chrono::duration_cast < chrono::milliseconds > (chrono::steady_clock::now().time_since_epoch());
+        cout << "SIM_ACP_IDX=" << dec << status.simAcpIdx << "/" << timeSinceEpoch.count() << endl;
+        cout << "SIM_CURR_ACP=" << dec << status.currAcpIdx << "/" << timeSinceEpoch.count() << endl;
 
         // check if we can load more moving target data
         if (options.count("ltf")) {
             auto& ff = options["ltf"].as<string>();
-            cout << "Moving target file: " << ff << " ... ";
-
             ifstream mtFile(ff, ios_base::in | ios_base::binary);
+            if (!mtFile || !mtFile.is_open()) {
+                cerr << "Unable to open file: " << ff << endl;
+                exit(2);
+            }
             rsim.loadNextTargetMaps(mtFile);
         }
 
@@ -122,7 +148,7 @@ int main(int argc, char* argv[]) {
     }
 
     // disable simulator
-    //rsim.disable();
+    rsim.disable();
 
     return 0;
 }

@@ -168,12 +168,10 @@ private:
     /** Target map memory region **/
     u32 *targetMemPtr;
 
+    u32 targetMemLoadIdx;
+
     /** Target memory region size in 32bit words **/
     u32 targetMapWordSize;
-
-    /** Indexes of the target map FIFO logic **/
-    int targetQueueHead;
-    int targetQueueTail;
 
     /** AXI DMA for clutter maps **/
     XAxiDma clutterDma;
@@ -214,23 +212,6 @@ private:
      * Initiates the AXI DMA engine using the Xilinx APIs.
      */
     static void startDmaTransfer(XAxiDma *dma, UINTPTR physMemAddr, u32 simBlockSize, int blockCount);
-
-    //--------------------------------------------
-    // Function: isFull()
-    // Purpose: Return true if the queue is full.
-    // Returns: TRUE if full, otherwise FALSE
-    // Note: C has no boolean data type so we use
-    //  the defined int values for TRUE and FALSE
-    //  instead.
-    //--------------------------------------------
-    int isTargetQueueFull()
-    {
-        // Queue is full if tail has wrapped around
-        //  to location of the head.  See note in
-        //  Enqueue() function.
-        return ((targetQueueTail - MT_BLK_CNT) == targetQueueHead);
-    }
-
 
 };
 
