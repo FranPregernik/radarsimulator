@@ -98,12 +98,12 @@
 # elfutils 
 #
 # CONFIG_elfutils is not set
-# CONFIG_libelf is not set
 # CONFIG_libasm is not set
 # CONFIG_elfutils-binutils is not set
 # CONFIG_elfutils-dev is not set
 # CONFIG_libdw is not set
 # CONFIG_elfutils-dbg is not set
+# CONFIG_libelf is not set
 
 #
 # formfactor 
@@ -944,6 +944,13 @@ CONFIG_boost-random=y
 # CONFIG_libevdev is not set
 # CONFIG_libevdev-dev is not set
 # CONFIG_libevdev-dbg is not set
+
+#
+# libevent 
+#
+# CONFIG_libevent is not set
+# CONFIG_libevent-dev is not set
+# CONFIG_libevent-dbg is not set
 
 #
 # libexif 
@@ -1821,6 +1828,13 @@ CONFIG_packagegroup-core-ssh-dropbear=y
 # CONFIG_pixman-dbg is not set
 
 #
+# pps-tools 
+#
+# CONFIG_pps-tools is not set
+# CONFIG_pps-tools-dbg is not set
+# CONFIG_pps-tools-dev is not set
+
+#
 # ptest-runner 
 #
 # CONFIG_ptest-runner is not set
@@ -1910,7 +1924,6 @@ CONFIG_packagegroup-core-ssh-dropbear=y
 # CONFIG_qtimageformats is not set
 # CONFIG_qtimageformats-examples-dbg is not set
 # CONFIG_qtimageformats-dev is not set
-# CONFIG_qtimageformats-mkspecs is not set
 # CONFIG_qtimageformats-dbg is not set
 # CONFIG_qtimageformats-plugins is not set
 # CONFIG_qtimageformats-plugins-dbg is not set
@@ -1920,6 +1933,7 @@ CONFIG_packagegroup-core-ssh-dropbear=y
 # CONFIG_qtimageformats-examples is not set
 # CONFIG_qtimageformats-qmldesigner is not set
 # CONFIG_qtimageformats-tools is not set
+# CONFIG_qtimageformats-mkspecs is not set
 # CONFIG_qtimageformats-qmlplugins-dbg is not set
 
 #
@@ -2587,6 +2601,17 @@ CONFIG_bridge-utils=y
 # CONFIG_netcat-dbg is not set
 
 #
+# ntp 
+#
+CONFIG_ntp=y
+# CONFIG_ntpdate is not set
+# CONFIG_ntp-utils is not set
+# CONFIG_sntp is not set
+# CONFIG_ntp-dev is not set
+# CONFIG_ntp-dbg is not set
+# CONFIG_ntp-tickadj is not set
+
+#
 # tcpdump 
 #
 # CONFIG_tcpdump is not set
@@ -2948,8 +2973,8 @@ CONFIG_bridge-utils=y
 # xserver-nodm-init 
 #
 # CONFIG_xserver-nodm-init is not set
-# CONFIG_xserver-nodm-init-dbg is not set
 # CONFIG_xserver-nodm-init-dev is not set
+# CONFIG_xserver-nodm-init-dbg is not set
 
 #
 # apps 
