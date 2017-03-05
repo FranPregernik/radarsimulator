@@ -1,6 +1,5 @@
 package hr.franp.rsim.models
 
-import hr.franp.*
 import hr.franp.rsim.*
 import javafx.collections.FXCollections.*
 import javafx.embed.swing.*
@@ -176,10 +175,14 @@ class Clutter() : JsonModel {
 
         if (bytes != null) {
             img = ImageIO.read(bytes.inputStream())
+        } else {
+            img = null
+        }
+
+        if (img != null) {
             originalWidth = img.width.toDouble()
             originalHeight = img.height.toDouble()
         } else {
-            img = null
             originalWidth = minWidth.toDouble()
             originalHeight = minHeight.toDouble()
         }
@@ -216,7 +219,7 @@ class Clutter() : JsonModel {
 
     override fun toJSON(json: JsonBuilder) {
         with(json) {
-            add("imageFileContents", Base64.getEncoder().encodeToString(bytes))
+            add("imageFileContents", Base64.getEncoder().encodeToString(bytes ?: ByteArray(0)))
         }
     }
 
