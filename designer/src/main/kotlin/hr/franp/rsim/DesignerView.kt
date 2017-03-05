@@ -390,6 +390,7 @@ class DesignerView : View() {
                                 }
 
                                 button("START") {
+                                    disableProperty().bind(calculatingHitsProperty())
 
                                     tooltip("Transfer and begin simulation")
 
