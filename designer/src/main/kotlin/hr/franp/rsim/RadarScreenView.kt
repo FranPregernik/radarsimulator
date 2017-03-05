@@ -43,9 +43,6 @@ class RadarScreenView : View() {
     val stationaryTargetLayerOpacityProperty = SimpleDoubleProperty(1.0)
     val movingTargetsLayerOpacityProperty = SimpleDoubleProperty(1.0)
 
-    var calculatingHits by property<Boolean>()
-    fun calculatingHitsProperty() = getProperty(RadarScreenView::calculatingHits)
-
     override val root = Pane().apply {
         addClass(Styles.radarScreen)
     }
@@ -134,12 +131,8 @@ class RadarScreenView : View() {
         root.heightProperty().addListener(boundsChangeListener)
 
         // redraw after model changes
-        controller.displayParameters.viewPortProperty().addListener { observableValue, oldVal, newVal ->
-            drawHits()
-        }
         controller.displayParameters.simulatedCurrentTimeSecProperty().addListener { observableValue, oldTime, newTime ->
             drawMovingTargets()
-            drawHits()
         }
         controller.selectedMovingTargetProperty.addListener { observableValue, oldTime, newTime ->
             drawMovingTargets()
@@ -247,7 +240,6 @@ class RadarScreenView : View() {
         drawStationaryTargets()
         drawStaticMarkers()
         drawMovingTargets()
-        drawHits()
     }
 
     fun drawStaticMarkers() {
@@ -361,11 +353,17 @@ class RadarScreenView : View() {
         val selectedTargetGroup = Group()
         movingTargetsGroup.add(selectedTargetGroup)
 
+        val movingHitsGroup = Group().apply {
+            opacityProperty().bind(movingHitsLayerOpacityProperty)
+        }
+        hitsGroup.children.setAll(movingHitsGroup)
+
         // helper calculated constants
         val factor = getRadarScalingFactor()
 
         // zoom scale factor compensation
         val displayScale = setupViewPort(movingTargetsGroup)
+        setupViewPort(hitsGroup)
 
         // draw moving targets
         val noneSelected = controller.selectedMovingTarget !in controller.scenario.movingTargets
@@ -512,7 +510,7 @@ az=${angleStringConverter.toString(az)}"""
                                     x = factor * plotPosCart.x,
                                     y = factor * plotPosCart.y
                                 )
-                                group.add(movingTarget)
+                                movingHitsGroup.add(movingTarget)
                             }
                         }
                 }
@@ -531,71 +529,4 @@ az=${angleStringConverter.toString(az)}"""
             .forEach(Node::toFront)
     }
 
-    fun drawHits() {
-
-        // helper calculated constants
-        val factor = getRadarScalingFactor()
-        val radarParameters = controller.radarParameters
-        val c1 = TWO_PI / radarParameters.azimuthChangePulse
-        val spreadRad = toRadians(radarParameters.horizontalAngleBeamWidthDeg)
-
-        val movingHitsCanvas = Canvas(root.width, root.height).apply {
-            opacityProperty().bind(movingHitsLayerOpacityProperty)
-        }
-        val stationaryHitsCanvas = Canvas(root.width, root.height).apply {
-            opacityProperty().bind(stationaryHitsLayerOpacityProperty)
-        }
-        hitsGroup.children.setAll(movingHitsCanvas, stationaryHitsCanvas)
-
-        // draw
-        val movingHitsGrphCtx = movingHitsCanvas.graphicsContext2D
-        val stationaryHitsGrphCtx = stationaryHitsCanvas.graphicsContext2D
-
-        // zoom scale factor compensation
-        setupViewPort(movingHitsCanvas)
-        setupViewPort(stationaryHitsCanvas)
-
-        val targetHits = targetHitsProperty.get() ?: Bits(0)
-        var idx = targetHits.nextSetBit(0)
-        while (idx >= 0 && idx < targetHits.size()) {
-
-            val sweepIdx = idx / controller.radarParameters.maxImpulsePeriodUs.toInt()
-            val signalTimeUs = idx % controller.radarParameters.maxImpulsePeriodUs.toInt()
-
-            val sweepHeadingRad = sweepIdx * c1
-            val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM
-
-            movingHitsGrphCtx.movingHitMarker(
-                factor * distanceKm,
-                factor * radarParameters.distanceResolutionKm,
-                azimuthToAngle(sweepHeadingRad),
-                spreadRad
-            )
-
-            idx = targetHits.nextSetBit(idx + 1)
-
-        }
-
-        val clutterHits = clutterHitsProperty.get() ?: Bits(0)
-        idx = clutterHits.nextSetBit(0)
-        while (idx >= 0 && idx < clutterHits.size()) {
-
-            val sweepIdx = idx / controller.radarParameters.maxImpulsePeriodUs.toInt()
-            val signalTimeUs = idx % controller.radarParameters.maxImpulsePeriodUs.toInt()
-
-            val sweepHeadingRad = sweepIdx * c1
-            val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM
-
-            stationaryHitsGrphCtx.stationaryHitMarker(
-                factor * distanceKm,
-                factor * radarParameters.distanceResolutionKm,
-                azimuthToAngle(sweepHeadingRad),
-                spreadRad
-            )
-
-            idx = clutterHits.nextSetBit(idx + 1)
-
-        }
-
-    }
 }
