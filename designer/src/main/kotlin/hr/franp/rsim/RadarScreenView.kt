@@ -31,8 +31,8 @@ class RadarScreenView : View() {
         fill = Color.DARKGRAY.deriveColor(3.0, 1.0, 1.0, 0.4)
     }
 
-    var stationaryHitsLayerOpacityProperty = SimpleDoubleProperty(1.0)
-    var movingHitsLayerOpacityProperty = SimpleDoubleProperty(1.0)
+    val stationaryHitsLayerOpacityProperty = SimpleDoubleProperty(1.0)
+    val movingHitsLayerOpacityProperty = SimpleDoubleProperty(1.0)
     val stationaryTargetLayerOpacityProperty = SimpleDoubleProperty(1.0)
     val movingTargetsLayerOpacityProperty = SimpleDoubleProperty(1.0)
 
@@ -40,7 +40,7 @@ class RadarScreenView : View() {
         addClass(Styles.radarScreen)
     }
 
-    val boundsChangeListener = ChangeListener<Number> { obs, oldVal, newVal ->
+    val boundsChangeListener = ChangeListener<Number> { _, _, _ ->
         root.clip = Rectangle(0.0, 0.0, root.width, root.height)
         draw()
     }
