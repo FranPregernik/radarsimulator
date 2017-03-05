@@ -4,6 +4,7 @@ import hr.franp.*
 import hr.franp.rsim.models.*
 import hr.franp.rsim.models.AzimuthMarkerType.*
 import hr.franp.rsim.models.DistanceUnit.*
+import javafx.embed.swing.*
 import javafx.geometry.*
 import javafx.scene.control.*
 import javafx.scene.image.*
@@ -11,21 +12,29 @@ import javafx.scene.layout.*
 import javafx.scene.text.*
 import javafx.stage.*
 import javafx.util.converter.*
+import net.schmizz.sshj.*
+import net.schmizz.sshj.common.*
+import net.schmizz.sshj.xfer.*
 import org.controlsfx.glyphfont.*
 import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 import java.io.*
 import java.nio.*
-import java.util.zip.*
+import javax.imageio.*
 
 class DesignerView : View() {
     override val root = BorderPane()
+    val status: TaskStatus by inject()
 
     private var fontAwesome = GlyphFontRegistry.font("FontAwesome")
     private val controller: DesignerController by inject()
     private val radarScreen: RadarScreenView by inject()
     private val movingTargetEditor: MovingTargetEditorView by inject()
     private val movingTargetSelector: MovingTargetSelectorView by inject()
+
+    var calculatingHits by property<Boolean>()
+    fun calculatingHitsProperty() = getProperty(DesignerView::calculatingHits)
+
 
     init {
 
@@ -40,6 +49,16 @@ class DesignerView : View() {
             }
 
             right = vbox {
+
+                /**
+                 * Display of background task progress
+                 */
+                hbox(4.0) {
+                    progressbar(status.progress)
+                    label(status.message)
+                    visibleWhen { status.running }
+                    paddingAll = 4
+                }
 
                 titledpane("Control", pane {
 
@@ -250,17 +269,18 @@ class DesignerView : View() {
 
                             }
                             field {
-                                button("Calculate") {
+                                button("CALC") {
+                                    disableProperty().bind(calculatingHitsProperty())
 
                                     tooltip("Calculate and display all hits")
 
                                     setOnAction {
-                                        this.disableProperty().set(true)
+                                        calculatingHitsProperty().set(true)
 
-                                        runAsync {
+                                        try {
+                                            runAsync {
 
-                                            FileOutputStream("clutter.bin.gz").use { stream ->
-                                                GZIPOutputStream(stream).use {
+                                                FileOutputStream("clutter.bin").use { stream ->
                                                     stream.write(
                                                         ByteBuffer.allocate(4)
                                                             .order(ByteOrder.LITTLE_ENDIAN)
@@ -286,14 +306,24 @@ class DesignerView : View() {
                                                             .array()
                                                     )
 
+                                                    updateMessage("Writing clutter sim")
+                                                    updateProgress(0.0, 1.0)
                                                     val clutterHits = controller.calculateClutterHits()
-                                                    radarScreen.clutterHitsProperty.set(clutterHits)
                                                     clutterHits.writeTo(stream)
-                                                }
-                                            }
 
-                                            FileOutputStream("targets.bin.gz").use { fileStream ->
-                                                GZIPOutputStream(fileStream).use { stream ->
+                                                    // DEBUG
+                                                    ImageIO.write(
+                                                        SwingFXUtils.fromFXImage(generateRadarHitImage(clutterHits, controller.radarParameters), null),
+                                                        "png",
+                                                        File("test_clutter.png")
+                                                    )
+
+                                                    updateMessage("Wrote clutter sim")
+                                                    updateProgress(1.0, 1.0)
+
+                                                }
+
+                                                FileOutputStream("targets.bin").use { stream ->
                                                     stream.write(
                                                         ByteBuffer.allocate(4)
                                                             .order(ByteOrder.LITTLE_ENDIAN)
@@ -320,17 +350,86 @@ class DesignerView : View() {
                                                     )
 
                                                     val mergedHits = Bits(0)
+
+                                                    updateMessage("Writing target sim")
+                                                    updateProgress(0.0, 1.0)
+
+                                                    var seekTime = 0.0
                                                     controller.calculateTargetHits().forEach {
+                                                        seekTime += controller.radarParameters.seekTimeSec
+                                                        updateProgress(
+                                                            seekTime / (controller.scenario.simulationDurationMin * MIN_TO_S),
+                                                            1.0
+                                                        )
                                                         mergedHits.or(it)
                                                         it.writeTo(stream)
                                                     }
-                                                    radarScreen.targetHitsProperty.set(mergedHits)
+
+                                                    // DEBUG
+                                                    ImageIO.write(
+                                                        SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, controller.radarParameters), null),
+                                                        "png",
+                                                        File("test_targets.png")
+                                                    )
+
+
+                                                    updateMessage("Wrote target sim")
+                                                    updateProgress(1.0, 1.0)
+
                                                 }
 
+
+                                            } ui {
+                                                calculatingHitsProperty().set(false)
                                             }
-                                        } ui {
-                                            this.disableProperty().set(false)
-                                            radarScreen.drawHits()
+                                        } finally {
+                                            calculatingHitsProperty().set(false)
+                                        }
+
+                                    }
+                                }
+
+                                button("START") {
+
+                                    tooltip("Transfer and begin simulation")
+
+                                    setOnAction {
+
+                                        runAsync {
+
+                                            SSHClient().apply {
+                                                // no need to verify, not really security oriented
+                                                addHostKeyVerifier { hostname, port, key -> true }
+
+                                                useCompression()
+
+                                                connect("192.168.0.108")
+
+                                                // again security here is not an issue - petalinux default login
+                                                authPassword("root", "root")
+
+                                                newSCPFileTransfer().apply {
+                                                    transferListener = object : TransferListener {
+                                                        override fun directory(name: String?): TransferListener {
+                                                            return this
+                                                        }
+
+                                                        override fun file(name: String?, size: Long): StreamCopier.Listener {
+                                                            return StreamCopier.Listener { transferred ->
+                                                                updateMessage("Transferring $name")
+                                                                updateProgress(transferred, size)
+                                                            }
+                                                        }
+                                                    }
+                                                    upload(FileSystemFile("clutter.bin"), "/var/")
+                                                    upload(FileSystemFile("targets.bin"), "/var/")
+                                                }
+
+                                                startSession().use { session ->
+                                                    session.exec("killall radar-sim-tes; radar-sim=test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bom").join()
+                                                }
+                                            }
+
                                         }
 
                                     }

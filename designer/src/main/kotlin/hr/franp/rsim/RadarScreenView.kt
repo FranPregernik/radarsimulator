@@ -1,11 +1,9 @@
 package hr.franp.rsim
 
-import hr.franp.*
 import hr.franp.rsim.models.*
 import hr.franp.rsim.shapes.*
 import javafx.beans.property.*
 import javafx.beans.value.*
-import javafx.embed.swing.*
 import javafx.event.*
 import javafx.geometry.*
 import javafx.scene.*
@@ -16,20 +14,15 @@ import javafx.scene.paint.*
 import javafx.scene.shape.*
 import javafx.scene.transform.*
 import tornadofx.*
-import java.io.*
 import java.lang.Math.*
 import java.util.*
 import java.util.Spliterators.*
 import java.util.stream.StreamSupport.*
-import javax.imageio.*
 
 class RadarScreenView : View() {
 
     val cloudOneImage = processHitMaskImage(Image(resources["/cloud1.png"]))
     val cloudTwoImage = processHitMaskImage(Image(resources["/cloud2.png"]))
-
-    val clutterHitsProperty = SimpleObjectProperty<Bits>()
-    val targetHitsProperty = SimpleObjectProperty<Bits>()
 
     val mousePositionProperty = SimpleObjectProperty<RadarCoordinate>()
     val mouseClickProperty = SimpleObjectProperty<RadarCoordinate>()
@@ -70,24 +63,6 @@ class RadarScreenView : View() {
 
 
     init {
-
-        // DEBUG
-        targetHitsProperty.addListener { observable, oldValue, newValue ->
-            ImageIO.write(
-                SwingFXUtils.fromFXImage(generateRadarHitImage(newValue, controller.radarParameters), null),
-                "png",
-                File("test_targets.png")
-            )
-        }
-
-        // DEBUG
-        clutterHitsProperty.addListener { observable, oldValue, newValue ->
-            ImageIO.write(
-                SwingFXUtils.fromFXImage(generateRadarHitImage(newValue, controller.radarParameters), null),
-                "png",
-                File("test_clutter.png")
-            )
-        }
 
         with(root) {
 
