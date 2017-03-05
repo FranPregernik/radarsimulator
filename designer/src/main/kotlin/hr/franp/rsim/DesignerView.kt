@@ -315,7 +315,7 @@ class DesignerView : View() {
                                                     ImageIO.write(
                                                         SwingFXUtils.fromFXImage(generateRadarHitImage(clutterHits, controller.radarParameters), null),
                                                         "png",
-                                                        File("test_clutter.png")
+                                                        File("clutter.png")
                                                     )
 
                                                     updateMessage("Wrote clutter sim")
@@ -369,7 +369,7 @@ class DesignerView : View() {
                                                     ImageIO.write(
                                                         SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, controller.radarParameters), null),
                                                         "png",
-                                                        File("test_targets.png")
+                                                        File("targets.png")
                                                     )
 
 
