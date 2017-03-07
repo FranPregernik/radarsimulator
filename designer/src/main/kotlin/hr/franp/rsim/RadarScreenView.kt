@@ -127,19 +127,6 @@ class RadarScreenView : View() {
         combinedTransform = setupViewPort(viewPort, destViewPort)
         invCombinedTransform = combinedTransform.createInverse()
 
-
-        val p1 = Point2D(viewPort.minX, viewPort.minY)
-        val pp1 = combinedTransform.transform(p1)
-
-        val p2 = Point2D((viewPort.minX + viewPort.maxX) / 2, (viewPort.minY + viewPort.maxX) / 2)
-        val pp2 = combinedTransform.transform(p2)
-
-        val p3 = Point2D(viewPort.maxX, viewPort.maxX)
-        val pp3 = combinedTransform.transform(p3)
-
-        log.info {
-            "sdfasfd"
-        }
     }
 
     private fun getCurrentPathSegment(movingTarget: MovingTarget, currentTimeUs: Double): PathSegment? {
@@ -267,19 +254,22 @@ class RadarScreenView : View() {
         }
 
         // draw stationary targets
-        val width = (2.0 * controller.radarParameters.maxRadarDistanceKm).toInt()
-        val height = (2.0 * controller.radarParameters.maxRadarDistanceKm).toInt()
-        val rasterMapImage = controller.scenario.clutter.getImage(width, height)
+        val width = (2.0 * controller.radarParameters.maxRadarDistanceKm)
+        val height = (2.0 * controller.radarParameters.maxRadarDistanceKm)
+        val transformedBounds = combinedTransform.transform(BoundingBox(
+            -width / 2.0,
+            -height / 2.0,
+            width,
+            height
+        ))
 
-        val p = combinedTransform.transform(
-            -rasterMapImage.width / 2.0,
-            -rasterMapImage.height / 2.0
-        )
+        val rasterMapImage = controller.scenario.clutter.getImage(transformedBounds.width.toInt(), transformedBounds.height.toInt())
+
         stationaryTargetsGroup += imageview {
             image = rasterMapImage
             scaleY = -1.0 // invert inverted coordinate system to display the image right side up
-            x = p.x
-            y = p.y
+            x = transformedBounds.minX
+            y = transformedBounds.minY
         }
 
     }
