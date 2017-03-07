@@ -106,10 +106,10 @@ class RadarScreenView : View() {
         root.heightProperty().addListener(boundsChangeListener)
 
         // redraw after model changes
-        controller.displayParameters.simulatedCurrentTimeSecProperty().addListener { observableValue, oldTime, newTime ->
+        controller.displayParameters.simulatedCurrentTimeSecProperty().addListener { _, _, _ ->
             drawMovingTargets()
         }
-        controller.selectedMovingTargetProperty.addListener { observableValue, oldTime, newTime ->
+        controller.selectedMovingTargetProperty.addListener { _, _, _ ->
             drawMovingTargets()
         }
 
@@ -154,10 +154,6 @@ class RadarScreenView : View() {
             // invert Y axis so coordinate system is math/geometry like
             node.transforms.add(Scale(displayScale, -displayScale))
         }
-
-        println("Translate with scale $displayScale, and translate [$dx, $dy] - screen center [${destViewPort.width / 2}, ${destViewPort.height / 2}]")
-        println(Point2D(centerViewX, centerViewY))
-        println(node.localToParent(centerViewX, centerViewY))
 
         return displayScale
     }
@@ -435,21 +431,19 @@ az=${angleStringConverter.toString(az)}"""
                             text = text,
                             color = color
                         )
-                        MovingTargetType.Test1 -> Test1TargetPositionMarker(
+                        MovingTargetType.Test1 -> MovingTargetPositionMarker(
                             displayScale = displayScale,
                             x = factor * pt.x,
                             y = factor * pt.y,
                             text = text,
                             color = color
                         )
-                        MovingTargetType.Test2 -> Test2TargetPositionMarker(
+                        MovingTargetType.Test2 -> MovingTargetPositionMarker(
                             displayScale = displayScale,
                             x = factor * pt.x,
                             y = factor * pt.y,
                             text = text,
-                            color = color,
-                            maxDistance = factor * controller.radarParameters.maxRadarDistanceKm,
-                            angleResolutionDeg = controller.radarParameters.horizontalAngleBeamWidthDeg
+                            color = color
                         )
                     }
                     group.add(movingTarget)
@@ -480,12 +474,30 @@ az=${angleStringConverter.toString(az)}"""
                                     return@forEach
                                 }
 
-                                val movingTarget = MovingTargetPlotMarker(
-                                    displayScale = displayScale,
-                                    x = factor * plotPosCart.x,
-                                    y = factor * plotPosCart.y
-                                )
-                                movingHitsGroup.add(movingTarget)
+                                val movingTarget = when (type) {
+                                    MovingTargetType.Cloud1 -> null
+                                    MovingTargetType.Cloud2 -> null
+                                    MovingTargetType.Point -> MovingTargetPlotMarker(
+                                        displayScale = displayScale,
+                                        x = factor * plotPosCart.x,
+                                        y = factor * plotPosCart.y
+                                    )
+                                    MovingTargetType.Test1 -> Test1TargetHitMarker(
+                                        displayScale = displayScale,
+                                        x = factor * plotPosCart.x,
+                                        y = factor * plotPosCart.y
+                                    )
+                                    MovingTargetType.Test2 -> Test2TargetHitMarker(
+                                        displayScale = displayScale,
+                                        x = factor * plotPosCart.x,
+                                        y = factor * plotPosCart.y,
+                                        maxDistance = factor * controller.radarParameters.maxRadarDistanceKm,
+                                        angleResolutionDeg = controller.radarParameters.horizontalAngleBeamWidthDeg
+                                    )
+                                }
+                                if (movingTarget != null) {
+                                    movingHitsGroup.add(movingTarget)
+                                }
                             }
                         }
                 }

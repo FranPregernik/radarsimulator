@@ -1,9 +1,8 @@
 package hr.franp.rsim
 
-import javafx.geometry.VPos
-import javafx.scene.paint.Color
-import javafx.scene.text.FontWeight
-import javafx.scene.text.TextAlignment
+import javafx.geometry.*
+import javafx.scene.paint.*
+import javafx.scene.text.*
 import tornadofx.*
 
 class Styles : Stylesheet() {
@@ -20,8 +19,8 @@ class Styles : Stylesheet() {
         val movingTargetRectangle by cssclass()
         val movingTargetPlotMarker by cssclass()
         val imageMovingTargetRectangle by cssclass()
-        val movingTargetTestTwoWedge by cssclass()
-        val movingTargetTestOneCircle by cssclass()
+        val movingTargetTestTwoPlotWedge by cssclass()
+        val movingTargetTestOnePlotCircle by cssclass()
 
         // Define our colors
         val radarBgColor = c("202020")
@@ -85,12 +84,12 @@ class Styles : Stylesheet() {
             fill = Color.TRANSPARENT
         }
 
-        s(movingTargetTestOneCircle) {
+        s(movingTargetTestOnePlotCircle) {
             fill = Color.TRANSPARENT
             stroke = movingTargetCourseLineColor
         }
 
-        s(movingTargetTestTwoWedge) {
+        s(movingTargetTestTwoPlotWedge) {
             fill = movingTargetCourseLineColor
             stroke = movingTargetCourseLineColor
         }

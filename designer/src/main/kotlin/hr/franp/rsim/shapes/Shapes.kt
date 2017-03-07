@@ -114,63 +114,32 @@ class MovingTargetPlotMarker(displayScale: Double, x: Double, y: Double, r: Doub
     }
 }
 
-class Test1TargetPositionMarker(displayScale: Double, x: Double, y: Double, text: String, color: Color) : Group() {
-    val label = Text(
-        x,
-        -y + 1.5 * Font.getDefault().size / displayScale,
-        text
-    ).apply {
-        addClass(Styles.movingTargetPositionLabel)
-        font = Font(Font.getDefault().size / displayScale)
-
-        transforms.clear()
-        transforms.add(Scale(1.0, -1.0))
-        transforms.add(Translate(-boundsInLocal.width / 2, 0.0))
-    }
-
+class Test1TargetHitMarker(displayScale: Double, x: Double, y: Double) : Group() {
     private val d = sqrt(pow(x, 2.0) + pow(y, 2.0))
 
     val marker = Circle(0.0, 0.0, d, Color.TRANSPARENT).apply {
-        addClass(Styles.movingTargetTestOneCircle)
+        addClass(Styles.movingTargetTestOnePlotCircle)
         strokeWidth = 1.0 / displayScale
-        stroke = color
     }
 
     init {
+        addClass(Styles.movingTargetPlotMarker)
         add(marker)
-        add(label)
     }
 }
 
-class Test2TargetPositionMarker(displayScale: Double, x: Double, y: Double, text: String, angleResolutionDeg: Double, maxDistance: Double, color: Color) : Group() {
-    val label = Text(
-        x,
-        -y + 1.5 * Font.getDefault().size / displayScale,
-        text
-    ).apply {
-        addClass(Styles.movingTargetPositionLabel)
-        font = Font(Font.getDefault().size / displayScale)
-
-        transforms.clear()
-        transforms.add(Scale(1.0, -1.0))
-        transforms.add(Translate(-boundsInLocal.width / 2, 0.0))
-    }
-
+class Test2TargetHitMarker(displayScale: Double, x: Double, y: Double, angleResolutionDeg: Double, maxDistance: Double) : Group() {
     private val startAngleDeg = 360 - floor(toDegrees(atan2(y, x)) / angleResolutionDeg) * angleResolutionDeg
 
     val marker = Arc(0.0, 0.0, maxDistance, maxDistance, startAngleDeg, angleResolutionDeg).apply {
-        addClass(Styles.movingTargetTestTwoWedge)
-        stroke = color
+        addClass(Styles.movingTargetTestTwoPlotWedge)
         strokeWidth = 1.0 / displayScale
-        fill = color
         type = ArcType.ROUND
     }
 
     init {
-        println(toDegrees(atan2(y, x)))
-        println(startAngleDeg)
+        addClass(Styles.movingTargetPlotMarker)
         add(marker)
-        add(label)
     }
 }
 

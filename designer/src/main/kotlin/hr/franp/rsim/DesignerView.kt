@@ -92,6 +92,12 @@ class DesignerView : View() {
                                                 .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
                                                 .array()
                                         )
+                                        stream.write(
+                                            ByteBuffer.allocate(4)
+                                                .order(ByteOrder.LITTLE_ENDIAN)
+                                                .putInt(1)
+                                                .array()
+                                        )
 
                                         updateMessage("Writing clutter sim")
                                         updateProgress(0.0, 1.0)
@@ -135,6 +141,12 @@ class DesignerView : View() {
                                                 .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
                                                 .array()
                                         )
+                                        stream.write(
+                                            ByteBuffer.allocate(4)
+                                                .order(ByteOrder.LITTLE_ENDIAN)
+                                                .putInt((controller.scenario.simulationDurationMin * MIN_TO_S / controller.radarParameters.seekTimeSec).toInt())
+                                                .array()
+                                        )
 
                                         val mergedHits = Bits(0)
 
@@ -158,7 +170,6 @@ class DesignerView : View() {
                                             "png",
                                             File("targets.png")
                                         )
-
 
                                         updateMessage("Wrote target sim")
                                         updateProgress(1.0, 1.0)
@@ -187,7 +198,7 @@ class DesignerView : View() {
 
                                 SSHClient().apply {
                                     // no need to verify, not really security oriented
-                                    addHostKeyVerifier { hostname, port, key -> true }
+                                    addHostKeyVerifier { _, _, _ -> true }
 
                                     useCompression()
 
@@ -371,7 +382,7 @@ class DesignerView : View() {
                                 button("", fontAwesome.create(FILE_PHOTO_ALT)) {
                                     setOnAction {
                                         val files = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg")))
-                                        println("The user chose $files")
+                                        log.info { "The user chose $files" }
                                         if (files.isNotEmpty()) {
                                             controller.scenario.clutter = Clutter(files.first())
                                             radarScreen.drawStationaryTargets()

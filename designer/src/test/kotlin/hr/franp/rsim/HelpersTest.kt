@@ -23,6 +23,7 @@ class HelpersTest : Spek({
         maxRadarDistanceKm = 400.0
         minRadarDistanceKm = 5.0
     }
+    val cParams = CalculationParameters(radarParameters)
 
     val rotationTimeUs = radarParameters.seekTimeSec * S_TO_US
 
@@ -39,7 +40,7 @@ class HelpersTest : Spek({
 
             val tUs = toRadians(position.azDeg - radarParameters.horizontalAngleBeamWidthDeg) * rotationTimeUs / TWO_PI
 
-            calculatePointTargetHits(hits, position, tUs, radarParameters)
+            calculatePointTargetHits(hits, position, tUs, cParams)
 
             it("should result in no detection") {
                 hits.nextSetBit(0) shouldEqual -1
@@ -50,7 +51,7 @@ class HelpersTest : Spek({
 
             val tUs = toRadians(position.azDeg + radarParameters.horizontalAngleBeamWidthDeg) * rotationTimeUs / TWO_PI
 
-            calculatePointTargetHits(hits, position, tUs, radarParameters)
+            calculatePointTargetHits(hits, position, tUs, cParams)
 
             it("should result in no detection") {
                 hits.nextSetBit(0) shouldEqual -1
@@ -61,7 +62,7 @@ class HelpersTest : Spek({
 
             val tUs = toRadians(position.azDeg) * rotationTimeUs / TWO_PI
 
-            calculatePointTargetHits(hits, position, tUs, radarParameters)
+            calculatePointTargetHits(hits, position, tUs, cParams)
 
             it("should result in detection") {
                 hits.nextSetBit(0) shouldNotEqual -1
@@ -81,7 +82,7 @@ class HelpersTest : Spek({
 
             val position = RadarCoordinate(radarParameters.minRadarDistanceKm - 1, azDeg)
 
-            calculatePointTargetHits(hits, position, tUs, radarParameters)
+            calculatePointTargetHits(hits, position, tUs, cParams)
 
             it("should result in no detection") {
                 hits.nextSetBit(0) shouldEqual -1
@@ -92,7 +93,7 @@ class HelpersTest : Spek({
 
             val position = RadarCoordinate(radarParameters.maxRadarDistanceKm + 1, azDeg)
 
-            calculatePointTargetHits(hits, position, tUs, radarParameters)
+            calculatePointTargetHits(hits, position, tUs, cParams)
 
             it("should result in no detection") {
                 hits.nextSetBit(0) shouldEqual -1
@@ -109,7 +110,7 @@ class HelpersTest : Spek({
             val position = RadarCoordinate(100.0, 45.0)
 
             (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
-                calculatePointTargetHits(hits, position, it.toDouble(), radarParameters)
+                calculatePointTargetHits(hits, position, it.toDouble(), cParams)
             }
 
             it("should result in detection") {
@@ -123,7 +124,7 @@ class HelpersTest : Spek({
             val position = RadarCoordinate(100.0, 135.0)
 
             (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
-                calculatePointTargetHits(hits, position, it.toDouble(), radarParameters)
+                calculatePointTargetHits(hits, position, it.toDouble(), cParams)
             }
 
             it("should result in detection") {
@@ -137,7 +138,7 @@ class HelpersTest : Spek({
             val position = RadarCoordinate(100.0, 225.0)
 
             (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
-                calculatePointTargetHits(hits, position, it.toDouble(), radarParameters)
+                calculatePointTargetHits(hits, position, it.toDouble(), cParams)
             }
 
             it("should result in detection") {
@@ -151,7 +152,7 @@ class HelpersTest : Spek({
             val position = RadarCoordinate(100.0, 315.0)
 
             (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
-                calculatePointTargetHits(hits, position, it.toDouble(), radarParameters)
+                calculatePointTargetHits(hits, position, it.toDouble(), cParams)
             }
 
             it("should result in detection") {
@@ -170,7 +171,7 @@ class HelpersTest : Spek({
 
         on("calculating the hit") {
 
-            calculateClutterHits(hits, RasterIterator(clutterMap), radarParameters)
+            calculateClutterHits(hits, RasterIterator(clutterMap), cParams)
 
             it("should result in  detection") {
                 hits.nextSetBit(0) shouldNotEqual -1

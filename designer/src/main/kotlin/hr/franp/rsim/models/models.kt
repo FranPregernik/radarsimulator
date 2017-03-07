@@ -212,11 +212,6 @@ class Clutter() : JsonModel {
         return processHitMaskImage(fxImage)
     }
 
-    fun getRasterHitMap(minWidth: Int, minHeight: Int): RasterIterator {
-        val fxImage = scaleStoredImage(minHeight, minWidth)
-        return RasterIterator(fxImage)
-    }
-
     override fun toJSON(json: JsonBuilder) {
         with(json) {
             add("imageFileContents", Base64.getEncoder().encodeToString(bytes ?: ByteArray(0)))

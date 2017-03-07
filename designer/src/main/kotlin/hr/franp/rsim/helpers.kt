@@ -35,11 +35,14 @@ fun azimuthToAngle(azimuthRadians: Double): Double {
 
 const val LIGHTSPEED_US_TO_ROUNDTRIP_KM = 2.0 / SPEED_OF_LIGHT_KM_US * S_TO_US
 
-class RasterIterator(val img: Image) : Iterator<Point2D> {
+class RasterIterator(img: Image) : Iterator<Point2D> {
 
     val reader: PixelReader = img.pixelReader
     val pixelCnt = (img.width * img.height).toInt()
     var idx = 0
+
+    val width = img.width
+    val height = img.height
 
     override fun hasNext(): Boolean = idx in 0..(pixelCnt - 1)
 
@@ -47,21 +50,20 @@ class RasterIterator(val img: Image) : Iterator<Point2D> {
 
         while (hasNext()) {
 
-            val x = idx % img.width
+            val x = idx % width
             // invert Y to convert to geometric coordinate system
-            val y = idx / img.width
+            val y = idx / width
 
             idx += 1
 
             val color = reader.getColor(x.toInt(), y.toInt())
             if (!(color.red == 0.0 && color.green == 0.0 && color.blue == 0.0)) {
-                return Point2D(x, img.height - 1 - y)
+                return Point2D(x, height - 1 - y)
             }
 
         }
 
         return Point2D.ZERO
-
 
     }
 
@@ -251,7 +253,7 @@ fun generateRadarHitImage(hits: Bits, radarParameters: RadarParameters): Writabl
 
         val angle = azimuthToAngle(sweepHeadingRad)
         val x = (radarParameters.maxRadarDistanceKm + distanceKm * cos(angle)).toInt()
-        val y = (2 * radarParameters.maxRadarDistanceKm - (radarParameters.maxRadarDistanceKm + distanceKm * sin(angle))).toInt()
+        val y = (2 * radarParameters.maxRadarDistanceKm - 1 - (radarParameters.maxRadarDistanceKm + distanceKm * sin(angle))).toInt()
 
         writer.setColor(x, y, Color.RED)
 
@@ -351,87 +353,171 @@ fun normalizeAngleDeg(angle: Double): Double {
     return ((angle % 360) + 360) % 360
 }
 
-fun calculateClutterHits(hits: Bits, hitRaster: RasterIterator, radarParameters: RadarParameters) {
-    val maxRadarDistanceKm = radarParameters.maxRadarDistanceKm
-    val minRadarDistanceKm = radarParameters.minRadarDistanceKm
-    val distanceResolutionKm = radarParameters.distanceResolutionKm
-
-    val width = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
-    val height = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
-
-    val azimuthChangePulseCount = radarParameters.azimuthChangePulse
-    val horizontalAngleBeamWidthRad = Math.toRadians(radarParameters.horizontalAngleBeamWidthDeg)
-    val c1 = TWO_PI / azimuthChangePulseCount
-    val maxSignalTimeUs = ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-    val minSignalTimeUs = ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+fun calculateClutterHits(hits: Bits, hitRaster: RasterIterator, cParam: CalculationParameters) {
 
     for (hit in hitRaster) {
-        val x = (hit.x - width / 2.0) * distanceResolutionKm
-        val y = (hit.y - height / 2.0) * distanceResolutionKm
+        val x = (hit.x - cParam.width / 2.0) * cParam.distanceResolutionKm
+        val y = (hit.y - cParam.height / 2.0) * cParam.distanceResolutionKm
 
         val radarDistanceKm = sqrt(pow(x, 2.0) + pow(y, 2.0))
-        if (radarDistanceKm < minRadarDistanceKm || radarDistanceKm > maxRadarDistanceKm) {
+        if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
             continue
         }
 
-        val cartesianAngleRad = Math.atan2(y, x)
+        val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
+        if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
+            continue
+        }
+
+        val cartesianAngleRad = atan2(y, x)
         val sweepHeadingRad = angleToAzimuth(cartesianAngleRad)
 
-        val minSweepIndex = floor((sweepHeadingRad - horizontalAngleBeamWidthRad) / c1).toInt()
-        val maxSweepIndex = ceil((sweepHeadingRad + horizontalAngleBeamWidthRad) / c1).toInt()
+        val minSweepIndex = floor((sweepHeadingRad - cParam.horizontalAngleBeamWidthRad) / cParam.c1).toInt()
+        val maxSweepIndex = ceil((sweepHeadingRad + cParam.horizontalAngleBeamWidthRad) / cParam.c1).toInt()
 
-        for (sweepIdx in minSweepIndex..maxSweepIndex) {
-            val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
-            if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
-                val normSweepIdx = ((sweepIdx % radarParameters.azimuthChangePulse) + radarParameters.azimuthChangePulse) % radarParameters.azimuthChangePulse
-                val bitIdx = normSweepIdx * radarParameters.maxImpulsePeriodUs.toInt() + signalTimeUs
-
-                // set signal hit
-                hits.setBit(bitIdx, true)
-            }
-        }
+        (minSweepIndex..maxSweepIndex)
+            .map { sweepIdx -> ((sweepIdx % cParam.azimuthChangePulseCount) + cParam.azimuthChangePulseCount) % cParam.azimuthChangePulseCount }
+            .map { normSweepIdx -> normSweepIdx * cParam.maxImpulsePeriodUs + signalTimeUs }
+            .forEach { hits.setBit(it, true) }
     }
 }
 
-fun calculatePointTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
+fun calculatePointTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, cParam: CalculationParameters) {
 
-    val maxRadarDistanceKm = radarParameters.maxRadarDistanceKm
-    val minRadarDistanceKm = radarParameters.minRadarDistanceKm
-    val horizontalAngleBeamWidthRad = toRadians(radarParameters.horizontalAngleBeamWidthDeg)
-    val rotationTimeUs = radarParameters.seekTimeSec * S_TO_US
-    val sweepHeadingRad = TWO_PI / rotationTimeUs * tUs
-    val azimuthChangePulseCount = radarParameters.azimuthChangePulse
-    val c1 = TWO_PI / azimuthChangePulseCount
-    val maxSignalTimeUs = ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
-    val minSignalTimeUs = ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+    val sweepHeadingRad = TWO_PI / cParam.rotationTimeUs * tUs
 
     // get the angle of the target (center point)
     val radarDistanceKm = position.rKm
-    if (radarDistanceKm < minRadarDistanceKm || radarDistanceKm > maxRadarDistanceKm) {
+    if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
+        return
+    }
+    val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
+    if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
         return
     }
 
     val targetHeadingRad = toRadians(position.azDeg)
     val diff = abs(((abs(targetHeadingRad - sweepHeadingRad) + PI) % TWO_PI) - PI)
-    if (diff > horizontalAngleBeamWidthRad / 2.0) {
+    if (diff > cParam.horizontalAngleBeamWidthRad / 2.0) {
         return
     }
 
-    val sweepIdx = round(sweepHeadingRad / c1).toInt()
-    val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
-    if (signalTimeUs > minSignalTimeUs && signalTimeUs < maxSignalTimeUs) {
-        val normSweepIdx = ((sweepIdx % radarParameters.azimuthChangePulse) + radarParameters.azimuthChangePulse) % radarParameters.azimuthChangePulse
-        val bitIdx = normSweepIdx * radarParameters.maxImpulsePeriodUs.toInt() + signalTimeUs
+    val sweepIdx = round(sweepHeadingRad / cParam.c1).toInt()
+    val normSweepIdx = ((sweepIdx % cParam.azimuthChangePulseCount) + cParam.azimuthChangePulseCount) % cParam.azimuthChangePulseCount
+    val bitIdx = normSweepIdx * cParam.maxImpulsePeriodUs + signalTimeUs
 
+    // set signal hit
+    hits.setBit(bitIdx, true)
+
+}
+
+/**
+ * Test 1 type of target is azimuth indifferent unlike the distance which is taken into account.
+ */
+fun calculateTest1TargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, cParam: CalculationParameters) {
+
+    val sweepHeadingRad = TWO_PI / cParam.rotationTimeUs * tUs
+
+    // get the angle of the target
+    val radarDistanceKm = position.rKm
+    if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
+        return
+    }
+    val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
+    if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
+        return
+    }
+
+    val sweepIdx = round(sweepHeadingRad / cParam.c1).toInt()
+    val normSweepIdx = ((sweepIdx % cParam.azimuthChangePulseCount) + cParam.azimuthChangePulseCount) % cParam.azimuthChangePulseCount
+    val bitIdx = normSweepIdx * cParam.maxImpulsePeriodUs + signalTimeUs
+
+    // set signal hit
+    hits.setBit(bitIdx, true)
+
+}
+
+/**
+ * Test 2 type of target is distance indifferent unlike the azimuth which is taken into account.
+ * Radar range is taken into account.
+ */
+fun calculateTest2TargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, cParam: CalculationParameters) {
+
+    val sweepHeadingRad = TWO_PI / cParam.rotationTimeUs * tUs
+
+    // get the angle of the target
+    val radarDistanceKm = position.rKm
+    if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
+        return
+    }
+    val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
+    if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
+        return
+    }
+
+    val targetHeadingRad = toRadians(position.azDeg)
+    val diff = abs(((abs(targetHeadingRad - sweepHeadingRad) + PI) % TWO_PI) - PI)
+    if (diff > cParam.horizontalAngleBeamWidthRad / 2.0) {
+        return
+    }
+
+    val sweepIdx = round(sweepHeadingRad / cParam.c1).toInt()
+    val normSweepIdx = ((sweepIdx % cParam.azimuthChangePulseCount) + cParam.azimuthChangePulseCount) % cParam.azimuthChangePulseCount
+
+    (cParam.minSignalTimeUs.toInt()..cParam.maxSignalTimeUs.toInt()).forEach { i ->
+        val bitIdx = normSweepIdx * cParam.maxImpulsePeriodUs + i
         // set signal hit
         hits.setBit(bitIdx, true)
+    }
+}
+
+data class CalculationParameters(var radarParameters: RadarParameters) {
+    val maxRadarDistanceKm = radarParameters.maxRadarDistanceKm
+    val minRadarDistanceKm = radarParameters.minRadarDistanceKm
+    val distanceResolutionKm = radarParameters.distanceResolutionKm
+    val horizontalAngleBeamWidthRad = toRadians(radarParameters.horizontalAngleBeamWidthDeg)
+    val azimuthChangePulseCount = radarParameters.azimuthChangePulse
+    val c1 = TWO_PI / azimuthChangePulseCount
+    val maxSignalTimeUs = ceil(maxRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+    val minSignalTimeUs = ceil(minRadarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+    val maxImpulsePeriodUs = radarParameters.maxImpulsePeriodUs.toInt()
+    val rotationTimeUs = radarParameters.seekTimeSec * S_TO_US
+    val width = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
+    val height = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
+}
+
+fun calculateCloudTargetHits(hits: Bits, position: RadarCoordinate, hitRaster: RasterIterator, cParam: CalculationParameters) {
+
+    val cp = position.toCartesian()
+
+    for (hit in hitRaster) {
+
+        val x = cp.x + (hit.x - hitRaster.width / 2.0)
+        val y = cp.y + (hit.y - hitRaster.height / 2.0)
+
+        val radarDistanceKm = sqrt(pow(x, 2.0) + pow(y, 2.0))
+        if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
+            continue
+        }
+        val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
+        if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
+            continue
+        }
+
+        val cartesianAngleRad = atan2(y, x)
+        val sweepHeadingRad = angleToAzimuth(cartesianAngleRad)
+
+        val minSweepIndex = floor((sweepHeadingRad - cParam.horizontalAngleBeamWidthRad) / cParam.c1).toInt()
+        val maxSweepIndex = ceil((sweepHeadingRad + cParam.horizontalAngleBeamWidthRad) / cParam.c1).toInt()
+
+        (minSweepIndex..maxSweepIndex)
+            .map { sweepIdx -> ((sweepIdx % cParam.azimuthChangePulseCount) + cParam.azimuthChangePulseCount) % cParam.azimuthChangePulseCount }
+            .map { normSweepIdx -> normSweepIdx * cParam.maxImpulsePeriodUs + signalTimeUs }
+            .forEach { hits.setBit(it, true) }
     }
 
 }
 
-fun calculateTestTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
-}
-
-fun calculateCloudTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, radarParameters: RadarParameters) {
-
+fun Image.getRasterHitMap(): RasterIterator {
+    return RasterIterator(this)
 }

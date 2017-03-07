@@ -2,6 +2,7 @@ package hr.franp.rsim
 
 import hr.franp.*
 import hr.franp.rsim.models.*
+import javafx.scene.image.*
 import tornadofx.*
 import java.util.*
 import java.util.Spliterators.*
@@ -9,6 +10,10 @@ import java.util.stream.*
 import java.util.stream.StreamSupport.*
 
 class DesignerController : Controller() {
+
+    val cloudOneImage = processHitMaskImage(Image(resources["/cloud1.png"]))
+    val cloudTwoImage = processHitMaskImage(Image(resources["/cloud2.png"]))
+
     val radarParameters: RadarParameters = RadarParameters().apply {
         impulsePeriodUs = 3003.0
         maxImpulsePeriodUs = 3072.0
@@ -97,6 +102,8 @@ class DesignerController : Controller() {
 
     fun calculateTargetHits(): Stream<Bits> {
 
+        val cParams = CalculationParameters(radarParameters)
+
         // (deep)clone for background processing
         val scenarioClone = scenario.copy<Scenario>()
         val radarParameters = radarParameters
@@ -107,37 +114,93 @@ class DesignerController : Controller() {
                 var p1 = movingTarget.initialPosition
                 var t1 = 0.0
 
-                movingTarget.directions.map { direction ->
-                    val p2 = direction.destination
-                    val speedKmUs = direction.speedKmh / HOUR_TO_US
-
-                    // distance from last course change point
-                    val p1c = p1.toCartesian()
-                    val p2c = p2.toCartesian()
-                    val dx = p2c.x - p1c.x
-                    val dy = p2c.y - p1c.y
-                    val distance = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0))
-                    val dt = distance / speedKmUs
-
-
-                    val pathSegment = PathSegment(
+                if (movingTarget.directions?.size == 0) {
+                    // hovering or standing still
+                    listOf(PathSegment(
                         p1 = p1,
-                        p2 = p2,
+                        p2 = p1,
                         t1Us = t1,
-                        t2Us = t1 + dt,
-                        vxKmUs = speedKmUs * dx / distance,
-                        vyKmUs = speedKmUs * dy / distance,
+                        t2Us = scenarioClone.simulationDurationMin * MIN_TO_US,
+                        vxKmUs = 0.0,
+                        vyKmUs = 0.0,
                         type = movingTarget.type
-                    )
+                    ))
+                } else {
+                    // moving targets
+                    movingTarget.directions.map { direction ->
+                        val p2 = direction.destination
+                        val speedKmUs = direction.speedKmh / HOUR_TO_US
 
-                    p1 = p2
-                    t1 += dt
+                        // distance from last course change point
+                        val p1c = p1.toCartesian()
+                        val p2c = p2.toCartesian()
+                        val dx = p2c.x - p1c.x
+                        val dy = p2c.y - p1c.y
+                        val distance = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0))
+                        val dt = distance / speedKmUs
 
-                    pathSegment
+
+                        val pathSegment = PathSegment(
+                            p1 = p1,
+                            p2 = p2,
+                            t1Us = t1,
+                            t2Us = t1 + dt,
+                            vxKmUs = speedKmUs * dx / distance,
+                            vyKmUs = speedKmUs * dy / distance,
+                            type = movingTarget.type
+                        )
+
+                        p1 = p2
+                        t1 += dt
+
+                        pathSegment
+                    }
                 }
             }
 
         val simulationDurationSec = scenarioClone.simulationDurationMin * 60.0
+
+//        // iterate over full ARP rotations
+//        targetPathSegments.stream()
+//            .flatMap { ps ->
+//
+//                val stepTime = 0.5 * min(
+//                    radarParameters.distanceResolutionKm / ps.vxKmUs,
+//                    radarParameters.distanceResolutionKm / ps.vyKmUs
+//                )
+//                val simTimeIterator = generateSequence(ps.t1Us) { it + stepTime }
+//                    .takeWhile { it < ps.t2Us && it < simulationDurationSec }
+//                    .iterator()
+//
+//                // iterate in one ARP rotation every simulation step time period
+//                stream(spliteratorUnknownSize(simTimeIterator, Spliterator.ORDERED), false)
+//                    .map { Pair(it, ps) }
+//
+//            }
+//            // group by ARP
+////            .parallel()
+//            .forEach { pair ->
+//
+//                val timeUs = pair.first
+//                val pathSegment = pair.second
+//                val position = pathSegment.getPositionForTime(timeUs) ?: return@forEach
+//
+//                val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+//
+//                when (pathSegment.type) {
+//                    MovingTargetType.Point ->
+//                        calculatePointTargetHits(hits, position, timeUs, cParams)
+//                    MovingTargetType.Cloud1 ->
+//                        calculateCloudTargetHits(hits, position, cloudOneImage.getRasterHitMap(), cParams)
+//                    MovingTargetType.Cloud2 ->
+//                        calculateCloudTargetHits(hits, position, cloudTwoImage.getRasterHitMap(), cParams)
+//                    MovingTargetType.Test1 ->
+//                        calculateTestTargetHits(hits, position, timeUs, cParams)
+//                    MovingTargetType.Test2 ->
+//                        calculateTestTargetHits(hits, position, timeUs, cParams)
+//                }
+//
+//            }
 
         val arpTimeIterator = generateSequence(0.0) { it + radarParameters.seekTimeSec }
             .takeWhile { it < simulationDurationSec }
@@ -166,15 +229,15 @@ class DesignerController : Controller() {
 
                             when (pathSegment.type) {
                                 MovingTargetType.Point ->
-                                    calculatePointTargetHits(hits, position, tUs, radarParameters)
+                                    calculatePointTargetHits(hits, position, tUs, cParams)
                                 MovingTargetType.Cloud1 ->
-                                    calculateCloudTargetHits(hits, position, tUs, radarParameters)
+                                    calculateCloudTargetHits(hits, position, cloudOneImage.getRasterHitMap(), cParams)
                                 MovingTargetType.Cloud2 ->
-                                    calculateCloudTargetHits(hits, position, tUs, radarParameters)
+                                    calculateCloudTargetHits(hits, position, cloudTwoImage.getRasterHitMap(), cParams)
                                 MovingTargetType.Test1 ->
-                                    calculateTestTargetHits(hits, position, tUs, radarParameters)
+                                    calculateTest1TargetHits(hits, position, tUs, cParams)
                                 MovingTargetType.Test2 ->
-                                    calculateTestTargetHits(hits, position, tUs, radarParameters)
+                                    calculateTest2TargetHits(hits, position, tUs, cParams)
                             }
                         }
                     }
@@ -186,6 +249,9 @@ class DesignerController : Controller() {
 
 
     fun calculateClutterHits(): Bits {
+
+        val cParams = CalculationParameters(radarParameters)
+
         // (deep)clone for background processing
         val scenario = this.scenario.copy<Scenario>()
 
@@ -197,9 +263,9 @@ class DesignerController : Controller() {
         val width = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
         val height = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
 
-        val raster = scenario.clutter?.getRasterHitMap(width, height) ?: return hits
+        val raster = scenario.clutter?.getImage(width, height)?.getRasterHitMap() ?: return hits
 
-        calculateClutterHits(hits, raster, radarParameters)
+        calculateClutterHits(hits, raster, cParams)
 
         return hits
     }
