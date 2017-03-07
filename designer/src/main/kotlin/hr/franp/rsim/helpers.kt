@@ -9,6 +9,7 @@ import javafx.scene.image.*
 import javafx.scene.input.*
 import javafx.scene.paint.*
 import javafx.scene.shape.*
+import javafx.scene.transform.*
 import javafx.util.*
 import jfxtras.labs.util.*
 import jfxtras.labs.util.event.*
@@ -520,4 +521,25 @@ fun calculateCloudTargetHits(hits: Bits, position: RadarCoordinate, hitRaster: R
 
 fun Image.getRasterHitMap(): RasterIterator {
     return RasterIterator(this)
+}
+
+
+fun setupViewPort(fromViewPort: Bounds, destViewPort: Bounds): Transform {
+
+    val affine = Affine()
+
+    val centerViewX = (fromViewPort.minX + fromViewPort.maxX) / 2.0
+    val centerViewY = (fromViewPort.minY + fromViewPort.maxY) / 2.0
+
+    val calcScale = min(destViewPort.width / fromViewPort.width, destViewPort.height / fromViewPort.height)
+    val displayScale = if (calcScale.isNaN() || calcScale == 0.0) 1.0 else calcScale
+
+    val centerDestX = (destViewPort.minX + destViewPort.maxX) / 2.0
+    val centerDestY = (destViewPort.minY + destViewPort.maxY) / 2.0
+
+    affine.appendTranslation(centerDestX, centerDestY)
+    affine.appendScale(displayScale, -displayScale)
+    affine.appendTranslation(-centerViewX, -centerViewY)
+
+    return affine
 }

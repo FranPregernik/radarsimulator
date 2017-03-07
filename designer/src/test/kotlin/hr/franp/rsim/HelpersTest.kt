@@ -4,6 +4,7 @@ package hr.franp.rsim
 
 import hr.franp.*
 import hr.franp.rsim.models.*
+import javafx.geometry.*
 import javafx.scene.image.*
 import javafx.scene.paint.*
 import org.amshove.kluent.*
@@ -177,5 +178,231 @@ class HelpersTest : Spek({
                 hits.nextSetBit(0) shouldNotEqual -1
             }
         }
+    }
+
+
+    given("A zoomed in cartesian region in quadrant 1") {
+
+        val region = BoundingBox(100.0, 100.0, 300.0, 400.0)
+        val window = BoundingBox(0.0, 0.0, 600.0, 800.0)
+
+        val affine = setupViewPort(region, window)
+
+        on("Calculating the lower left point of region") {
+            val transPoint = affine.transform(region.minX, region.minY)
+
+            it("should transform to lower left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper left point of region") {
+            val transPoint = affine.transform(region.minX, region.maxY)
+
+            it("should transform to upper left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.minY)
+            }
+        }
+
+        on("Calculating the lower right point of region") {
+            val transPoint = affine.transform(region.maxX, region.minY)
+
+            it("should transform to lower right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper right point of region") {
+            val transPoint = affine.transform(region.maxX, region.maxY)
+
+            it("should transform to upper right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.minY)
+            }
+        }
+
+    }
+
+    given("A zoomed in cartesian region in quadrant 2") {
+
+        val region = BoundingBox(-400.0, 100.0, 300.0, 400.0)
+        val window = BoundingBox(0.0, 0.0, 600.0, 800.0)
+
+        val affine = setupViewPort(region, window)
+
+        on("Calculating the lower left point of region") {
+            val transPoint = affine.transform(region.minX, region.minY)
+
+            it("should transform to lower left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper left point of region") {
+            val transPoint = affine.transform(region.minX, region.maxY)
+
+            it("should transform to upper left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.minY)
+            }
+        }
+
+        on("Calculating the lower right point of region") {
+            val transPoint = affine.transform(region.maxX, region.minY)
+
+            it("should transform to lower right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper right point of region") {
+            val transPoint = affine.transform(region.maxX, region.maxY)
+
+            it("should transform to upper right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.minY)
+            }
+        }
+
+    }
+
+    given("A zoomed in cartesian region in quadrant 3") {
+
+        val region = BoundingBox(-400.0, -500.0, 300.0, 400.0)
+        val window = BoundingBox(0.0, 0.0, 600.0, 800.0)
+
+        val affine = setupViewPort(region, window)
+
+        on("Calculating the lower left point of region") {
+            val transPoint = affine.transform(region.minX, region.minY)
+
+            it("should transform to lower left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper left point of region") {
+            val transPoint = affine.transform(region.minX, region.maxY)
+
+            it("should transform to upper left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.minY)
+            }
+        }
+
+        on("Calculating the lower right point of region") {
+            val transPoint = affine.transform(region.maxX, region.minY)
+
+            it("should transform to lower right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper right point of region") {
+            val transPoint = affine.transform(region.maxX, region.maxY)
+
+            it("should transform to upper right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.minY)
+            }
+        }
+
+    }
+
+    given("A zoomed in cartesian region in quadrant 4") {
+
+        val region = BoundingBox(100.0, -500.0, 300.0, 400.0)
+        val window = BoundingBox(0.0, 0.0, 600.0, 800.0)
+
+        val affine = setupViewPort(region, window)
+
+        on("Calculating the lower left point of region") {
+            val transPoint = affine.transform(region.minX, region.minY)
+
+            it("should transform to lower left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper left point of region") {
+            val transPoint = affine.transform(region.minX, region.maxY)
+
+            it("should transform to upper left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.minY)
+            }
+        }
+
+        on("Calculating the lower right point of region") {
+            val transPoint = affine.transform(region.maxX, region.minY)
+
+            it("should transform to lower right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper right point of region") {
+            val transPoint = affine.transform(region.maxX, region.maxY)
+
+            it("should transform to upper right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.minY)
+            }
+        }
+
+    }
+
+    given("A zoomed in cartesian region in covering all quadrants") {
+
+        val region = BoundingBox(-100.0, -100.0, 300.0, 400.0)
+        val window = BoundingBox(0.0, 0.0, 600.0, 800.0)
+
+        val affine = setupViewPort(region, window)
+
+        on("Calculating the lower left point of region") {
+            val transPoint = affine.transform(region.minX, region.minY)
+
+            it("should transform to lower left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper left point of region") {
+            val transPoint = affine.transform(region.minX, region.maxY)
+
+            it("should transform to upper left point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.minX, window.minY)
+            }
+        }
+
+        on("Calculating the lower right point of region") {
+            val transPoint = affine.transform(region.maxX, region.minY)
+
+            it("should transform to lower right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.maxY)
+            }
+        }
+
+        on("Calculating the upper right point of region") {
+            val transPoint = affine.transform(region.maxX, region.maxY)
+
+            it("should transform to upper right point of window") {
+                // window is in screen coordinate system (inverted y)
+                transPoint shouldEqual Point2D(window.maxX, window.minY)
+            }
+        }
+
     }
 })
