@@ -438,18 +438,6 @@ class DesignerView : View() {
                                 }
                             }
 
-                            field("Clutter hit layer") {
-
-                                slider {
-                                    tooltip("Controls transparency of the clutter hit layer")
-
-                                    min = 0.0
-                                    max = 1.0
-                                    blockIncrement = 0.1
-                                    bind(radarScreen.stationaryHitsLayerOpacityProperty)
-                                }
-                            }
-
                             field("Clutter map") {
                                 button("", fontAwesome.create(FILE_PHOTO_ALT)) {
                                     setOnAction {

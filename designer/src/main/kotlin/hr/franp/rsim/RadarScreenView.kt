@@ -33,7 +33,6 @@ class RadarScreenView : View() {
         fill = Color.DARKGRAY.deriveColor(3.0, 1.0, 1.0, 0.4)
     }
 
-    val stationaryHitsLayerOpacityProperty = SimpleDoubleProperty(1.0)
     val movingHitsLayerOpacityProperty = SimpleDoubleProperty(1.0)
     val stationaryTargetLayerOpacityProperty = SimpleDoubleProperty(1.0)
     val movingTargetsLayerOpacityProperty = SimpleDoubleProperty(1.0)
