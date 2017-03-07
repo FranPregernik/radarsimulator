@@ -453,10 +453,12 @@ class DesignerView : View() {
                             field("Clutter map") {
                                 button("", fontAwesome.create(FILE_PHOTO_ALT)) {
                                     setOnAction {
-                                        val files = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg")))
-                                        if (files.isNotEmpty()) {
-                                            controller.scenario.clutter = Clutter(files.first())
-                                            radarScreen.drawStationaryTargets()
+                                        val file = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg")), FileChooserMode.Single)
+                                            .firstOrNull()
+
+                                        if (file != null) {
+                                            controller.scenario.clutter = Clutter(file)
+                                            radarScreen.draw()
                                             this.tooltip = Tooltip("Select clutter map").apply {
                                                 graphic = ImageView(controller.scenario.clutter.getImage(100, 100))
                                             }
