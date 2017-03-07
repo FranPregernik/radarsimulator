@@ -67,7 +67,7 @@ class DesignerView : View() {
                                 .firstOrNull()
 
                             file?.bufferedReader()?.use { fileBufferReader ->
-                                createReader(fileBufferReader).use { jsonReader ->
+                                createReader(fileBufferReader)?.use { jsonReader ->
                                     val newScenario = Scenario()
                                     newScenario.updateModel(jsonReader.readObject())
 
@@ -87,7 +87,7 @@ class DesignerView : View() {
                                 .firstOrNull()
 
                             file?.bufferedWriter()?.use { fileBufferWriter ->
-                                createWriter(fileBufferWriter).use { jsonWriter ->
+                                createWriter(fileBufferWriter)?.use { jsonWriter ->
                                     jsonWriter.writeObject(controller.scenario.toJSON())
                                 }
                             }
