@@ -22,6 +22,7 @@ import tornadofx.*
 import java.io.*
 import java.nio.*
 import javax.imageio.*
+import javax.json.Json.*
 
 class DesignerView : View() {
     override val root = BorderPane()
@@ -56,10 +57,47 @@ class DesignerView : View() {
 
                     paddingAll = 4
 
-                    button("CALC") {
+                    button("", fontAwesome.create(FOLDER_OPEN)) {
                         disableProperty().bind(calculatingHitsProperty)
 
-                        tooltip("Calculate and display all hits")
+                        tooltip("Open scenario")
+
+                        setOnAction {
+                            val file = chooseFile("Select simulation scenario file", arrayOf(FileChooser.ExtensionFilter("Simulation scenario file", "*.rsim")), FileChooserMode.Single)
+                                .firstOrNull()
+
+                            file?.bufferedReader()?.use { fileBufferReader ->
+                                createReader(fileBufferReader).use { jsonReader ->
+                                    val newScenario = Scenario()
+                                    newScenario.updateModel(jsonReader.readObject())
+
+                                    newScenario.copy(controller.scenario)
+                                }
+                            }
+                        }
+                    }
+
+                    button("", fontAwesome.create(FLOPPY_ALT)) {
+                        disableProperty().bind(calculatingHitsProperty)
+
+                        tooltip("Save scenario")
+
+                        setOnAction {
+                            val file = chooseFile("Select simulation scenario file", arrayOf(FileChooser.ExtensionFilter("Simulation scenario file", "*.rsim")), FileChooserMode.Save)
+                                .firstOrNull()
+
+                            file?.bufferedWriter()?.use { fileBufferWriter ->
+                                createWriter(fileBufferWriter).use { jsonWriter ->
+                                    jsonWriter.writeObject(controller.scenario.toJSON())
+                                }
+                            }
+                        }
+                    }
+
+                    button("", fontAwesome.create(COGS)) {
+                        disableProperty().bind(calculatingHitsProperty)
+
+                        tooltip("Compute scenario")
 
                         setOnAction {
                             calculatingHitsProperty.set(true)
@@ -187,10 +225,10 @@ class DesignerView : View() {
                         }
                     }
 
-                    button("START") {
+                    button("", fontAwesome.create(UPLOAD)) {
                         disableProperty().bind(calculatingHitsProperty)
 
-                        tooltip("Transfer and begin simulation")
+                        tooltip("Transfer simulation")
 
                         setOnAction {
 
@@ -223,6 +261,30 @@ class DesignerView : View() {
                                         upload(FileSystemFile("clutter.bin"), "/var/")
                                         upload(FileSystemFile("targets.bin"), "/var/")
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    button("", fontAwesome.create(PLAY)) {
+                        disableProperty().bind(calculatingHitsProperty)
+
+                        tooltip("Transfer and begin simulation")
+
+                        setOnAction {
+
+                            runAsync {
+
+                                SSHClient().apply {
+                                    // no need to verify, not really security oriented
+                                    addHostKeyVerifier { _, _, _ -> true }
+
+                                    useCompression()
+
+                                    connect("192.168.0.108")
+
+                                    // again security here is not an issue - petalinux default login
+                                    authPassword("root", "root")
 
                                     startSession().use { session ->
                                         session.exec("killall radar-sim-test; radar-sim=test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bom").join()
@@ -230,6 +292,16 @@ class DesignerView : View() {
                                 }
 
                             }
+
+                        }
+                    }
+
+                    button("", fontAwesome.create(STOP)) {
+                        disableProperty().bind(calculatingHitsProperty)
+
+                        tooltip("Stop simulation")
+
+                        setOnAction {
 
                         }
                     }
@@ -382,7 +454,6 @@ class DesignerView : View() {
                                 button("", fontAwesome.create(FILE_PHOTO_ALT)) {
                                     setOnAction {
                                         val files = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg")))
-                                        log.info { "The user chose $files" }
                                         if (files.isNotEmpty()) {
                                             controller.scenario.clutter = Clutter(files.first())
                                             radarScreen.drawStationaryTargets()
