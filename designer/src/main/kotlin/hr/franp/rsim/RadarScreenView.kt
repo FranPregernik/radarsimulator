@@ -255,20 +255,23 @@ class RadarScreenView : View() {
         // draw stationary targets
         val width = (2.0 * controller.radarParameters.maxRadarDistanceKm)
         val height = (2.0 * controller.radarParameters.maxRadarDistanceKm)
+
+        val rasterMapImage = controller.scenario.clutter.getImage(width.toInt(), height.toInt())
+
         val transformedBounds = combinedTransform.transform(BoundingBox(
-            -width / 2.0,
-            -height / 2.0,
+            -width/2.0,
+            -height/2.0,
             width,
             height
         ))
 
-        val rasterMapImage = controller.scenario.clutter.getImage(transformedBounds.width.toInt(), transformedBounds.height.toInt())
-
         stationaryTargetsGroup += imageview {
             image = rasterMapImage
-            scaleY = -1.0 // invert inverted coordinate system to display the image right side up
             x = transformedBounds.minX
             y = transformedBounds.minY
+            isPreserveRatio = true
+            fitWidth = transformedBounds.width
+            fitHeight = transformedBounds.height
         }
 
     }
