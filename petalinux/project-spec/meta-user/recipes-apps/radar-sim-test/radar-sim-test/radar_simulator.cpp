@@ -174,12 +174,12 @@ void RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 
     XAxiDma_BdSetCtrl(PrevBdPtr, XAXIDMA_BD_CTRL_TXEOF_MASK);
 
     /*  debug print */
-    CurrBdPtr = FirstBdPtr;
-    for (int i = 0; i < bdCount; i++) {
-        FXAxiDma_DumpBd(CurrBdPtr);
-        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
-    }
-    PrintDmaStatus(dmaPtr);
+//    CurrBdPtr = FirstBdPtr;
+//    for (int i = 0; i < bdCount; i++) {
+//        FXAxiDma_DumpBd(CurrBdPtr);
+//        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
+//    }
+//    PrintDmaStatus(dmaPtr);
 
     /* Give the BD to DMA to kick off the transmission. */
     Status = XAxiDma_BdRingToHw(TxRingPtr, bdCount, FirstBdPtr);
@@ -413,7 +413,6 @@ void RadarSimulator::loadNextTargetMaps(istream& input) {
 
     // block index to write - should be the one before where the currArp is located in (circular buffer)
     int i = targetMemLoadIdx % MT_BLK_CNT;
-    cout << i * blockByteSize << endl;
     UINTPTR memPtr = ((UINTPTR)targetMemPtr) + i * blockByteSize;
 
     // read from file or clear
