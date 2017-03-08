@@ -214,6 +214,35 @@ class DesignerView : View() {
 
                                     }
 
+                                    SSHClient().apply {
+                                        // no need to verify, not really security oriented
+                                        addHostKeyVerifier { _, _, _ -> true }
+
+                                        useCompression()
+
+                                        connect("192.168.0.108")
+
+                                        // again security here is not an issue - petalinux default login
+                                        authPassword("root", "root")
+
+                                        newSCPFileTransfer().apply {
+                                            transferListener = object : TransferListener {
+                                                override fun directory(name: String?): TransferListener {
+                                                    return this
+                                                }
+
+                                                override fun file(name: String?, size: Long): StreamCopier.Listener {
+                                                    return StreamCopier.Listener { transferred ->
+                                                        updateMessage("Transferring $name")
+                                                        updateProgress(transferred, size)
+                                                    }
+                                                }
+                                            }
+                                            upload(FileSystemFile("clutter.bin"), "/var/")
+                                            upload(FileSystemFile("targets.bin"), "/var/")
+                                        }
+                                    }
+
 
                                 } ui {
                                     calculatingHitsProperty.set(false)
@@ -222,47 +251,6 @@ class DesignerView : View() {
                                 calculatingHitsProperty.set(false)
                             }
 
-                        }
-                    }
-
-                    button("", fontAwesome.create(UPLOAD)) {
-                        disableProperty().bind(calculatingHitsProperty)
-
-                        tooltip("Transfer simulation")
-
-                        setOnAction {
-
-                            runAsync {
-
-                                SSHClient().apply {
-                                    // no need to verify, not really security oriented
-                                    addHostKeyVerifier { _, _, _ -> true }
-
-                                    useCompression()
-
-                                    connect("192.168.0.108")
-
-                                    // again security here is not an issue - petalinux default login
-                                    authPassword("root", "root")
-
-                                    newSCPFileTransfer().apply {
-                                        transferListener = object : TransferListener {
-                                            override fun directory(name: String?): TransferListener {
-                                                return this
-                                            }
-
-                                            override fun file(name: String?, size: Long): StreamCopier.Listener {
-                                                return StreamCopier.Listener { transferred ->
-                                                    updateMessage("Transferring $name")
-                                                    updateProgress(transferred, size)
-                                                }
-                                            }
-                                        }
-                                        upload(FileSystemFile("clutter.bin"), "/var/")
-                                        upload(FileSystemFile("targets.bin"), "/var/")
-                                    }
-                                }
-                            }
                         }
                     }
 
