@@ -363,23 +363,33 @@ az=${angleStringConverter.toString(az)}"""
 
                 val movingTarget = when (type) {
                     MovingTargetType.Cloud1 -> {
+                        val bounds = combinedTransform.transform(BoundingBox(
+                            plotPosCart.x - cloudOneImage.width / 2,
+                            plotPosCart.y - cloudOneImage.height / 2,
+                            cloudOneImage.width,
+                            cloudOneImage.height
+                        ))
                         MovingTargetPositionMarker(
                             p = pt,
                             text = text,
-                            width = 300.0,
-                            height = 300.0,
                             color = color,
-                            image = cloudOneImage
+                            image = cloudOneImage,
+                            imageBounds = bounds
                         )
                     }
                     MovingTargetType.Cloud2 -> {
+                        val bounds = combinedTransform.transform(BoundingBox(
+                            plotPosCart.x - cloudTwoImage.width / 2,
+                            plotPosCart.y - cloudTwoImage.height / 2,
+                            cloudTwoImage.width,
+                            cloudTwoImage.height
+                        ))
                         MovingTargetPositionMarker(
                             p = pt,
                             text = text,
-                            width = 300.0,
-                            height = 300.0,
                             color = color,
-                            image = cloudTwoImage
+                            image = cloudTwoImage,
+                            imageBounds = bounds
                         )
                     }
                     MovingTargetType.Point -> MovingTargetPositionMarker(

@@ -78,7 +78,7 @@ class Styles : Stylesheet() {
 
         s(movingTargetRectangle) {
             stroke = movingTargetCourseLineColor
-            fill = Styles.radarBgColor
+            fill = Color.TRANSPARENT
         }
 
         s(imageMovingTargetRectangle) {
