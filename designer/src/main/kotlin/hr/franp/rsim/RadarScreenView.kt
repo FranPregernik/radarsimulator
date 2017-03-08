@@ -259,8 +259,8 @@ class RadarScreenView : View() {
         val rasterMapImage = controller.scenario.clutter.getImage(width.toInt(), height.toInt())
 
         val transformedBounds = combinedTransform.transform(BoundingBox(
-            -width/2.0,
-            -height/2.0,
+            -width / 2.0,
+            -height / 2.0,
             width,
             height
         ))
@@ -291,6 +291,9 @@ class RadarScreenView : View() {
         }
         hitsGroup.children.setAll(movingHitsGroup)
 
+        val currentTimeS = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
+        val currentTimeUs = S_TO_US * currentTimeS
+
         // draw moving targets
         val noneSelected = controller.selectedMovingTarget !in controller.scenario.movingTargets
         val movingTargetCount = controller.scenario.movingTargets.size
@@ -302,6 +305,12 @@ class RadarScreenView : View() {
 
                 val type = target.type ?: return@forEachIndexed
 
+                val initPosCart = target.initialPosition.toCartesian()
+                val p = combinedTransform.transform(
+                    initPosCart.x,
+                    initPosCart.y
+                )
+
                 // shift colors for each target and if the target is selected display other targets semi-transparent
                 val color = Color.RED.deriveColor(
                     i * (360.0 / movingTargetCount),
@@ -310,15 +319,7 @@ class RadarScreenView : View() {
                     1.0
                 )
 
-                val initPosCart = target.initialPosition.toCartesian()
-
                 val group = if (target != controller.selectedMovingTarget) nonSelectedTargetsGroup else selectedTargetGroup
-
-                val p = combinedTransform.transform(
-                    initPosCart.x,
-                    initPosCart.y
-                )
-
                 group.add(
                     MovingTargetPathMarker(p).apply {
                         stroke = color
@@ -346,61 +347,67 @@ class RadarScreenView : View() {
                 }
 
                 // draw current simulated position marker
-                val currentTimeS = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
-                val currentTimeUs = S_TO_US * currentTimeS
-                val plotPathSegment = getCurrentPathSegment(target, currentTimeUs)
-                val plotPosCart = plotPathSegment?.getPositionForTime(currentTimeUs)?.toCartesian()
+                val plotPathSegment = getCurrentPathSegment(target, currentTimeUs) ?: return@forEachIndexed
+                val plotPos = plotPathSegment.getPositionForTime(currentTimeUs) ?: return@forEachIndexed
+                val plotPosCart = plotPos.toCartesian()
                 val pt = combinedTransform.transform(plotPosCart)
-                if (pt != null) {
-                    val distance = sqrt(pow(pt.x, 2.0) + pow(pt.y, 2.0))
-                    val az = toDegrees(angleToAzimuth(atan2(pt.y, pt.x)))
 
-                    val text = """${target.name}
-hdg=${angleStringConverter.toString(plotPathSegment?.headingDeg)}
-spd=${speedStringConverter.toString(plotPathSegment?.vKmh)}
+                val distance = sqrt(pow(pt.x, 2.0) + pow(pt.y, 2.0))
+                val az = toDegrees(angleToAzimuth(atan2(pt.y, pt.x)))
+
+                val text = """${target.name}
+hdg=${angleStringConverter.toString(plotPathSegment.headingDeg)}
+spd=${speedStringConverter.toString(plotPathSegment.vKmh)}
 r=${distanceStringConverter.toString(distance)}
 az=${angleStringConverter.toString(az)}"""
 
-                    val movingTarget = when (type) {
-                        MovingTargetType.Cloud1 -> {
-                            MovingTargetPositionMarker(
-                                p = pt,
-                                text = text,
-                                width = 300.0,
-                                height = 300.0,
-                                color = color,
-                                image = cloudOneImage
-                            )
-                        }
-                        MovingTargetType.Cloud2 -> {
-                            MovingTargetPositionMarker(
-                                p = pt,
-                                text = text,
-                                width = 300.0,
-                                height = 300.0,
-                                color = color,
-                                image = cloudTwoImage
-                            )
-                        }
-                        MovingTargetType.Point -> MovingTargetPositionMarker(
+                val movingTarget = when (type) {
+                    MovingTargetType.Cloud1 -> {
+                        MovingTargetPositionMarker(
                             p = pt,
                             text = text,
-                            color = color
-                        )
-                        MovingTargetType.Test1 -> MovingTargetPositionMarker(
-                            p = pt,
-                            text = text,
-                            color = color
-                        )
-                        MovingTargetType.Test2 -> MovingTargetPositionMarker(
-                            p = pt,
-                            text = text,
-                            color = color
+                            width = 300.0,
+                            height = 300.0,
+                            color = color,
+                            image = cloudOneImage
                         )
                     }
-                    group.add(movingTarget)
+                    MovingTargetType.Cloud2 -> {
+                        MovingTargetPositionMarker(
+                            p = pt,
+                            text = text,
+                            width = 300.0,
+                            height = 300.0,
+                            color = color,
+                            image = cloudTwoImage
+                        )
+                    }
+                    MovingTargetType.Point -> MovingTargetPositionMarker(
+                        p = pt,
+                        text = text,
+                        color = color
+                    )
+                    MovingTargetType.Test1 -> MovingTargetPositionMarker(
+                        p = pt,
+                        text = text,
+                        color = color
+                    )
+                    MovingTargetType.Test2 -> MovingTargetPositionMarker(
+                        p = pt,
+                        text = text,
+                        color = color
+                    )
                 }
+                group.add(movingTarget)
 
+            }
+
+        controller.scenario.movingTargets
+            .sortedBy { it.name }
+            // show only if the target is selected or marked as display
+            .filter { it == controller.selectedMovingTarget || controller.displayParameters.targetDisplayFilter.isEmpty() || it.name in controller.displayParameters.targetDisplayFilter }
+            .forEach { target ->
+                val type = target.type ?: return@forEach
 
                 // TEMP: draw last N plots relative to current time
                 // HACK: not real plot points ....
@@ -413,7 +420,7 @@ az=${angleStringConverter.toString(az)}"""
                         .iterator()
 
                     stream(spliteratorUnknownSize(timeIterator, Spliterator.ORDERED), false)
-                        .forEach { t ->
+                        .forEach inner@ { t ->
 
                             val plotPathSegment = getCurrentPathSegment(target, t)
                             val plotPosCart = plotPathSegment?.getPositionForTime(t)?.toCartesian()
@@ -423,7 +430,7 @@ az=${angleStringConverter.toString(az)}"""
                                 // range check
                                 val distance = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
                                 if (distance < controller.radarParameters.minRadarDistanceKm || distance > controller.radarParameters.maxRadarDistanceKm) {
-                                    return@forEach
+                                    return@inner
                                 }
 
                                 val transformedPlot = combinedTransform.transform(plotPosCart)
