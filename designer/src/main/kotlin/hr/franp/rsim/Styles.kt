@@ -73,6 +73,7 @@ class Styles : Stylesheet() {
             fill = movingTargetPositionLabelColor
             fontWeight = FontWeight.EXTRA_BOLD
             textAlignment = TextAlignment.CENTER
+            stroke = movingTargetPositionLabelColor
         }
 
         s(movingTargetRectangle) {

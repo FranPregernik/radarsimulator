@@ -64,10 +64,10 @@ class MovingTargetPathMarker(p: Point2D) : Circle(p.x, p.y, 1.0, Color.TRANSPARE
     }
 }
 
-class MovingTargetPositionMarker(x: Double, y: Double, text: String, width: Double = 10.0, height: Double = 10.0, color: Color, image: Image? = null) : Group() {
+class MovingTargetPositionMarker(p: Point2D, text: String, width: Double = 10.0, height: Double = 10.0, color: Color, image: Image? = null) : Group() {
     val label = Text(
-        x,
-        -y + height / 2 + 1.5 * Font.getDefault().size,
+        p.x,
+        p.y + height / 2 + 1.5 * Font.getDefault().size,
         text
     ).apply {
         addClass(Styles.movingTargetPositionLabel)
@@ -78,8 +78,8 @@ class MovingTargetPositionMarker(x: Double, y: Double, text: String, width: Doub
     }
 
     val marker = Rectangle(
-        x - width / 2.0,
-        y - height / 2.0,
+        p.x - width / 2.0,
+        p.y - height / 2.0,
         width,
         height
     ).apply {
@@ -96,11 +96,10 @@ class MovingTargetPositionMarker(x: Double, y: Double, text: String, width: Doub
         if (image != null) {
 
             add(ImageView(image).apply {
-                this.x = x - width / 2.0
-                this.y = y - height / 2.0
+                this.x = p.x - width / 2.0
+                this.y = p.y - height / 2.0
                 this.fitWidth = width
                 this.fitHeight = height
-                this.scaleY = -1.0
             })
         }
     }

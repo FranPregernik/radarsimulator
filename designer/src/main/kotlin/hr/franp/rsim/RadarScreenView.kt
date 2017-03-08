@@ -348,23 +348,23 @@ class RadarScreenView : View() {
                 // draw current simulated position marker
                 val currentTimeS = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
                 val currentTimeUs = S_TO_US * currentTimeS
-                val ps = getCurrentPathSegment(target, currentTimeUs)
-                val pt = combinedTransform.transform(ps?.getPositionForTime(currentTimeUs)?.toCartesian())
+                val plotPathSegment = getCurrentPathSegment(target, currentTimeUs)
+                val plotPosCart = plotPathSegment?.getPositionForTime(currentTimeUs)?.toCartesian()
+                val pt = combinedTransform.transform(plotPosCart)
                 if (pt != null) {
                     val distance = sqrt(pow(pt.x, 2.0) + pow(pt.y, 2.0))
                     val az = toDegrees(angleToAzimuth(atan2(pt.y, pt.x)))
 
                     val text = """${target.name}
-hdg=${angleStringConverter.toString(ps?.headingDeg)}
-spd=${speedStringConverter.toString(ps?.vKmh)}
+hdg=${angleStringConverter.toString(plotPathSegment?.headingDeg)}
+spd=${speedStringConverter.toString(plotPathSegment?.vKmh)}
 r=${distanceStringConverter.toString(distance)}
 az=${angleStringConverter.toString(az)}"""
 
                     val movingTarget = when (type) {
                         MovingTargetType.Cloud1 -> {
                             MovingTargetPositionMarker(
-                                x = pt.x,
-                                y = pt.y,
+                                p = pt,
                                 text = text,
                                 width = 300.0,
                                 height = 300.0,
@@ -374,8 +374,7 @@ az=${angleStringConverter.toString(az)}"""
                         }
                         MovingTargetType.Cloud2 -> {
                             MovingTargetPositionMarker(
-                                x = pt.x,
-                                y = pt.y,
+                                p = pt,
                                 text = text,
                                 width = 300.0,
                                 height = 300.0,
@@ -384,20 +383,17 @@ az=${angleStringConverter.toString(az)}"""
                             )
                         }
                         MovingTargetType.Point -> MovingTargetPositionMarker(
-                            x = pt.x,
-                            y = pt.y,
+                            p = pt,
                             text = text,
                             color = color
                         )
                         MovingTargetType.Test1 -> MovingTargetPositionMarker(
-                            x = pt.x,
-                            y = pt.y,
+                            p = pt,
                             text = text,
                             color = color
                         )
                         MovingTargetType.Test2 -> MovingTargetPositionMarker(
-                            x = pt.x,
-                            y = pt.y,
+                            p = pt,
                             text = text,
                             color = color
                         )
@@ -408,7 +404,7 @@ az=${angleStringConverter.toString(az)}"""
 
                 // TEMP: draw last N plots relative to current time
                 // HACK: not real plot points ....
-                if (ps != null && type == MovingTargetType.Point) {
+                if (type == MovingTargetType.Point) {
                     val n = 6
                     val fromTimeUs = S_TO_US * controller.radarParameters.seekTimeSec * (floor(currentTimeS / controller.radarParameters.seekTimeSec) - n)
 
@@ -430,20 +426,22 @@ az=${angleStringConverter.toString(az)}"""
                                     return@forEach
                                 }
 
+                                val transformedPlot = combinedTransform.transform(plotPosCart)
+
                                 val movingTarget = when (type) {
                                     MovingTargetType.Cloud1 -> null
                                     MovingTargetType.Cloud2 -> null
                                     MovingTargetType.Point -> MovingTargetPlotMarker(
-                                        x = plotPosCart.x,
-                                        y = plotPosCart.y
+                                        x = transformedPlot.x,
+                                        y = transformedPlot.y
                                     )
                                     MovingTargetType.Test1 -> Test1TargetHitMarker(
-                                        x = plotPosCart.x,
-                                        y = plotPosCart.y
+                                        x = transformedPlot.x,
+                                        y = transformedPlot.y
                                     )
                                     MovingTargetType.Test2 -> Test2TargetHitMarker(
-                                        x = plotPosCart.x,
-                                        y = plotPosCart.y,
+                                        x = transformedPlot.x,
+                                        y = transformedPlot.y,
                                         maxDistance = controller.radarParameters.maxRadarDistanceKm,
                                         angleResolutionDeg = controller.radarParameters.horizontalAngleBeamWidthDeg
                                     )
