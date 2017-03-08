@@ -21,6 +21,7 @@ import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 import java.io.*
 import java.nio.*
+import java.util.zip.*
 import javax.imageio.*
 import javax.json.Json.*
 
@@ -105,113 +106,115 @@ class DesignerView : View() {
                             try {
                                 runAsync {
 
-                                    FileOutputStream("clutter.bin").use { stream ->
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt((controller.radarParameters.seekTimeSec * S_TO_US).toInt())
-                                                .array()
-                                        )
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt(controller.radarParameters.azimuthChangePulse.toInt())
-                                                .array()
-                                        )
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt(controller.radarParameters.impulsePeriodUs.toInt())
-                                                .array()
-                                        )
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
-                                                .array()
-                                        )
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt(1)
-                                                .array()
-                                        )
+                                    FileOutputStream("clutter.bin.gz").use { fileOutputStream ->
+                                        GZIPOutputStream(fileOutputStream).use { stream ->
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt((controller.radarParameters.seekTimeSec * S_TO_US).toInt())
+                                                    .array()
+                                            )
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt(controller.radarParameters.azimuthChangePulse.toInt())
+                                                    .array()
+                                            )
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt(controller.radarParameters.impulsePeriodUs.toInt())
+                                                    .array()
+                                            )
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
+                                                    .array()
+                                            )
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt(1)
+                                                    .array()
+                                            )
 
-                                        updateMessage("Writing clutter sim")
-                                        updateProgress(0.0, 1.0)
-                                        val clutterHits = controller.calculateClutterHits()
-                                        clutterHits.writeTo(stream)
+                                            updateMessage("Writing clutter sim")
+                                            updateProgress(0.0, 1.0)
+                                            val clutterHits = controller.calculateClutterHits()
+                                            clutterHits.writeTo(stream)
 
-                                        // DEBUG
-                                        ImageIO.write(
-                                            SwingFXUtils.fromFXImage(generateRadarHitImage(clutterHits, controller.radarParameters), null),
-                                            "png",
-                                            File("clutter.png")
-                                        )
+                                            // DEBUG
+                                            ImageIO.write(
+                                                SwingFXUtils.fromFXImage(generateRadarHitImage(clutterHits, controller.radarParameters), null),
+                                                "png",
+                                                File("clutter.png")
+                                            )
 
-                                        updateMessage("Wrote clutter sim")
-                                        updateProgress(1.0, 1.0)
-
+                                            updateMessage("Wrote clutter sim")
+                                            updateProgress(1.0, 1.0)
+                                        }
                                     }
 
-                                    FileOutputStream("targets.bin").use { stream ->
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt((controller.radarParameters.seekTimeSec * S_TO_US).toInt())
-                                                .array()
-                                        )
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt(controller.radarParameters.azimuthChangePulse.toInt())
-                                                .array()
-                                        )
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt(controller.radarParameters.impulsePeriodUs.toInt())
-                                                .array()
-                                        )
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
-                                                .array()
-                                        )
-                                        stream.write(
-                                            ByteBuffer.allocate(4)
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-                                                .putInt((controller.scenario.simulationDurationMin * MIN_TO_S / controller.radarParameters.seekTimeSec).toInt())
-                                                .array()
-                                        )
-
-                                        val mergedHits = Bits(0)
-
-                                        updateMessage("Writing target sim")
-                                        updateProgress(0.0, 1.0)
-
-                                        var seekTime = 0.0
-                                        controller.calculateTargetHits().forEach {
-                                            seekTime += controller.radarParameters.seekTimeSec
-                                            updateProgress(
-                                                seekTime / (controller.scenario.simulationDurationMin * MIN_TO_S),
-                                                1.0
+                                    FileOutputStream("targets.bin.gz").use { fileOutputStream ->
+                                        GZIPOutputStream(fileOutputStream).use { stream ->
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt((controller.radarParameters.seekTimeSec * S_TO_US).toInt())
+                                                    .array()
                                             )
-                                            mergedHits.or(it)
-                                            it.writeTo(stream)
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt(controller.radarParameters.azimuthChangePulse.toInt())
+                                                    .array()
+                                            )
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt(controller.radarParameters.impulsePeriodUs.toInt())
+                                                    .array()
+                                            )
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
+                                                    .array()
+                                            )
+                                            stream.write(
+                                                ByteBuffer.allocate(4)
+                                                    .order(ByteOrder.LITTLE_ENDIAN)
+                                                    .putInt((controller.scenario.simulationDurationMin * MIN_TO_S / controller.radarParameters.seekTimeSec).toInt())
+                                                    .array()
+                                            )
+
+                                            val mergedHits = Bits(0)
+
+                                            updateMessage("Writing target sim")
+                                            updateProgress(0.0, 1.0)
+
+                                            var seekTime = 0.0
+                                            controller.calculateTargetHits().forEach {
+                                                seekTime += controller.radarParameters.seekTimeSec
+                                                updateProgress(
+                                                    seekTime / (controller.scenario.simulationDurationMin * MIN_TO_S),
+                                                    1.0
+                                                )
+                                                mergedHits.or(it)
+                                                it.writeTo(stream)
+                                            }
+
+                                            // DEBUG
+                                            ImageIO.write(
+                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, controller.radarParameters), null),
+                                                "png",
+                                                File("targets.png")
+                                            )
+
+                                            updateMessage("Wrote target sim")
+                                            updateProgress(1.0, 1.0)
                                         }
-
-                                        // DEBUG
-                                        ImageIO.write(
-                                            SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, controller.radarParameters), null),
-                                            "png",
-                                            File("targets.png")
-                                        )
-
-                                        updateMessage("Wrote target sim")
-                                        updateProgress(1.0, 1.0)
-
                                     }
 
                                     SSHClient().apply {
@@ -238,9 +241,22 @@ class DesignerView : View() {
                                                     }
                                                 }
                                             }
-                                            upload(FileSystemFile("clutter.bin"), "/var/")
-                                            upload(FileSystemFile("targets.bin"), "/var/")
+                                            upload(FileSystemFile("clutter.bin.gz"), "/var/")
+                                            upload(FileSystemFile("targets.bin.gz"), "/var/")
                                         }
+
+                                        // cleanup
+                                        startSession().use { it.exec("killall -9 radar-sim-test").join() }
+                                        startSession().use { it.exec("rm -rf /var/clutter.bin").join() }
+                                        startSession().use { it.exec("rm -rf /var/targets.bin").join() }
+                                        startSession().use { it.exec("killall radar-sim-test").join() }
+
+                                        updateMessage("Unpacking")
+                                        updateProgress(0.0, 1.0)
+                                        startSession().use { it.exec("gunzip /var/clutter.bin.gz").join() }
+                                        updateProgress(0.5, 1.0)
+                                        startSession().use { it.exec("gunzip /var/targets.bin.gz").join() }
+                                        updateProgress(1.0, 1.0)
                                     }
 
 
@@ -274,8 +290,22 @@ class DesignerView : View() {
                                     // again security here is not an issue - petalinux default login
                                     authPassword("root", "root")
 
+                                    // cleanup
+                                    startSession().use { it.exec("killall radar-sim-test").join() }
+                                    startSession().use { it.exec("killall -9 radar-sim-test").join() }
+
+                                    // start sim
                                     startSession().use { session ->
-                                        session.exec("killall radar-sim-test; radar-sim=test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bom").join()
+                                        val cmd = session.exec("/mnt/radar-sim-test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bin")
+//                                        val cmd = session.exec("ping -c 1 google.com")
+                                        cmd.inputStream.use { stdout ->
+                                            InputStreamReader(stdout).use { stdOutReader ->
+                                                stdOutReader.forEachLine {
+                                                    log.info { it }
+                                                }
+                                            }
+                                        }
+                                        cmd.join()
                                     }
                                 }
 
@@ -290,7 +320,21 @@ class DesignerView : View() {
                         tooltip("Stop simulation")
 
                         setOnAction {
+                            SSHClient().apply {
+                                // no need to verify, not really security oriented
+                                addHostKeyVerifier { _, _, _ -> true }
 
+                                useCompression()
+
+                                connect("192.168.0.108")
+
+                                // again security here is not an issue - petalinux default login
+                                authPassword("root", "root")
+
+                                // cleanup
+                                startSession().use { it.exec("killall radar-sim-test").join() }
+                                startSession().use { it.exec("killall -9 radar-sim-test").join() }
+                            }
                         }
                     }
 
