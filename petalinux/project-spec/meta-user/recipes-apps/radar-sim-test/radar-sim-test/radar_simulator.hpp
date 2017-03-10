@@ -211,7 +211,7 @@ private:
     /**
      * Initiates the AXI DMA engine using the Xilinx APIs.
      */
-    static void startDmaTransfer(XAxiDma *dma, UINTPTR physMemAddr, u32 simBlockSize, int blockCount);
+    static void startDmaTransfer(XAxiDma *dma, UINTPTR physMemAddr, u32 simBlockByteSize, int blockCount);
 
 };
 

@@ -118,7 +118,7 @@ void FXAxiDma_DumpBd(XAxiDma_Bd* BdPtr) {
     cout << endl;
 }
 
-void RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 simBlockSize, int blockCount) {
+void RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 simBlockByteSize, int blockCount) {
 
     XAxiDma_Bd *FirstBdPtr;
     XAxiDma_Bd *PrevBdPtr;
@@ -142,15 +142,15 @@ void RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 
     for (int i = 0; i < bdCount; i++) {
 
         /* Set up the BD using the information of the packet to transmit */
-        Status = XAxiDma_BdSetBufAddr(CurrBdPtr, physMemAddr + memIdx * simBlockSize);
+        Status = XAxiDma_BdSetBufAddr(CurrBdPtr, physMemAddr + memIdx * simBlockByteSize);
         if (Status != XST_SUCCESS) {
             printf("Tx set buffer addr %x on BD %x failed %d\r\n", physMemAddr, (UINTPTR) CurrBdPtr, Status);
             RAISE(DmaInitFailedException, "Unable to set BD buffer address");
         }
 
-        Status = XAxiDma_BdSetLength(CurrBdPtr, simBlockSize, TxRingPtr->MaxTransferLen);
+        Status = XAxiDma_BdSetLength(CurrBdPtr, simBlockByteSize, TxRingPtr->MaxTransferLen);
         if (Status != XST_SUCCESS) {
-            printf("Tx set length %d on BD %x failed %d\r\n", simBlockSize, (UINTPTR) CurrBdPtr, Status);
+            printf("Tx set length %d on BD %x failed %d\r\n", simBlockByteSize, (UINTPTR) CurrBdPtr, Status);
             RAISE(DmaInitFailedException, "Unable to set BD buffer length");
         }
 
@@ -180,6 +180,7 @@ void RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 
 //        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
 //    }
 //    PrintDmaStatus(dmaPtr);
+
     /* Give the BD to DMA to kick off the transmission. */
     Status = XAxiDma_BdRingToHw(TxRingPtr, bdCount, FirstBdPtr);
     if (Status != XST_SUCCESS) {
@@ -273,9 +274,9 @@ void RadarSimulator::initMapMemory() {
     // store the block size in
     blockByteSize = mem_blk_word_cnt * WORD_SIZE;
 
-    // calculate the needed sizes for the individual block sizesz
-    clutterMapWordSize = CL_BLK_CNT * blockByteSize / WORD_SIZE;
-    targetMapWordSize = MT_BLK_CNT * blockByteSize / WORD_SIZE;
+    // calculate the needed sizes for the individual block sizes
+    clutterMapWordSize = CL_BLK_CNT * mem_blk_word_cnt;
+    targetMapWordSize = MT_BLK_CNT * mem_blk_word_cnt;
 
     // store pointer to the beginnings of the individual memory blocks
     u32 dataOffset = (DATA_BASE - MEM_BASE_ADDR) / WORD_SIZE;
@@ -345,11 +346,13 @@ void RadarSimulator::initClutterMap(istream& input) {
     u32 acpCnt = 0;
     u32 trigUs = 0;
     u32 trigSize = 0;
+    u32 blockCount = 0;
 
     input.read((char*) &arpUs, sizeof(u32));
     input.read((char*) &acpCnt, sizeof(u32));
     input.read((char*) &trigUs, sizeof(u32));
     input.read((char*) &trigSize, sizeof(u32));
+    input.read((char*) &blockCount, sizeof(u32));
 
     if (ctrl->arpUs != arpUs || ctrl->acpCnt != acpCnt || ctrl->trigUs != trigUs) {
         cerr << "Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs;
@@ -357,7 +360,7 @@ void RadarSimulator::initClutterMap(istream& input) {
     }
 
     for (int i = 0; i < CL_BLK_CNT; i++) {
-        input.read((char*) (clutterMemPtr + i * blockByteSize), blockByteSize);
+        input.read(((char*) clutterMemPtr) + i * blockByteSize, blockByteSize);
     }
 }
 
@@ -366,18 +369,20 @@ void RadarSimulator::initTargetMap(istream& input) {
     u32 acpCnt = 0;
     u32 trigUs = 0;
     u32 trigSize = 0;
+    u32 blockCount = 0;
 
     input.read((char*) &arpUs, sizeof(u32));
     input.read((char*) &acpCnt, sizeof(u32));
     input.read((char*) &trigUs, sizeof(u32));
     input.read((char*) &trigSize, sizeof(u32));
+    input.read((char*) &blockCount, sizeof(u32));
 
     if (ctrl->arpUs != arpUs || ctrl->acpCnt != acpCnt || ctrl->trigUs != trigUs) {
         RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
     }
 
     for (int i = 0; i < MT_BLK_CNT; i++) {
-        input.read((char*) (targetMemPtr + i * blockByteSize), blockByteSize);
+        input.read(((char*) targetMemPtr) + i * blockByteSize, blockByteSize);
     }
 
     targetMemLoadIdx = MT_BLK_CNT - 1;
@@ -398,17 +403,25 @@ void RadarSimulator::loadNextTargetMaps(istream& input) {
     // time to load the next block
     targetMemLoadIdx++;
 
-    // block index to write - should be the one before where the currArp is located in (circular buffer)
-    int i = targetMemLoadIdx % MT_BLK_CNT;
+    u32 blockCount = 0;
+
+    input.seekg(4 * sizeof(u32));
+    input.read((char*) &blockCount, sizeof(u32));
 
     // rewind the file past the headers to correct position of next block to load
-    input.seekg(4 * sizeof(u32) + targetMemLoadIdx * blockByteSize);
+    input.seekg(5 * sizeof(u32) + targetMemLoadIdx * blockByteSize);
 
-    if (!input.eof()) {
-        input.read((char*) (targetMemPtr + i * blockByteSize), blockByteSize);
+    // block index to write - should be the one before where the currArp is located in (circular buffer)
+    int i = targetMemLoadIdx % MT_BLK_CNT;
+    UINTPTR memPtr = ((UINTPTR)targetMemPtr) + i * blockByteSize;
+
+    // read from file or clear
+    if (!input.eof() && targetMemLoadIdx < blockCount) {
+        input.read((char*) memPtr, blockByteSize);
         cout << "LOAD_MT_ARP_MAP=" << targetMemLoadIdx << "/" << i << endl;
     } else {
-        memset((u8*) (targetMemPtr + i * blockByteSize), 0x0, blockByteSize);
+        cout << "CLR_MT_ARP_MAP=" << targetMemLoadIdx << "/" << i << endl;
+        memset((u8*) memPtr, 0x0, blockByteSize);
     }
 
 }
