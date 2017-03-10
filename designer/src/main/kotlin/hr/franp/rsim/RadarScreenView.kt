@@ -103,7 +103,7 @@ class RadarScreenView : View() {
 
         // redraw after model changes
         controller.displayParameters.simulatedCurrentTimeSecProperty().addListener { _, _, _ ->
-            drawMovingTargets()
+            draw()
         }
         controller.selectedMovingTargetProperty.addListener { _, _, _ ->
             drawMovingTargets()
@@ -242,6 +242,19 @@ class RadarScreenView : View() {
             )
             angleMarkersGroup.add(AzimuthMarkerLabel(p, a))
         }
+
+        // draw simulation position markers
+        val simPosGroup = Group()
+        staticMarkersGroup.add(simPosGroup)
+
+        val a = TWO_PI * (controller.displayParameters.simulatedCurrentTimeSec / controller.radarParameters.seekTimeSec)
+        val pc = combinedTransform
+            .transform(0.0, 0.0)
+        val p = combinedTransform
+            .transform(0.0, controller.radarParameters.maxRadarDistanceKm)
+            .add(0.0, 0.0)
+        simPosGroup.add(Circle(p.x, p.y, 5.0, Color.RED))
+        simPosGroup.transforms.add(Rotate(toDegrees(a), pc.x, pc.y))
 
     }
 
