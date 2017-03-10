@@ -369,13 +369,12 @@ void RadarSimulator::initTargetMap(istream& input) {
     u32 acpCnt = 0;
     u32 trigUs = 0;
     u32 trigSize = 0;
-    u32 blockCount = 0;
 
     input.read((char*) &arpUs, sizeof(u32));
     input.read((char*) &acpCnt, sizeof(u32));
     input.read((char*) &trigUs, sizeof(u32));
     input.read((char*) &trigSize, sizeof(u32));
-    input.read((char*) &blockCount, sizeof(u32));
+    input.read((char*) &targetBlockCount, sizeof(u32));
 
     if (ctrl->arpUs != arpUs || ctrl->acpCnt != acpCnt || ctrl->trigUs != trigUs) {
         RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
