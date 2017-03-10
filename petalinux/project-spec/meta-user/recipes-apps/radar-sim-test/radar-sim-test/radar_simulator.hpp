@@ -146,6 +146,10 @@ public:
      */
     Simulator getStatus();
 
+    bool isScenarioFinished() {
+        return targetMemLoadIdx >= targetBlockCount + MT_BLK_CNT;
+    }
+
 private:
     /** Device handle to /dev/mem **/
     int devMemHandle;
@@ -169,6 +173,7 @@ private:
     u32 *targetMemPtr;
 
     u32 targetMemLoadIdx;
+    u32 targetBlockCount;
 
     /** Target memory region size in 32bit words **/
     u32 targetMapWordSize;
