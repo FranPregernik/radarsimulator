@@ -4,6 +4,7 @@ import hr.franp.*
 import hr.franp.rsim.models.*
 import hr.franp.rsim.models.AzimuthMarkerType.*
 import hr.franp.rsim.models.DistanceUnit.*
+import javafx.application.*
 import javafx.beans.property.*
 import javafx.embed.swing.*
 import javafx.geometry.*
@@ -21,6 +22,7 @@ import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 import java.io.*
 import java.nio.*
+import java.util.concurrent.*
 import java.util.zip.*
 import javax.imageio.*
 import javax.json.Json.*
@@ -105,6 +107,57 @@ class DesignerView : View() {
 
                             try {
                                 runAsync {
+
+                                    SSHClient().apply {
+                                        // no need to verify, not really security oriented
+                                        addHostKeyVerifier { _, _, _ -> true }
+
+                                        useCompression()
+
+                                        connect("192.168.0.108")
+
+                                        // again security here is not an issue - petalinux default login
+                                        authPassword("root", "root")
+
+                                        // cleanup
+                                        startSession().use { it.exec("killall -9 radar-sim-test").join() }
+                                        startSession().use { it.exec("killall radar-sim-test").join() }
+
+                                        var arpUs = controller.radarParameters.seekTimeSec
+                                        var acpCnt = controller.radarParameters.azimuthChangePulse
+                                        var trigUs = controller.radarParameters.impulsePeriodUs
+                                        var calibrated = false
+                                        val valueRegex = "\\w+=(\\d+)".toRegex()
+
+                                        // calibrate sim
+                                        startSession().use { session ->
+                                            val cmd = session.exec("/mnt/radar-sim-test -c")
+                                            cmd.inputStream.use command@ { stdout ->
+                                                InputStreamReader(stdout).use { stdOutReader ->
+                                                    stdOutReader.forEachLine {
+                                                        log.info { it }
+                                                        val matchedValue = valueRegex.matchEntire(it)?.groups?.get(1)?.value
+                                                        if (it.startsWith("SIM_ARP_US")) {
+                                                            arpUs = matchedValue?.toDouble() ?: controller.radarParameters.seekTimeSec
+                                                        } else if (it.startsWith("SIM_ACP_CNT")) {
+                                                            acpCnt = matchedValue?.toInt() ?: controller.radarParameters.azimuthChangePulse
+                                                        } else if (it.startsWith("SIM_TRIG_US")) {
+                                                            trigUs = matchedValue?.toDouble() ?: controller.radarParameters.impulsePeriodUs
+                                                        } else if (it.startsWith("SIM_CAL")) {
+                                                            calibrated = (matchedValue?.toInt() ?: 0) > 0
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            cmd.join(1, TimeUnit.MINUTES)
+                                        }
+
+                                        if (calibrated) {
+                                            controller.radarParameters.seekTimeSec = arpUs / S_TO_US
+                                            controller.radarParameters.azimuthChangePulse = acpCnt
+                                            controller.radarParameters.impulsePeriodUs = trigUs
+                                        }
+                                    }
 
                                     FileOutputStream("clutter.bin.gz").use { fileOutputStream ->
                                         GZIPOutputStream(fileOutputStream).use { stream ->
@@ -247,9 +300,9 @@ class DesignerView : View() {
 
                                         // cleanup
                                         startSession().use { it.exec("killall -9 radar-sim-test").join() }
+                                        startSession().use { it.exec("killall radar-sim-test").join() }
                                         startSession().use { it.exec("rm -rf /var/clutter.bin").join() }
                                         startSession().use { it.exec("rm -rf /var/targets.bin").join() }
-                                        startSession().use { it.exec("killall radar-sim-test").join() }
 
                                         updateMessage("Unpacking")
                                         updateProgress(0.0, 1.0)
@@ -295,13 +348,25 @@ class DesignerView : View() {
                                     startSession().use { it.exec("killall -9 radar-sim-test").join() }
 
                                     // start sim
+                                    val reg = "\\w+=(\\d+)/(\\d+)".toRegex()
                                     startSession().use { session ->
                                         val cmd = session.exec("/mnt/radar-sim-test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bin")
-//                                        val cmd = session.exec("ping -c 1 google.com")
                                         cmd.inputStream.use { stdout ->
+                                            updateMessage("Running simulation")
+                                            updateProgress(0.0, controller.scenario.simulationDurationMin * MIN_TO_S)
                                             InputStreamReader(stdout).use { stdOutReader ->
-                                                stdOutReader.forEachLine {
-                                                    log.info { it }
+                                                stdOutReader.forEachLine { line ->
+                                                    if (line.startsWith("SIM_ACP_IDX")) {
+                                                        val simCurrentTimeSec = (reg.matchEntire(line)?.groups?.get(1)?.value ?: "0").toDouble() / controller.radarParameters.azimuthChangePulse * controller.radarParameters.seekTimeSec
+
+                                                        if (simCurrentTimeSec <= controller.scenario.simulationDurationMin * MIN_TO_S) {
+                                                            updateProgress(simCurrentTimeSec, controller.scenario.simulationDurationMin * MIN_TO_S)
+                                                            Platform.runLater {
+                                                                controller.displayParameters.simulatedCurrentTimeSec = simCurrentTimeSec
+                                                            }
+                                                        }
+                                                    }
+                                                    log.info { line }
                                                 }
                                             }
                                         }
