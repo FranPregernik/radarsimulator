@@ -135,7 +135,9 @@ int main(int argc, char* argv[]) {
 
             chrono::milliseconds timeSinceEpoch = chrono::duration_cast < chrono::milliseconds > (chrono::steady_clock::now().time_since_epoch());
             cout << "SIM_ACP_IDX=" << dec << status.simAcpIdx << "/" << timeSinceEpoch.count() << endl;
-            cout << "SIM_CURR_ACP=" << dec << status.currAcpIdx << "/" << timeSinceEpoch.count() << endl;
+
+            // NOT IMPLEMENTED
+            // cout << "SIM_CURR_ACP=" << dec << status.currAcpIdx << "/" << timeSinceEpoch.count() << endl;
 
             // check if we can load more moving target data
             if (options.count("ltf")) {
