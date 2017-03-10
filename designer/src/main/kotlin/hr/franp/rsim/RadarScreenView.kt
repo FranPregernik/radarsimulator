@@ -179,7 +179,10 @@ class RadarScreenView : View() {
         staticMarkersGroup.add(distanceMarkersGroup)
 
         // Distance markers
-        val step = controller.displayParameters.distanceStepKm ?: controller.radarParameters.maxRadarDistanceKm
+        val step = if (controller.displayParameters.distanceStepKm == 0.0)
+            controller.radarParameters.maxRadarDistanceKm
+        else
+            controller.displayParameters.distanceStepKm
         val distanceSequence = sequenceOf(controller.radarParameters.minRadarDistanceKm, controller.radarParameters.maxRadarDistanceKm) +
             generateSequence(controller.radarParameters.minRadarDistanceKm) { it + step }
                 .takeWhile { it <= controller.radarParameters.maxRadarDistanceKm - step / 3 }
@@ -202,7 +205,7 @@ class RadarScreenView : View() {
             angleSequence = generateSequence(0.0) { it + deltaAngleStep }
                 .takeWhile { it < (TWO_PI - deltaAngleStep / 3) }
         } else {
-            angleSequence = sequenceOf(0.0, HALF_PI, Math.PI, 3 * HALF_PI, TWO_PI)
+            angleSequence = sequenceOf(0.0, HALF_PI, PI, 3 * HALF_PI, TWO_PI)
         }
         if (controller.displayParameters.azimuthMarkerType == AzimuthMarkerType.FULL) {
             // draw full lines (like a spiderweb)
@@ -222,24 +225,36 @@ class RadarScreenView : View() {
             for (a in angleSequence) {
                 for (d in distanceSequence.filter { it > controller.radarParameters.minRadarDistanceKm }) {
                     val length = 5
-                    val p1 = combinedTransform.transform(
-                        (d - length / 2.0) * Math.cos(a),
-                        (d - length / 2.0) * Math.sin(a)
+                    val pc = combinedTransform
+                        .transform(
+                            d * Math.cos(a),
+                            d * Math.sin(a)
+                        )
+                    val p1 = pc.add(
+                        -length / 2.0 * Math.cos(a),
+                        length / 2.0 * Math.sin(a)
                     )
-                    val p2 = combinedTransform.transform(
-                        (d + length / 2.0) * Math.cos(a),
-                        (d + length / 2.0) * Math.sin(a)
+                    val p2 = pc.add(
+                        length / 2.0 * Math.cos(a),
+                        -length / 2.0 * Math.sin(a)
                     )
                     angleMarkersGroup.add(AzimuthMarkerLine(p1, p2))
                 }
             }
         }
-        val angleTextRadius = controller.radarParameters.maxRadarDistanceKm + 20
+
         for (a in angleSequence) {
-            val p = combinedTransform.transform(
-                angleTextRadius * cos(angleToAzimuth(a) - HALF_PI),
-                angleTextRadius * sin(angleToAzimuth(a) - HALF_PI)
-            )
+            val angle = angleToAzimuth(a) - HALF_PI
+            val p = combinedTransform
+                .transform(
+                    controller.radarParameters.maxRadarDistanceKm * cos(angle),
+                    controller.radarParameters.maxRadarDistanceKm * sin(angle)
+                )
+                .add(
+                    20 * cos(angle),
+                    -20 * sin(angle)
+                )
+
             angleMarkersGroup.add(AzimuthMarkerLabel(p, a))
         }
 
