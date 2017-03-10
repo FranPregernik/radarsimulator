@@ -49,6 +49,7 @@ class RadarScreenView : View() {
     private val controller: DesignerController by inject()
 
     private val staticMarkersGroup = Pane()
+    private val dynamicMarkersGroup = Pane()
     private val movingTargetsGroup = Pane().apply {
         opacityProperty().bind(movingTargetsLayerOpacityProperty)
     }
@@ -91,6 +92,7 @@ class RadarScreenView : View() {
             })
 
             this += staticMarkersGroup
+            this += dynamicMarkersGroup
             this += stationaryTargetsGroup
             this += hitsGroup
             // draw shapes on top of hits
@@ -103,7 +105,8 @@ class RadarScreenView : View() {
 
         // redraw after model changes
         controller.displayParameters.simulatedCurrentTimeSecProperty().addListener { _, _, _ ->
-            draw()
+            drawDynamicMarkers()
+            drawMovingTargets()
         }
         controller.selectedMovingTargetProperty.addListener { _, _, _ ->
             drawMovingTargets()
@@ -168,6 +171,7 @@ class RadarScreenView : View() {
         setupViewPort()
         drawStationaryTargets()
         drawStaticMarkers()
+        drawDynamicMarkers()
         drawMovingTargets()
     }
 
@@ -257,16 +261,18 @@ class RadarScreenView : View() {
 
             angleMarkersGroup.add(AzimuthMarkerLabel(p, a))
         }
+    }
+
+    fun drawDynamicMarkers() {
+        dynamicMarkersGroup.children.clear()
 
         // draw simulation position markers
         val simPosGroup = Group()
-        staticMarkersGroup.add(simPosGroup)
+        dynamicMarkersGroup.add(simPosGroup)
 
         val a = TWO_PI * (controller.displayParameters.simulatedCurrentTimeSec / controller.radarParameters.seekTimeSec)
-        val pc = combinedTransform
-            .transform(0.0, 0.0)
-        val p = combinedTransform
-            .transform(0.0, controller.radarParameters.maxRadarDistanceKm)
+        val pc = combinedTransform.transform(0.0, 0.0)
+        val p = combinedTransform.transform(0.0, controller.radarParameters.maxRadarDistanceKm)
             .add(0.0, 0.0)
         simPosGroup.add(Circle(p.x, p.y, 5.0, Color.RED))
         simPosGroup.transforms.add(Rotate(toDegrees(a), pc.x, pc.y))
