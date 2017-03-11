@@ -47,7 +47,11 @@ class MovingTargetEditorView : View() {
 
                         targetTypeSelector = combobox<MovingTargetType> {
                             disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
-                            items = MovingTargetType.values().toList().observable()
+                            items = listOf(
+                                MovingTargetType.Point,
+                                MovingTargetType.Test1,
+                                MovingTargetType.Test2
+                            ).observable()
 
                             setOnAction {
                                 radarScreen.drawMovingTargets()
