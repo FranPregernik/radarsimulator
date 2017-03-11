@@ -4,6 +4,7 @@ import hr.franp.*
 import hr.franp.rsim.models.*
 import javafx.scene.image.*
 import tornadofx.*
+import java.lang.Math.*
 import java.util.*
 import java.util.Spliterators.*
 import java.util.stream.*
@@ -225,19 +226,49 @@ class DesignerController : Controller() {
                 stream(spliteratorUnknownSize(simTimeIterator, Spliterator.ORDERED), false)
                     .forEach { tUs ->
                         targetPathSegments.forEach tps@ { pathSegment ->
-                            val position = pathSegment.getPositionForTime(tUs) ?: return@tps
+
+                            // for Test1 the time is discrete and rounded down to seekTimeSec
+                            val rotationTime: Double
+                            if (pathSegment.type == MovingTargetType.Test1) {
+                                rotationTime = floor(tUs / cParams.rotationTimeUs) * cParams.rotationTimeUs
+                            } else {
+                                rotationTime = tUs
+                            }
+
+                            val plotPos = pathSegment.getPositionForTime(rotationTime) ?: return@tps
+                            val sweepHeadingRad = TWO_PI / cParams.rotationTimeUs * tUs
 
                             when (pathSegment.type) {
-                                MovingTargetType.Point ->
-                                    calculatePointTargetHits(hits, position, tUs, cParams)
-                                MovingTargetType.Cloud1 ->
-                                    calculateCloudTargetHits(hits, position, cloudOneImage.getRasterHitMap(), cParams)
-                                MovingTargetType.Cloud2 ->
-                                    calculateCloudTargetHits(hits, position, cloudTwoImage.getRasterHitMap(), cParams)
-                                MovingTargetType.Test1 ->
-                                    calculateTest1TargetHits(hits, position, tUs, cParams)
-                                MovingTargetType.Test2 ->
-                                    calculateTest2TargetHits(hits, position, tUs, cParams)
+                                MovingTargetType.Point -> calculatePointTargetHits(
+                                    hits,
+                                    plotPos,
+                                    sweepHeadingRad,
+                                    cParams
+                                )
+                                MovingTargetType.Cloud1 -> calculateCloudTargetHits(
+                                    hits,
+                                    plotPos,
+                                    cloudOneImage.getRasterHitMap(),
+                                    cParams
+                                )
+                                MovingTargetType.Cloud2 -> calculateCloudTargetHits(
+                                    hits,
+                                    plotPos,
+                                    cloudTwoImage.getRasterHitMap(),
+                                    cParams
+                                )
+                                MovingTargetType.Test1 -> calculateTest1TargetHits(
+                                    hits,
+                                    plotPos,
+                                    sweepHeadingRad,
+                                    cParams
+                                )
+                                MovingTargetType.Test2 -> calculateTest2TargetHits(
+                                    hits,
+                                    plotPos,
+                                    sweepHeadingRad,
+                                    cParams
+                                )
                             }
                         }
                     }

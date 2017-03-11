@@ -409,9 +409,7 @@ fun calculateClutterHits(hits: Bits, hitRaster: RasterIterator, cParam: Calculat
     }
 }
 
-fun calculatePointTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, cParam: CalculationParameters) {
-
-    val sweepHeadingRad = TWO_PI / cParam.rotationTimeUs * tUs
+fun calculatePointTargetHits(hits: Bits, position: RadarCoordinate, sweepHeadingRad: Double, cParam: CalculationParameters) {
 
     // get the angle of the target (center point)
     val radarDistanceKm = position.rKm
@@ -441,9 +439,7 @@ fun calculatePointTargetHits(hits: Bits, position: RadarCoordinate, tUs: Double,
 /**
  * Test 1 type of target is azimuth indifferent unlike the distance which is taken into account.
  */
-fun calculateTest1TargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, cParam: CalculationParameters) {
-
-    val sweepHeadingRad = TWO_PI / cParam.rotationTimeUs * tUs
+fun calculateTest1TargetHits(hits: Bits, position: RadarCoordinate, sweepHeadingRad: Double, cParam: CalculationParameters) {
 
     // get the angle of the target
     val radarDistanceKm = position.rKm
@@ -468,9 +464,7 @@ fun calculateTest1TargetHits(hits: Bits, position: RadarCoordinate, tUs: Double,
  * Test 2 type of target is distance indifferent unlike the azimuth which is taken into account.
  * Radar range is taken into account.
  */
-fun calculateTest2TargetHits(hits: Bits, position: RadarCoordinate, tUs: Double, cParam: CalculationParameters) {
-
-    val sweepHeadingRad = TWO_PI / cParam.rotationTimeUs * tUs
+fun calculateTest2TargetHits(hits: Bits, position: RadarCoordinate, sweepHeadingRad: Double, cParam: CalculationParameters) {
 
     // get the angle of the target
     val radarDistanceKm = position.rKm

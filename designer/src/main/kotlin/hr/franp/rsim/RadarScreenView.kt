@@ -139,43 +139,52 @@ class RadarScreenView : View() {
         var p1 = movingTarget.initialPosition
         var t1 = 0.0
 
-        movingTarget.directions.forEachIndexed { _, direction ->
-            val p2 = direction.destination
-            val speedKmUs = direction.speedKmh / HOUR_TO_US
+        var ps: PathSegment? = null
 
-            // distance from last course change point
-            val p1c = p1.toCartesian()
-            val p2c = p2.toCartesian()
-            val dx = p2c.x - p1c.x
-            val dy = p2c.y - p1c.y
-            val distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0))
-            val dt = distance / speedKmUs
-            if (currentTimeUs >= t1 && currentTimeUs < t1 + dt) {
-                return PathSegment(
-                    p1 = p1,
-                    p2 = p2,
-                    t1Us = t1,
-                    t2Us = t1 + dt,
-                    vxKmUs = speedKmUs * dx / distance,
-                    vyKmUs = speedKmUs * dy / distance,
-                    type = movingTarget.type
-                )
-            }
+        if (movingTarget.directions.size == 0) {
+            ps = PathSegment(
+                p1 = p1,
+                p2 = p1,
+                t1Us = t1,
+                t2Us = currentTimeUs,
+                vxKmUs = 0.0,
+                vyKmUs = 0.0,
+                type = movingTarget.type
+            )
+        } else {
+            movingTarget.directions
+                .forEach { direction ->
+                    val p2 = direction.destination
+                    val speedKmUs = direction.speedKmh / HOUR_TO_US
 
-            p1 = p2
-            t1 += dt
+                    // distance from last course change point
+                    val p1c = p1.toCartesian()
+                    val p2c = p2.toCartesian()
+                    val dx = p2c.x - p1c.x
+                    val dy = p2c.y - p1c.y
+                    val distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0))
+                    val dt = distance / speedKmUs
+                    if (currentTimeUs >= t1 && currentTimeUs < t1 + dt) {
+                        ps = PathSegment(
+                            p1 = p1,
+                            p2 = p2,
+                            t1Us = t1,
+                            t2Us = t1 + dt,
+                            vxKmUs = speedKmUs * dx / distance,
+                            vyKmUs = speedKmUs * dy / distance,
+                            type = movingTarget.type
+                        )
+                        return@forEach
+                    }
 
+                    p1 = p2
+                    t1 += dt
+
+                }
         }
 
-        return PathSegment(
-            p1 = p1,
-            p2 = p1,
-            t1Us = t1,
-            t2Us = currentTimeUs,
-            vxKmUs = 0.0,
-            vyKmUs = 0.0,
-            type = movingTarget.type
-        )
+        return ps
+
     }
 
     fun draw() {
@@ -498,8 +507,8 @@ az=${angleStringConverter.toString(az)}"""
                     .forEach inner@ { t ->
 
                         val plotPathSegment = getCurrentPathSegment(target, t)
-                        val radarCoordinate = plotPathSegment?.getPositionForTime(t)
-                        val plotPosCart = radarCoordinate?.toCartesian()
+                        val plotPos = plotPathSegment?.getPositionForTime(t)
+                        val plotPosCart = plotPos?.toCartesian()
 
                         if (plotPosCart != null) {
 
@@ -521,7 +530,7 @@ az=${angleStringConverter.toString(az)}"""
                                 MovingTargetType.Test1 -> Test1TargetHitMarker(cp, transformedPlot.distance(cp))
                                 MovingTargetType.Test2 -> Test2TargetHitMarker(
                                     cp,
-                                    radarCoordinate?.azDeg,
+                                    plotPos?.azDeg,
                                     maxDistance = bp.distance(cp),
                                     angleResolutionDeg = designerController.radarParameters.horizontalAngleBeamWidthDeg
                                 )

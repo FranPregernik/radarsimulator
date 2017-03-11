@@ -39,9 +39,9 @@ class HelpersTest : Spek({
 
         on("calculating the hit for sweep angle just prior heading range") {
 
-            val tUs = toRadians(position.azDeg - radarParameters.horizontalAngleBeamWidthDeg) * rotationTimeUs / TWO_PI
+            val sweepHeadingRad = toRadians(position.azDeg - radarParameters.horizontalAngleBeamWidthDeg)
 
-            calculatePointTargetHits(hits, position, tUs, cParams)
+            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
 
             it("should result in no detection") {
                 hits.nextSetBit(0) shouldEqual -1
@@ -50,9 +50,9 @@ class HelpersTest : Spek({
 
         on("calculating the hit for sweep angle just after heading range") {
 
-            val tUs = toRadians(position.azDeg + radarParameters.horizontalAngleBeamWidthDeg) * rotationTimeUs / TWO_PI
+            val sweepHeadingRad = toRadians(position.azDeg + radarParameters.horizontalAngleBeamWidthDeg)
 
-            calculatePointTargetHits(hits, position, tUs, cParams)
+            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
 
             it("should result in no detection") {
                 hits.nextSetBit(0) shouldEqual -1
@@ -61,9 +61,9 @@ class HelpersTest : Spek({
 
         on("calculating the hit for sweep angle inside heading range") {
 
-            val tUs = toRadians(position.azDeg) * rotationTimeUs / TWO_PI
+            val sweepHeadingRad = toRadians(position.azDeg)
 
-            calculatePointTargetHits(hits, position, tUs, cParams)
+            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
 
             it("should result in detection") {
                 hits.nextSetBit(0) shouldNotEqual -1
@@ -75,7 +75,7 @@ class HelpersTest : Spek({
 
         val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
         val azDeg = 10.0
-        val tUs = toRadians(azDeg) * rotationTimeUs / TWO_PI
+        val sweepHeadingRad = toRadians(azDeg)
 
         beforeEachTest { hits.clear() }
 
@@ -83,7 +83,7 @@ class HelpersTest : Spek({
 
             val position = RadarCoordinate(radarParameters.minRadarDistanceKm - 1, azDeg)
 
-            calculatePointTargetHits(hits, position, tUs, cParams)
+            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
 
             it("should result in no detection") {
                 hits.nextSetBit(0) shouldEqual -1
@@ -94,7 +94,7 @@ class HelpersTest : Spek({
 
             val position = RadarCoordinate(radarParameters.maxRadarDistanceKm + 1, azDeg)
 
-            calculatePointTargetHits(hits, position, tUs, cParams)
+            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
 
             it("should result in no detection") {
                 hits.nextSetBit(0) shouldEqual -1
@@ -110,9 +110,11 @@ class HelpersTest : Spek({
             val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
             val position = RadarCoordinate(100.0, 45.0)
 
-            (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
-                calculatePointTargetHits(hits, position, it.toDouble(), cParams)
-            }
+            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
+                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
+                .forEach { sweepHeadingRad ->
+                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+                }
 
             it("should result in detection") {
                 hits.nextSetBit(0) shouldNotEqual -1
@@ -124,9 +126,11 @@ class HelpersTest : Spek({
             val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
             val position = RadarCoordinate(100.0, 135.0)
 
-            (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
-                calculatePointTargetHits(hits, position, it.toDouble(), cParams)
-            }
+            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
+                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
+                .forEach { sweepHeadingRad ->
+                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+                }
 
             it("should result in detection") {
                 hits.nextSetBit(0) shouldNotEqual -1
@@ -138,9 +142,11 @@ class HelpersTest : Spek({
             val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
             val position = RadarCoordinate(100.0, 225.0)
 
-            (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
-                calculatePointTargetHits(hits, position, it.toDouble(), cParams)
-            }
+            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
+                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
+                .forEach { sweepHeadingRad ->
+                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+                }
 
             it("should result in detection") {
                 hits.nextSetBit(0) shouldNotEqual -1
@@ -152,9 +158,11 @@ class HelpersTest : Spek({
             val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
             val position = RadarCoordinate(100.0, 315.0)
 
-            (0..(radarParameters.seekTimeSec * S_TO_US).toInt()).forEach {
-                calculatePointTargetHits(hits, position, it.toDouble(), cParams)
-            }
+            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
+                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
+                .forEach { sweepHeadingRad ->
+                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+                }
 
             it("should result in detection") {
                 hits.nextSetBit(0) shouldNotEqual -1

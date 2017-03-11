@@ -1,6 +1,7 @@
 package hr.franp.rsim.models
 
 import hr.franp.rsim.*
+import hr.franp.rsim.models.RadarCoordinate.Companion.fromCartesian
 import javafx.collections.FXCollections.*
 import javafx.embed.swing.*
 import javafx.geometry.*
@@ -285,12 +286,10 @@ data class PathSegment(
         val x1 = p1.rKm * cos(azimuthToAngle(azRad))
         val y1 = p1.rKm * sin(azimuthToAngle(azRad))
 
-        // get current position of course in dt
-        val x = x1 + (timeUs - t1Us) * vxKmUs
-        val y = y1 + (timeUs - t1Us) * vyKmUs
-
-
-        return RadarCoordinate.fromCartesian(x, y)
+        return fromCartesian(
+            x1 + (timeUs - t1Us) * vxKmUs,
+            y1 + (timeUs - t1Us) * vyKmUs
+        )
     }
 
 }
