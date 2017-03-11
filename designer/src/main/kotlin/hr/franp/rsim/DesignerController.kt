@@ -15,16 +15,7 @@ class DesignerController : Controller() {
     val cloudOneImage = processHitMaskImage(Image(resources["/cloud1.png"]))
     val cloudTwoImage = processHitMaskImage(Image(resources["/cloud2.png"]))
 
-    val radarParameters: RadarParameters = RadarParameters().apply {
-        impulsePeriodUs = 3003.0
-        maxImpulsePeriodUs = 3072.0
-        seekTimeSec = 12.0
-        azimuthChangePulse = 4096
-        horizontalAngleBeamWidthDeg = 1.4
-        distanceResolutionKm = 0.150
-        maxRadarDistanceKm = 400.0
-        minRadarDistanceKm = 5.0
-    }
+    private val simulationController: SimulatorController by inject()
 
     val displayParameters: DisplayParameters = DisplayParameters().apply {
         distanceStep = 50.0
@@ -103,11 +94,11 @@ class DesignerController : Controller() {
 
     fun calculateTargetHits(): Stream<Bits> {
 
+        val radarParameters = simulationController.radarParameters
         val cParams = CalculationParameters(radarParameters)
 
         // (deep)clone for background processing
         val scenarioClone = scenario.copy<Scenario>()
-        val radarParameters = radarParameters
 
         val movingTargets = scenarioClone.movingTargets ?: emptyList<MovingTarget>()
         val targetPathSegments = movingTargets
@@ -281,6 +272,7 @@ class DesignerController : Controller() {
 
     fun calculateClutterHits(): Bits {
 
+        val radarParameters = simulationController.radarParameters
         val cParams = CalculationParameters(radarParameters)
 
         // (deep)clone for background processing

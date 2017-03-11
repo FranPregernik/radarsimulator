@@ -115,13 +115,8 @@ class DesignerView : View() {
                             runAsync {
                                 try {
 
-                                    simulationController.stopSimulation()
-
-                                    simulationController.calibrate().apply {
-                                        designerController.radarParameters.seekTimeSec = first
-                                        designerController.radarParameters.azimuthChangePulse = second
-                                        designerController.radarParameters.impulsePeriodUs = third
-                                    }
+                                    simulationController.calibrate()
+                                    val radarParameters = simulationController.radarParameters
 
                                     // TODO: move into SimulatorController.uploadClutterFile
                                     FileOutputStream("clutter.bin.gz").use { fileOutputStream ->
@@ -129,25 +124,25 @@ class DesignerView : View() {
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt((designerController.radarParameters.seekTimeSec * S_TO_US).toInt())
+                                                    .putInt((radarParameters.seekTimeSec * S_TO_US).toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(designerController.radarParameters.azimuthChangePulse.toInt())
+                                                    .putInt(radarParameters.azimuthChangePulse.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(designerController.radarParameters.impulsePeriodUs.toInt())
+                                                    .putInt(radarParameters.impulsePeriodUs.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(designerController.radarParameters.maxImpulsePeriodUs.toInt())
+                                                    .putInt(radarParameters.maxImpulsePeriodUs.toInt())
                                                     .array()
                                             )
                                             stream.write(
@@ -164,7 +159,7 @@ class DesignerView : View() {
 
                                             // DEBUG
                                             ImageIO.write(
-                                                SwingFXUtils.fromFXImage(generateRadarHitImage(clutterHits, designerController.radarParameters), null),
+                                                SwingFXUtils.fromFXImage(generateRadarHitImage(clutterHits, radarParameters), null),
                                                 "png",
                                                 File("clutter.png")
                                             )
@@ -180,31 +175,31 @@ class DesignerView : View() {
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt((designerController.radarParameters.seekTimeSec * S_TO_US).toInt())
+                                                    .putInt((radarParameters.seekTimeSec * S_TO_US).toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(designerController.radarParameters.azimuthChangePulse.toInt())
+                                                    .putInt(radarParameters.azimuthChangePulse.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(designerController.radarParameters.impulsePeriodUs.toInt())
+                                                    .putInt(radarParameters.impulsePeriodUs.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(designerController.radarParameters.maxImpulsePeriodUs.toInt())
+                                                    .putInt(radarParameters.maxImpulsePeriodUs.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt((designerController.scenario.simulationDurationMin * MIN_TO_S / designerController.radarParameters.seekTimeSec).toInt())
+                                                    .putInt((designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt())
                                                     .array()
                                             )
 
@@ -215,7 +210,7 @@ class DesignerView : View() {
 
                                             var seekTime = 0.0
                                             designerController.calculateTargetHits().forEach {
-                                                seekTime += designerController.radarParameters.seekTimeSec
+                                                seekTime += radarParameters.seekTimeSec
                                                 updateProgress(
                                                     seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
                                                     1.0
@@ -226,7 +221,7 @@ class DesignerView : View() {
 
                                             // DEBUG
                                             ImageIO.write(
-                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, designerController.radarParameters), null),
+                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, radarParameters), null),
                                                 "png",
                                                 File("targets.png")
                                             )
@@ -469,7 +464,7 @@ class DesignerView : View() {
                                     minWidth = Font.getDefault().size * 3
                                     setOnAction {
                                         val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
-                                        val newTime = simulatedCurrentTimeSec - 10 * designerController.radarParameters.seekTimeSec
+                                        val newTime = simulatedCurrentTimeSec - 10 * simulationController.radarParameters.seekTimeSec
                                         designerController.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
                                     }
                                 }
@@ -480,7 +475,7 @@ class DesignerView : View() {
                                     )
                                     setOnAction {
                                         val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
-                                        val newTime = simulatedCurrentTimeSec - designerController.radarParameters.seekTimeSec
+                                        val newTime = simulatedCurrentTimeSec - simulationController.radarParameters.seekTimeSec
                                         designerController.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
                                     }
                                 }
@@ -501,7 +496,7 @@ class DesignerView : View() {
                                     )
                                     setOnAction {
                                         val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
-                                        val newTime = simulatedCurrentTimeSec + designerController.radarParameters.seekTimeSec
+                                        val newTime = simulatedCurrentTimeSec + simulationController.radarParameters.seekTimeSec
                                         designerController.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S)
                                     }
                                 }
@@ -513,7 +508,7 @@ class DesignerView : View() {
                                     minWidth = Font.getDefault().size * 3
                                     setOnAction {
                                         val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
-                                        val newTime = simulatedCurrentTimeSec + 10 * designerController.radarParameters.seekTimeSec
+                                        val newTime = simulatedCurrentTimeSec + 10 * simulationController.radarParameters.seekTimeSec
                                         designerController.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S)
                                     }
                                 }

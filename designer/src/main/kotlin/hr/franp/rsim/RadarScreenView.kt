@@ -49,7 +49,7 @@ class RadarScreenView : View() {
     }
 
     private val designerController: DesignerController by inject()
-    private val simulationController: SimulatorController by inject()
+    private val simulatorController: SimulatorController by inject()
 
     private val staticMarkersGroup = Pane()
     private val dynamicMarkersGroup = Pane()
@@ -121,10 +121,10 @@ class RadarScreenView : View() {
     private fun setupViewPort() {
 
         val viewPort = designerController.displayParameters.viewPort ?: BoundingBox(
-            -designerController.radarParameters.maxRadarDistanceKm * 1.1,
-            -designerController.radarParameters.maxRadarDistanceKm * 1.1,
-            2 * designerController.radarParameters.maxRadarDistanceKm * 1.1,
-            2 * designerController.radarParameters.maxRadarDistanceKm * 1.1
+            -simulatorController.radarParameters.maxRadarDistanceKm * 1.1,
+            -simulatorController.radarParameters.maxRadarDistanceKm * 1.1,
+            2 * simulatorController.radarParameters.maxRadarDistanceKm * 1.1,
+            2 * simulatorController.radarParameters.maxRadarDistanceKm * 1.1
         )
 
         val destViewPort = BoundingBox(0.0, 0.0, root.width, root.height)
@@ -207,17 +207,17 @@ class RadarScreenView : View() {
 
         // Distance markers
         val stepKm = if (designerController.displayParameters.distanceStep == 0.0)
-            designerController.radarParameters.maxRadarDistanceKm
+            simulatorController.radarParameters.maxRadarDistanceKm
         else
             designerController.displayParameters.distanceStep * distanceToKmScale
 
         val mandatoryDistanceMarkers = sequenceOf(
-            designerController.radarParameters.minRadarDistanceKm,
-            designerController.radarParameters.maxRadarDistanceKm
+            simulatorController.radarParameters.minRadarDistanceKm,
+            simulatorController.radarParameters.maxRadarDistanceKm
         )
-        val distanceSequence = mandatoryDistanceMarkers + generateSequence(designerController.radarParameters.minRadarDistanceKm) {
+        val distanceSequence = mandatoryDistanceMarkers + generateSequence(simulatorController.radarParameters.minRadarDistanceKm) {
             it + stepKm
-        }.takeWhile { it <= designerController.radarParameters.maxRadarDistanceKm - stepKm / 3 }
+        }.takeWhile { it <= simulatorController.radarParameters.maxRadarDistanceKm - stepKm / 3 }
 
         val cp = combinedTransform.transform(0.0, 0.0)
         for (r in distanceSequence) {
@@ -243,19 +243,19 @@ class RadarScreenView : View() {
             // draw full lines (like a spiderweb)
             for (a in angleSequence) {
                 val p1 = combinedTransform.transform(
-                    designerController.radarParameters.minRadarDistanceKm * Math.cos(a),
-                    designerController.radarParameters.minRadarDistanceKm * Math.sin(a)
+                    simulatorController.radarParameters.minRadarDistanceKm * Math.cos(a),
+                    simulatorController.radarParameters.minRadarDistanceKm * Math.sin(a)
                 )
                 val p2 = combinedTransform.transform(
-                    designerController.radarParameters.maxRadarDistanceKm * Math.cos(a),
-                    designerController.radarParameters.maxRadarDistanceKm * Math.sin(a)
+                    simulatorController.radarParameters.maxRadarDistanceKm * Math.cos(a),
+                    simulatorController.radarParameters.maxRadarDistanceKm * Math.sin(a)
                 )
                 angleMarkersGroup.add(AzimuthMarkerLine(p1, p2))
             }
         } else {
             // draw only ticks on distance markers (circles)
             for (a in angleSequence) {
-                for (d in distanceSequence.filter { it > designerController.radarParameters.minRadarDistanceKm }) {
+                for (d in distanceSequence.filter { it > simulatorController.radarParameters.minRadarDistanceKm }) {
                     val length = 5
                     val pc = combinedTransform
                         .transform(
@@ -279,8 +279,8 @@ class RadarScreenView : View() {
             val angle = HALF_PI - angleToAzimuth(a)
             val p = combinedTransform
                 .transform(
-                    designerController.radarParameters.maxRadarDistanceKm * cos(angle),
-                    designerController.radarParameters.maxRadarDistanceKm * sin(angle)
+                    simulatorController.radarParameters.maxRadarDistanceKm * cos(angle),
+                    simulatorController.radarParameters.maxRadarDistanceKm * sin(angle)
                 )
                 .add(
                     20 * cos(angle),
@@ -294,27 +294,27 @@ class RadarScreenView : View() {
     fun drawDynamicMarkers() {
         dynamicMarkersGroup.children.clear()
 
-        val rad = TWO_PI * (designerController.displayParameters.simulatedCurrentTimeSec / designerController.radarParameters.seekTimeSec)
+        val rad = TWO_PI * (designerController.displayParameters.simulatedCurrentTimeSec / simulatorController.radarParameters.seekTimeSec)
 
         // draw simulation position markers
         val simPosGroup = Group()
         dynamicMarkersGroup.add(simPosGroup)
 
         val center = combinedTransform.transform(0.0, 0.0)
-        val p = combinedTransform.transform(0.0, designerController.radarParameters.maxRadarDistanceKm)
+        val p = combinedTransform.transform(0.0, simulatorController.radarParameters.maxRadarDistanceKm)
         simPosGroup.add(Circle(p.x, p.y, 5.0, Color.RED))
 
         val deg = toDegrees(rad)
         val rotTransform = Rotate(deg, center.x, center.y)
         simPosGroup.transforms.setAll(rotTransform)
 
-        if (simulationController.simulationRunningProperty.get()) {
+        if (simulatorController.simulationRunningProperty.get()) {
             timeline {
-                keyframe(Duration.seconds(designerController.radarParameters.seekTimeSec)) {
+                keyframe(Duration.seconds(simulatorController.radarParameters.seekTimeSec)) {
                     keyvalue(rotTransform.angleProperty(), deg + 360, Interpolator.LINEAR)
                 }
             }.apply {
-                simulationController.simulationRunningProperty.addListener { _, _, newValue ->
+                simulatorController.simulationRunningProperty.addListener { _, _, newValue ->
                     if (!newValue) {
                         stop()
                     }
@@ -333,8 +333,8 @@ class RadarScreenView : View() {
         }
 
         // draw stationary targets
-        val width = (2.0 * designerController.radarParameters.maxRadarDistanceKm)
-        val height = (2.0 * designerController.radarParameters.maxRadarDistanceKm)
+        val width = (2.0 * simulatorController.radarParameters.maxRadarDistanceKm)
+        val height = (2.0 * simulatorController.radarParameters.maxRadarDistanceKm)
 
         val rasterMapImage = designerController.scenario.clutter.getImage(width.toInt(), height.toInt())
 
@@ -495,7 +495,7 @@ az=${angleStringConverter.toString(az)}"""
         // TEMP: draw last N plots relative to current time
         // HACK: not real plot points ....
         val cp = combinedTransform.transform(0.0, 0.0)
-        val bp = combinedTransform.transform(designerController.radarParameters.maxRadarDistanceKm, 0.0)
+        val bp = combinedTransform.transform(simulatorController.radarParameters.maxRadarDistanceKm, 0.0)
         designerController.scenario.movingTargets
             .sortedBy { it.name }
             // show only if the target is selected or marked as display
@@ -505,9 +505,9 @@ az=${angleStringConverter.toString(az)}"""
 
 
                 val n = 6
-                val fromTimeUs = S_TO_US * designerController.radarParameters.seekTimeSec * (floor(currentTimeS / designerController.radarParameters.seekTimeSec) - n)
+                val fromTimeUs = S_TO_US * simulatorController.radarParameters.seekTimeSec * (floor(currentTimeS / simulatorController.radarParameters.seekTimeSec) - n)
 
-                val timeIterator = generateSequence(fromTimeUs) { t -> t + S_TO_US * designerController.radarParameters.seekTimeSec }
+                val timeIterator = generateSequence(fromTimeUs) { t -> t + S_TO_US * simulatorController.radarParameters.seekTimeSec }
                     .takeWhile { t -> t < currentTimeUs }
                     .iterator()
 
@@ -522,7 +522,7 @@ az=${angleStringConverter.toString(az)}"""
 
                             // range check
                             val distance = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
-                            if (distance < designerController.radarParameters.minRadarDistanceKm || distance > designerController.radarParameters.maxRadarDistanceKm) {
+                            if (distance < simulatorController.radarParameters.minRadarDistanceKm || distance > simulatorController.radarParameters.maxRadarDistanceKm) {
                                 return@inner
                             }
 
@@ -540,7 +540,7 @@ az=${angleStringConverter.toString(az)}"""
                                     cp,
                                     plotPos?.azDeg,
                                     maxDistance = bp.distance(cp),
-                                    angleResolutionDeg = designerController.radarParameters.horizontalAngleBeamWidthDeg
+                                    angleResolutionDeg = simulatorController.radarParameters.horizontalAngleBeamWidthDeg
                                 )
 
                             }

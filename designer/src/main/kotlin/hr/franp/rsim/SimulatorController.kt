@@ -1,5 +1,6 @@
 package hr.franp.rsim
 
+import hr.franp.rsim.models.*
 import javafx.application.Platform.*
 import javafx.beans.property.*
 import net.schmizz.sshj.*
@@ -10,6 +11,17 @@ import java.io.*
 import java.util.concurrent.*
 
 class SimulatorController : Controller() {
+
+    val radarParameters: RadarParameters = RadarParameters().apply {
+        impulsePeriodUs = 3003.0
+        maxImpulsePeriodUs = 3072.0
+        seekTimeSec = 12.0
+        azimuthChangePulse = 4096
+        horizontalAngleBeamWidthDeg = 1.4
+        distanceResolutionKm = 0.150
+        maxRadarDistanceKm = 400.0
+        minRadarDistanceKm = 5.0
+    }
 
     private val sshClient = SSHClient().apply {
         // no need to verify, not really security oriented
@@ -160,7 +172,7 @@ class SimulatorController : Controller() {
         }
     }
 
-    fun calibrate(): Triple<Double, Int, Double> {
+    fun calibrate() {
 
         stopSimulation()
 
@@ -200,7 +212,10 @@ class SimulatorController : Controller() {
             throw RuntimeException("Unable to calibrate")
         }
 
-        return Triple(arpUs / S_TO_US, acpCnt, trigUs)
+        radarParameters.seekTimeSec = arpUs / S_TO_US
+        radarParameters.azimuthChangePulse = acpCnt
+        radarParameters.impulsePeriodUs = trigUs
+
     }
 
 }
