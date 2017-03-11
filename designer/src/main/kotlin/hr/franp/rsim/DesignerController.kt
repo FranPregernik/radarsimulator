@@ -17,15 +17,6 @@ class DesignerController : Controller() {
 
     private val simulationController: SimulatorController by inject()
 
-    val displayParameters: DisplayParameters = DisplayParameters().apply {
-        distanceStep = 50.0
-        distanceUnit = DistanceUnit.Km
-        azimuthSteps = 36
-        azimuthMarkerType = AzimuthMarkerType.FULL
-        coordinateSystem = CoordinateSystem.R_AZ
-        simulatedCurrentTimeSec = 0.0
-    }
-
     val scenario: Scenario = Scenario().apply {
         simulationDurationMin = 120.0
         simulationStepUs = 1000.0

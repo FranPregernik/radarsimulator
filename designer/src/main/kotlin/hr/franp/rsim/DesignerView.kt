@@ -270,7 +270,7 @@ class DesignerView : View() {
                                 }
 
                                 if (simCurrentTimeSec <= designerController.scenario.simulationDurationMin * MIN_TO_S) {
-                                    designerController.displayParameters.simulatedCurrentTimeSec = simCurrentTimeSec
+                                    radarScreen.displayParameters.simulatedCurrentTimeSec = simCurrentTimeSec
                                 }
                             }
 
@@ -317,13 +317,13 @@ class DesignerView : View() {
                                     togglebutton(Km.toString()) {
                                         isSelected = true
                                         setOnAction {
-                                            designerController.displayParameters.distanceUnit = Km
+                                            radarScreen.displayParameters.distanceUnit = Km
                                             radarScreen.draw()
                                         }
                                     }
                                     togglebutton(NM.toString()) {
                                         setOnAction {
-                                            designerController.displayParameters.distanceUnit = NM
+                                            radarScreen.displayParameters.distanceUnit = NM
                                             radarScreen.draw()
                                         }
                                     }
@@ -331,17 +331,17 @@ class DesignerView : View() {
 
                                 togglegroup {
                                     togglebutton("0").setOnAction {
-                                        designerController.displayParameters.distanceStep = 0.0
+                                        radarScreen.displayParameters.distanceStep = 0.0
                                         radarScreen.draw()
                                     }
                                     togglebutton("10").setOnAction {
-                                        designerController.displayParameters.distanceStep = 10.0
+                                        radarScreen.displayParameters.distanceStep = 10.0
                                         radarScreen.draw()
                                     }
                                     togglebutton("50") {
                                         isSelected = true
                                         setOnAction {
-                                            designerController.displayParameters.distanceStep = 50.0
+                                            radarScreen.displayParameters.distanceStep = 50.0
                                             radarScreen.draw()
                                         }
                                     }
@@ -358,13 +358,13 @@ class DesignerView : View() {
                                     togglebutton(FULL.toString()) {
                                         isSelected = true
                                         setOnAction {
-                                            designerController.displayParameters.azimuthMarkerType = FULL
+                                            radarScreen.displayParameters.azimuthMarkerType = FULL
                                             radarScreen.draw()
                                         }
                                     }
                                     togglebutton(MIN.toString()) {
                                         setOnAction {
-                                            designerController.displayParameters.azimuthMarkerType = MIN
+                                            radarScreen.displayParameters.azimuthMarkerType = MIN
                                             radarScreen.draw()
                                         }
                                     }
@@ -372,17 +372,17 @@ class DesignerView : View() {
 
                                 togglegroup {
                                     togglebutton("0").setOnAction {
-                                        designerController.displayParameters.azimuthSteps = 0
+                                        radarScreen.displayParameters.azimuthSteps = 0
                                         radarScreen.draw()
                                     }
                                     togglebutton("5").setOnAction {
-                                        designerController.displayParameters.azimuthSteps = 72
+                                        radarScreen.displayParameters.azimuthSteps = 72
                                         radarScreen.draw()
                                     }
                                     togglebutton("10") {
                                         isSelected = true
                                         setOnAction {
-                                            designerController.displayParameters.azimuthSteps = 36
+                                            radarScreen.displayParameters.azimuthSteps = 36
                                             radarScreen.draw()
                                         }
                                     }
@@ -449,40 +449,40 @@ class DesignerView : View() {
 
                                 button("", fontAwesome.create(STEP_BACKWARD)) {
                                     disableProperty().bind(
-                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0)
                                             .or(simulationController.simulationRunningProperty)
                                     )
                                     setOnAction {
-                                        designerController.displayParameters.simulatedCurrentTimeSec = 0.0
+                                        radarScreen.displayParameters.simulatedCurrentTimeSec = 0.0
                                     }
                                 }
                                 button("", fontAwesome.create(FAST_BACKWARD)) {
                                     disableProperty().bind(
-                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0)
                                             .or(simulationController.simulationRunningProperty)
                                     )
                                     minWidth = Font.getDefault().size * 3
                                     setOnAction {
-                                        val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val simulatedCurrentTimeSec = radarScreen.displayParameters.simulatedCurrentTimeSec ?: 0.0
                                         val newTime = simulatedCurrentTimeSec - 10 * simulationController.radarParameters.seekTimeSec
-                                        designerController.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
                                     }
                                 }
                                 button("", fontAwesome.create(BACKWARD)) {
                                     disableProperty().bind(
-                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0)
                                             .or(simulationController.simulationRunningProperty)
                                     )
                                     setOnAction {
-                                        val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val simulatedCurrentTimeSec = radarScreen.displayParameters.simulatedCurrentTimeSec ?: 0.0
                                         val newTime = simulatedCurrentTimeSec - simulationController.radarParameters.seekTimeSec
-                                        designerController.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
                                     }
                                 }
 
                                 textfield {
                                     disableProperty().bind(simulationController.simulationRunningProperty)
-                                    textProperty().bindBidirectional(designerController.displayParameters.simulatedCurrentTimeSecProperty(), SecondsStringConverter())
+                                    textProperty().bindBidirectional(radarScreen.displayParameters.simulatedCurrentTimeSecProperty(), SecondsStringConverter())
                                     minWidth = Font.getDefault().size * 3
                                     maxWidth = Font.getDefault().size * 5
                                     prefWidth = Font.getDefault().size * 4
@@ -491,34 +491,34 @@ class DesignerView : View() {
 
                                 button("", fontAwesome.create(FORWARD)) {
                                     disableProperty().bind(
-                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S)
                                             .or(simulationController.simulationRunningProperty)
                                     )
                                     setOnAction {
-                                        val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val simulatedCurrentTimeSec = radarScreen.displayParameters.simulatedCurrentTimeSec ?: 0.0
                                         val newTime = simulatedCurrentTimeSec + simulationController.radarParameters.seekTimeSec
-                                        designerController.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S)
                                     }
                                 }
                                 button("", fontAwesome.create(FAST_FORWARD)) {
                                     disableProperty().bind(
-                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S)
                                             .or(simulationController.simulationRunningProperty)
                                     )
                                     minWidth = Font.getDefault().size * 3
                                     setOnAction {
-                                        val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val simulatedCurrentTimeSec = radarScreen.displayParameters.simulatedCurrentTimeSec ?: 0.0
                                         val newTime = simulatedCurrentTimeSec + 10 * simulationController.radarParameters.seekTimeSec
-                                        designerController.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S)
                                     }
                                 }
                                 button("", fontAwesome.create(STEP_FORWARD)) {
                                     disableProperty().bind(
-                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                        radarScreen.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S)
                                             .or(simulationController.simulationRunningProperty)
                                     )
                                     setOnAction {
-                                        designerController.displayParameters.simulatedCurrentTimeSec = designerController.scenario.simulationDurationMin * MIN_TO_S
+                                        radarScreen.displayParameters.simulatedCurrentTimeSec = designerController.scenario.simulationDurationMin * MIN_TO_S
                                     }
                                 }
 
