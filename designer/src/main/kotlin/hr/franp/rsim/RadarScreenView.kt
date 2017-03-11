@@ -202,21 +202,29 @@ class RadarScreenView : View() {
         val distanceMarkersGroup = Group()
         staticMarkersGroup.add(distanceMarkersGroup)
 
+        // scale in case of nautical miles
+        val distanceToKmScale = designerController.displayParameters.distanceToKmScale()
+
         // Distance markers
-        val step = if (designerController.displayParameters.distanceStepKm == 0.0)
+        val stepKm = if (designerController.displayParameters.distanceStep == 0.0)
             designerController.radarParameters.maxRadarDistanceKm
         else
-            designerController.displayParameters.distanceStepKm
-        val distanceSequence = sequenceOf(designerController.radarParameters.minRadarDistanceKm, designerController.radarParameters.maxRadarDistanceKm) +
-            generateSequence(designerController.radarParameters.minRadarDistanceKm) { it + step }
-                .takeWhile { it <= designerController.radarParameters.maxRadarDistanceKm - step / 3 }
+            designerController.displayParameters.distanceStep * distanceToKmScale
+
+        val mandatoryDistanceMarkers = sequenceOf(
+            designerController.radarParameters.minRadarDistanceKm,
+            designerController.radarParameters.maxRadarDistanceKm
+        )
+        val distanceSequence = mandatoryDistanceMarkers + generateSequence(designerController.radarParameters.minRadarDistanceKm) {
+            it + stepKm
+        }.takeWhile { it <= designerController.radarParameters.maxRadarDistanceKm - stepKm / 3 }
 
         val cp = combinedTransform.transform(0.0, 0.0)
         for (r in distanceSequence) {
             val dp = combinedTransform.transform(r, 0.0)
             val dist = cp.distance(dp)
             distanceMarkersGroup.add(DistanceMarkerCircle(cp, dist))
-            distanceMarkersGroup.add(DistanceMarkerLabel(dp, r.toInt().toString()))
+            distanceMarkersGroup.add(DistanceMarkerLabel(dp, (r / distanceToKmScale).toInt().toString()))
         }
 
         // draw angle markers
@@ -424,13 +432,13 @@ class RadarScreenView : View() {
                 val plotPosCart = plotPos.toCartesian()
                 val pt = combinedTransform.transform(plotPosCart)
 
-                val distance = sqrt(pow(pt.x, 2.0) + pow(pt.y, 2.0))
+                val distanceKm = sqrt(pow(pt.x, 2.0) + pow(pt.y, 2.0))
                 val az = toDegrees(angleToAzimuth(atan2(pt.y, pt.x)))
 
                 val text = """${target.name}
 hdg=${angleStringConverter.toString(plotPathSegment.headingDeg)}
 spd=${speedStringConverter.toString(plotPathSegment.vKmh)}
-r=${distanceStringConverter.toString(distance)}
+r=${distanceStringConverter.toString(distanceKm / designerController.displayParameters.distanceToKmScale())}
 az=${angleStringConverter.toString(az)}"""
 
                 val movingTarget = when (type) {

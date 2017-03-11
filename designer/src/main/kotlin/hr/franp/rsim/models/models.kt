@@ -377,9 +377,9 @@ class DisplayParameters {
     /**
      * Draw distance marker circles around the radar
      */
-    var distanceStepKm by property<Double>()
+    var distanceStep by property<Double>()
 
-    fun distanceStepKmProperty() = getProperty(DisplayParameters::distanceStepKm)
+    fun distanceStepProperty() = getProperty(DisplayParameters::distanceStep)
 
     /**
      * Current displayed distance unit
@@ -387,6 +387,11 @@ class DisplayParameters {
     var distanceUnit by property<DistanceUnit>()
 
     fun distanceUnitProperty() = getProperty(DisplayParameters::distanceUnit)
+
+    fun distanceToKmScale() = if (distanceUnit == DistanceUnit.NM)
+        1.852
+    else
+        1.0
 
     /**
      * Draw azimuth lines

@@ -323,31 +323,31 @@ class DesignerView : View() {
                                         isSelected = true
                                         setOnAction {
                                             designerController.displayParameters.distanceUnit = Km
-                                            radarScreen.drawStaticMarkers()
+                                            radarScreen.draw()
                                         }
                                     }
                                     togglebutton(NM.toString()) {
                                         setOnAction {
                                             designerController.displayParameters.distanceUnit = NM
-                                            radarScreen.drawStaticMarkers()
+                                            radarScreen.draw()
                                         }
                                     }
                                 }
 
                                 togglegroup {
                                     togglebutton("0").setOnAction {
-                                        designerController.displayParameters.distanceStepKm = 0.0
-                                        radarScreen.drawStaticMarkers()
+                                        designerController.displayParameters.distanceStep = 0.0
+                                        radarScreen.draw()
                                     }
                                     togglebutton("10").setOnAction {
-                                        designerController.displayParameters.distanceStepKm = 10.0
-                                        radarScreen.drawStaticMarkers()
+                                        designerController.displayParameters.distanceStep = 10.0
+                                        radarScreen.draw()
                                     }
                                     togglebutton("50") {
                                         isSelected = true
                                         setOnAction {
-                                            designerController.displayParameters.distanceStepKm = 50.0
-                                            radarScreen.drawStaticMarkers()
+                                            designerController.displayParameters.distanceStep = 50.0
+                                            radarScreen.draw()
                                         }
                                     }
                                 }
@@ -364,13 +364,13 @@ class DesignerView : View() {
                                         isSelected = true
                                         setOnAction {
                                             designerController.displayParameters.azimuthMarkerType = FULL
-                                            radarScreen.drawStaticMarkers()
+                                            radarScreen.draw()
                                         }
                                     }
                                     togglebutton(MIN.toString()) {
                                         setOnAction {
                                             designerController.displayParameters.azimuthMarkerType = MIN
-                                            radarScreen.drawStaticMarkers()
+                                            radarScreen.draw()
                                         }
                                     }
                                 }
@@ -378,17 +378,17 @@ class DesignerView : View() {
                                 togglegroup {
                                     togglebutton("0").setOnAction {
                                         designerController.displayParameters.azimuthSteps = 0
-                                        radarScreen.drawStaticMarkers()
+                                        radarScreen.draw()
                                     }
                                     togglebutton("5").setOnAction {
                                         designerController.displayParameters.azimuthSteps = 72
-                                        radarScreen.drawStaticMarkers()
+                                        radarScreen.draw()
                                     }
                                     togglebutton("10") {
                                         isSelected = true
                                         setOnAction {
                                             designerController.displayParameters.azimuthSteps = 36
-                                            radarScreen.drawStaticMarkers()
+                                            radarScreen.draw()
                                         }
                                     }
                                 }

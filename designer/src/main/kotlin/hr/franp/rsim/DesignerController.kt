@@ -27,7 +27,7 @@ class DesignerController : Controller() {
     }
 
     val displayParameters: DisplayParameters = DisplayParameters().apply {
-        distanceStepKm = 50.0
+        distanceStep = 50.0
         distanceUnit = DistanceUnit.Km
         azimuthSteps = 36
         azimuthMarkerType = AzimuthMarkerType.FULL
