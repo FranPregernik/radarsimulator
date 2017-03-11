@@ -153,7 +153,7 @@ class MovingTarget : JsonModel {
             name = string("name")
             type = MovingTargetType.valueOf(string("type")!!)
             initialPosition = getJsonObject("initialPosition").toModel()
-            directions = getJsonArray("directions").toModel()
+            directions = getJsonArray("directions")?.toModel() ?: observableArrayList<Direction>(mutableListOf())
         }
     }
 }
