@@ -300,8 +300,8 @@ class SecondsStringConverter : StringConverter<Double>() {
 
     companion object {
         val decimalFormat = DecimalFormat().apply {
-            minimumFractionDigits = 2
-            maximumFractionDigits = 2
+            minimumFractionDigits = 0
+            maximumFractionDigits = 0
             isGroupingUsed = false
             decimalFormatSymbols = DECIMAL_SYMBOLS
         }

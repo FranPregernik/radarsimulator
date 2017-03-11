@@ -486,7 +486,10 @@ class DesignerView : View() {
                                 textfield {
                                     disableProperty().bind(simulationController.simulationRunningProperty)
                                     textProperty().bindBidirectional(designerController.displayParameters.simulatedCurrentTimeSecProperty(), SecondsStringConverter())
-                                    minWidth = Font.getDefault().size * 5
+                                    minWidth = Font.getDefault().size * 3
+                                    maxWidth = Font.getDefault().size * 5
+                                    prefWidth = Font.getDefault().size * 4
+                                    alignment = Pos.BASELINE_CENTER
                                 }
 
                                 button("", fontAwesome.create(FORWARD)) {
