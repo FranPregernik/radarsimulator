@@ -27,6 +27,7 @@ class Styles : Stylesheet() {
         val radarFgColor = Color.GRAY
         val movingTargetHitFill = Color.BLUE
         val stationaryTargetHitFill = Color.GREEN
+        val hitColor = Color.GREEN
 
         val movingTargetPositionLabelColor = Color.WHITE
         val movingTargetCourseLineColor = Color.RED
@@ -87,17 +88,17 @@ class Styles : Stylesheet() {
 
         s(movingTargetTestOnePlotCircle) {
             fill = Color.TRANSPARENT
-            stroke = movingTargetCourseLineColor
+            stroke = hitColor
         }
 
         s(movingTargetTestTwoPlotWedge) {
-            fill = movingTargetCourseLineColor
-            stroke = movingTargetCourseLineColor
+            fill = hitColor
+            stroke = hitColor
         }
 
         s(movingTargetPlotMarker) {
-            stroke = Color.GREEN
-            fill = Color.GREEN
+            stroke = hitColor
+            fill = hitColor
         }
 
     }

@@ -3,7 +3,6 @@ package hr.franp.rsim.shapes
 import hr.franp.rsim.*
 import javafx.geometry.*
 import javafx.scene.*
-import javafx.scene.canvas.*
 import javafx.scene.image.*
 import javafx.scene.paint.*
 import javafx.scene.shape.*
@@ -116,10 +115,9 @@ class MovingTargetPlotMarker(x: Double, y: Double, r: Double = 2.0) : Circle(x, 
     }
 }
 
-class Test1TargetHitMarker(x: Double, y: Double) : Group() {
-    private val d = sqrt(pow(x, 2.0) + pow(y, 2.0))
+class Test1TargetHitMarker(cp: Point2D, d: Double) : Group() {
 
-    val marker = Circle(0.0, 0.0, d, Color.TRANSPARENT).apply {
+    val marker = Circle(cp.x, cp.y, d, Color.TRANSPARENT).apply {
         addClass(Styles.movingTargetTestOnePlotCircle)
         strokeWidth = 1.0
     }
@@ -130,10 +128,11 @@ class Test1TargetHitMarker(x: Double, y: Double) : Group() {
     }
 }
 
-class Test2TargetHitMarker(x: Double, y: Double, angleResolutionDeg: Double, maxDistance: Double) : Group() {
-    private val startAngleDeg = 360 - floor(toDegrees(atan2(y, x)) / angleResolutionDeg) * angleResolutionDeg
+class Test2TargetHitMarker(cp: Point2D, azDeg: Double, angleResolutionDeg: Double, maxDistance: Double) : Group() {
+    private val angleDeg = toDegrees(azimuthToAngle(toRadians(azDeg)))
+    private val startAngleDeg = floor(angleDeg / angleResolutionDeg) * angleResolutionDeg
 
-    val marker = Arc(0.0, 0.0, maxDistance, maxDistance, startAngleDeg, angleResolutionDeg).apply {
+    val marker = Arc(cp.x, cp.y, maxDistance, maxDistance, startAngleDeg, angleResolutionDeg).apply {
         addClass(Styles.movingTargetTestTwoPlotWedge)
         strokeWidth = 1.0
         type = ArcType.ROUND
@@ -143,71 +142,4 @@ class Test2TargetHitMarker(x: Double, y: Double, angleResolutionDeg: Double, max
         addClass(Styles.movingTargetPlotMarker)
         add(marker)
     }
-}
-
-
-fun GraphicsContext.movingHitMarker(innerRadius: Double, width: Double, angleRad: Double, spreadRad: Double) {
-    val angleAlpha = angleRad - spreadRad / 2.0
-    val angleAlphaNext = angleRad + spreadRad / 2.0
-    val outerRadius = innerRadius + width
-
-    //Point 1
-    val pointX1 = innerRadius * cos(angleAlpha)
-    val pointY1 = innerRadius * sin(angleAlpha)
-
-    //Point 2
-    val pointX2 = outerRadius * cos(angleAlpha)
-    val pointY2 = outerRadius * sin(angleAlpha)
-
-    //Point 3
-    val pointX3 = outerRadius * cos(angleAlphaNext)
-    val pointY3 = outerRadius * sin(angleAlphaNext)
-
-    //Point 4
-    val pointX4 = innerRadius * cos(angleAlphaNext)
-    val pointY4 = innerRadius * sin(angleAlphaNext)
-
-    fill = Styles.movingTargetHitFill
-    beginPath()
-    moveTo(pointX1, pointY1)
-    lineTo(pointX2, pointY2)
-    lineTo(pointX3, pointY3)
-    lineTo(pointX4, pointY4)
-    lineTo(pointX1, pointY1)
-    fill()
-    closePath()
-
-}
-
-fun GraphicsContext.stationaryHitMarker(innerRadius: Double, width: Double, angleRad: Double, spreadRad: Double) {
-    val angleAlpha = angleRad - spreadRad / 2.0
-    val angleAlphaNext = angleRad + spreadRad / 2.0
-    val outerRadius = innerRadius + width
-
-    //Point 1
-    val pointX1 = innerRadius * cos(angleAlpha)
-    val pointY1 = innerRadius * sin(angleAlpha)
-
-    //Point 2
-    val pointX2 = outerRadius * cos(angleAlpha)
-    val pointY2 = outerRadius * sin(angleAlpha)
-
-    //Point 3
-    val pointX3 = outerRadius * cos(angleAlphaNext)
-    val pointY3 = outerRadius * sin(angleAlphaNext)
-
-    //Point 4
-    val pointX4 = innerRadius * cos(angleAlphaNext)
-    val pointY4 = innerRadius * sin(angleAlphaNext)
-
-    fill = Styles.stationaryTargetHitFill
-    beginPath()
-    moveTo(pointX1, pointY1)
-    lineTo(pointX2, pointY2)
-    lineTo(pointX3, pointY3)
-    lineTo(pointX4, pointY4)
-    lineTo(pointX1, pointY1)
-    fill()
-    closePath()
-
 }

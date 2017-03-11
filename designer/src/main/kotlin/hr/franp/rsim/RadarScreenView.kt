@@ -467,6 +467,10 @@ az=${angleStringConverter.toString(az)}"""
 
             }
 
+        // TEMP: draw last N plots relative to current time
+        // HACK: not real plot points ....
+        val cp = combinedTransform.transform(0.0, 0.0)
+        val bp = combinedTransform.transform(designerController.radarParameters.maxRadarDistanceKm, 0.0)
         designerController.scenario.movingTargets
             .sortedBy { it.name }
             // show only if the target is selected or marked as display
@@ -474,56 +478,52 @@ az=${angleStringConverter.toString(az)}"""
             .forEach { target ->
                 val type = target.type ?: return@forEach
 
-                // TEMP: draw last N plots relative to current time
-                // HACK: not real plot points ....
-                if (type == MovingTargetType.Point) {
-                    val n = 6
-                    val fromTimeUs = S_TO_US * designerController.radarParameters.seekTimeSec * (floor(currentTimeS / designerController.radarParameters.seekTimeSec) - n)
 
-                    val timeIterator = generateSequence(fromTimeUs) { t -> t + S_TO_US * designerController.radarParameters.seekTimeSec }
-                        .takeWhile { t -> t < currentTimeUs }
-                        .iterator()
+                val n = 6
+                val fromTimeUs = S_TO_US * designerController.radarParameters.seekTimeSec * (floor(currentTimeS / designerController.radarParameters.seekTimeSec) - n)
 
-                    stream(spliteratorUnknownSize(timeIterator, Spliterator.ORDERED), false)
-                        .forEach inner@ { t ->
+                val timeIterator = generateSequence(fromTimeUs) { t -> t + S_TO_US * designerController.radarParameters.seekTimeSec }
+                    .takeWhile { t -> t < currentTimeUs }
+                    .iterator()
 
-                            val plotPathSegment = getCurrentPathSegment(target, t)
-                            val plotPosCart = plotPathSegment?.getPositionForTime(t)?.toCartesian()
+                stream(spliteratorUnknownSize(timeIterator, Spliterator.ORDERED), false)
+                    .forEach inner@ { t ->
 
-                            if (plotPosCart != null) {
+                        val plotPathSegment = getCurrentPathSegment(target, t)
+                        val radarCoordinate = plotPathSegment?.getPositionForTime(t)
+                        val plotPosCart = radarCoordinate?.toCartesian()
 
-                                // range check
-                                val distance = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
-                                if (distance < designerController.radarParameters.minRadarDistanceKm || distance > designerController.radarParameters.maxRadarDistanceKm) {
-                                    return@inner
-                                }
+                        if (plotPosCart != null) {
 
-                                val transformedPlot = combinedTransform.transform(plotPosCart)
+                            // range check
+                            val distance = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
+                            if (distance < designerController.radarParameters.minRadarDistanceKm || distance > designerController.radarParameters.maxRadarDistanceKm) {
+                                return@inner
+                            }
 
-                                val movingTarget = when (type) {
-                                    MovingTargetType.Cloud1 -> null
-                                    MovingTargetType.Cloud2 -> null
-                                    MovingTargetType.Point -> MovingTargetPlotMarker(
-                                        x = transformedPlot.x,
-                                        y = transformedPlot.y
-                                    )
-                                    MovingTargetType.Test1 -> Test1TargetHitMarker(
-                                        x = transformedPlot.x,
-                                        y = transformedPlot.y
-                                    )
-                                    MovingTargetType.Test2 -> Test2TargetHitMarker(
-                                        x = transformedPlot.x,
-                                        y = transformedPlot.y,
-                                        maxDistance = designerController.radarParameters.maxRadarDistanceKm,
-                                        angleResolutionDeg = designerController.radarParameters.horizontalAngleBeamWidthDeg
-                                    )
-                                }
-                                if (movingTarget != null) {
-                                    movingHitsGroup.add(movingTarget)
-                                }
+                            val transformedPlot = combinedTransform.transform(plotPosCart)
+
+                            val movingTarget = when (type) {
+                                MovingTargetType.Cloud1 -> null
+                                MovingTargetType.Cloud2 -> null
+                                MovingTargetType.Point -> MovingTargetPlotMarker(
+                                    x = transformedPlot.x,
+                                    y = transformedPlot.y
+                                )
+                                MovingTargetType.Test1 -> Test1TargetHitMarker(cp, transformedPlot.distance(cp))
+                                MovingTargetType.Test2 -> Test2TargetHitMarker(
+                                    cp,
+                                    radarCoordinate?.azDeg,
+                                    maxDistance = bp.distance(cp),
+                                    angleResolutionDeg = designerController.radarParameters.horizontalAngleBeamWidthDeg
+                                )
+
+                            }
+                            if (movingTarget != null) {
+                                movingHitsGroup.add(movingTarget)
                             }
                         }
-                }
+                    }
 
             }
 
