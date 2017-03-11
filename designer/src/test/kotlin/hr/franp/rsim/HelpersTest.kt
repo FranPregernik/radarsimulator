@@ -14,20 +14,17 @@ import java.lang.Math.*
 
 class HelpersTest : Spek({
 
-    val radarParameters = RadarParameters().apply {
-        impulsePeriodUs = 3003.0
-        maxImpulsePeriodUs = 3072.0
-        seekTimeSec = 12.0
-        azimuthChangePulse = 4096
-        horizontalAngleBeamWidthDeg = 1.4
-        distanceResolutionKm = 0.150
-        maxRadarDistanceKm = 400.0
+    val radarParameters = RadarParameters(
+        impulsePeriodUs = 3003.0,
+        maxImpulsePeriodUs = 3072.0,
+        seekTimeSec = 12.0,
+        azimuthChangePulse = 4096,
+        horizontalAngleBeamWidthDeg = 1.4,
+        distanceResolutionKm = 0.150,
+        maxRadarDistanceKm = 400.0,
         minRadarDistanceKm = 5.0
-    }
+    )
     val cParams = CalculationParameters(radarParameters)
-
-    val rotationTimeUs = radarParameters.seekTimeSec * S_TO_US
-
 
     given("A point target in distance detection range") {
 

@@ -294,66 +294,48 @@ data class PathSegment(
 
 }
 
-class RadarParameters {
-    /**
-     * TRIG impulse period - Ti
-     */
-    var impulsePeriodUs by property<Double>()
-
-    fun impulsePeriodUsProperty() = getProperty(RadarParameters::impulsePeriodUs)
+data class RadarParameters(
 
     /**
      * TRIG impulse period - Ti
      */
-    var maxImpulsePeriodUs by property<Double>()
-
-    fun maxImpulsePeriodUsProperty() = getProperty(RadarParameters::maxImpulsePeriodUs)
-
+    val impulsePeriodUs: Double,
+    /**
+     * TRIG impulse period - Ti
+     */
+    val maxImpulsePeriodUs: Double,
 
     /**
      * Time between two ARP pulses - Tpr
      */
-    var seekTimeSec by property<Double>()
-
-    fun seekTimeSProperty() = getProperty(RadarParameters::seekTimeSec)
-
+    val seekTimeSec: Double,
 
     /**
      * Azimuth change pulse - ACP
      */
-    var azimuthChangePulse by property<Int>()
-
-    fun azimuthChangePulseProperty() = getProperty(RadarParameters::azimuthChangePulse)
+    val azimuthChangePulse: Int,
 
     /**
      * Angle horizontally beam width (degrees) DAZ
      */
-    var horizontalAngleBeamWidthDeg by property<Double>()
-
-    fun horizontalAngleBeamWidthDegProperty() = getProperty(RadarParameters::horizontalAngleBeamWidthDeg)
+    val horizontalAngleBeamWidthDeg: Double,
 
     /**
      * Distance resolution in meters - DRc
      * Depends on the impulse time 1us = 150m
      */
-    var distanceResolutionKm by property<Double>()
-
-    fun distanceResolutionKmProperty() = getProperty(RadarParameters::distanceResolutionKm)
+    val distanceResolutionKm: Double,
 
     /**
      * Maximum radar distance - Rcmax
      */
-    var maxRadarDistanceKm by property<Double>()
-
-    fun maxRadarDistanceKmProperty() = getProperty(RadarParameters::maxRadarDistanceKm)
+    val maxRadarDistanceKm: Double,
 
     /**
      * Minimum radar distance - Rcmin
      */
-    var minRadarDistanceKm by property<Double>()
-
-    fun minRadarDistanceKmProperty() = getProperty(RadarParameters::minRadarDistanceKm)
-}
+    val minRadarDistanceKm: Double
+)
 
 /**
  * Options for display units for distance - kilometers or nautical miles

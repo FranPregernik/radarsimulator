@@ -12,16 +12,18 @@ import java.util.concurrent.*
 
 class SimulatorController : Controller() {
 
-    val radarParameters: RadarParameters = RadarParameters().apply {
-        impulsePeriodUs = 3003.0
-        maxImpulsePeriodUs = 3072.0
-        seekTimeSec = 12.0
-        azimuthChangePulse = 4096
-        horizontalAngleBeamWidthDeg = 1.4
-        distanceResolutionKm = 0.150
-        maxRadarDistanceKm = 400.0
+    var radarParameters by property(RadarParameters(
+        impulsePeriodUs = 3003.0,
+        maxImpulsePeriodUs = 3072.0,
+        seekTimeSec = 12.0,
+        azimuthChangePulse = 4096,
+        horizontalAngleBeamWidthDeg = 1.4,
+        distanceResolutionKm = 0.150,
+        maxRadarDistanceKm = 400.0,
         minRadarDistanceKm = 5.0
-    }
+    ))
+
+    val radarParametersProperty = getProperty(SimulatorController::radarParameters)
 
     private val sshClient = SSHClient().apply {
         // no need to verify, not really security oriented
@@ -212,9 +214,11 @@ class SimulatorController : Controller() {
             throw RuntimeException("Unable to calibrate")
         }
 
-        radarParameters.seekTimeSec = arpUs / S_TO_US
-        radarParameters.azimuthChangePulse = acpCnt
-        radarParameters.impulsePeriodUs = trigUs
+        radarParameters = radarParameters.copy(
+            seekTimeSec = arpUs / S_TO_US,
+            azimuthChangePulse = acpCnt,
+            impulsePeriodUs = trigUs
+        )
 
     }
 
