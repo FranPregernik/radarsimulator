@@ -268,7 +268,7 @@ class RadarScreenView : View() {
         }
 
         for (a in angleSequence) {
-            val angle = angleToAzimuth(a) - HALF_PI
+            val angle = HALF_PI - angleToAzimuth(a)
             val p = combinedTransform
                 .transform(
                     designerController.radarParameters.maxRadarDistanceKm * cos(angle),
