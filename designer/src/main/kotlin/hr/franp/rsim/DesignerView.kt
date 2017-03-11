@@ -123,6 +123,7 @@ class DesignerView : View() {
                                         designerController.radarParameters.impulsePeriodUs = third
                                     }
 
+                                    // TODO: move into SimulatorController.uploadClutterFile
                                     FileOutputStream("clutter.bin.gz").use { fileOutputStream ->
                                         GZIPOutputStream(fileOutputStream).use { stream ->
                                             stream.write(
@@ -173,6 +174,7 @@ class DesignerView : View() {
                                         }
                                     }
 
+                                    // TODO: move into SimulatorController.uploadTargetsFile
                                     FileOutputStream("targets.bin.gz").use { fileOutputStream ->
                                         GZIPOutputStream(fileOutputStream).use { stream ->
                                             stream.write(
