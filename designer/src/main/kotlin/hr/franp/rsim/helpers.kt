@@ -296,6 +296,32 @@ class DistanceStringConverter : StringConverter<Double>() {
     override fun toString(value: Double?) = if (value == null) "" else decimalFormat.format(value)
 }
 
+class SecondsStringConverter : StringConverter<Double>() {
+
+    companion object {
+        val decimalFormat = DecimalFormat().apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+            isGroupingUsed = false
+            decimalFormatSymbols = DECIMAL_SYMBOLS
+        }
+    }
+
+    /** {@inheritDoc}  */
+    override fun fromString(value: String?): Double? {
+        val safeValue = value?.trim() ?: return null
+
+        if (safeValue.isEmpty()) {
+            return null
+        }
+
+        return decimalFormat.parse(safeValue).toDouble()
+    }
+
+    /** {@inheritDoc}  */
+    override fun toString(value: Double?) = if (value == null) "" else decimalFormat.format(value)
+}
+
 class AngleStringConverter : StringConverter<Double>() {
 
     companion object {

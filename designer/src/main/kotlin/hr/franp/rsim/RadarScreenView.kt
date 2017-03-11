@@ -2,6 +2,7 @@ package hr.franp.rsim
 
 import hr.franp.rsim.models.*
 import hr.franp.rsim.shapes.*
+import javafx.animation.*
 import javafx.beans.property.*
 import javafx.beans.value.*
 import javafx.event.*
@@ -12,6 +13,7 @@ import javafx.scene.layout.*
 import javafx.scene.paint.*
 import javafx.scene.shape.*
 import javafx.scene.transform.*
+import javafx.util.*
 import tornadofx.*
 import java.lang.Math.*
 import java.util.*
@@ -46,7 +48,8 @@ class RadarScreenView : View() {
         draw()
     }
 
-    private val controller: DesignerController by inject()
+    private val designerController: DesignerController by inject()
+    private val simulationController: SimulatorController by inject()
 
     private val staticMarkersGroup = Pane()
     private val dynamicMarkersGroup = Pane()
@@ -81,9 +84,9 @@ class RadarScreenView : View() {
             addSelectionRectangleGesture(this, selectionRect, EventHandler {
                 if (it.isConsumed) {
                     if (selectionRect.width == 0.0 && selectionRect.height == 0.0) {
-                        controller.displayParameters.viewPort = null
+                        designerController.displayParameters.viewPort = null
                     } else {
-                        controller.displayParameters.viewPort = invCombinedTransform.transform(selectionRect.boundsInLocal)
+                        designerController.displayParameters.viewPort = invCombinedTransform.transform(selectionRect.boundsInLocal)
                     }
 
                     // refresh screen
@@ -104,11 +107,11 @@ class RadarScreenView : View() {
         root.heightProperty().addListener(boundsChangeListener)
 
         // redraw after model changes
-        controller.displayParameters.simulatedCurrentTimeSecProperty().addListener { _, _, _ ->
+        designerController.displayParameters.simulatedCurrentTimeSecProperty().addListener { _, _, _ ->
             drawDynamicMarkers()
             drawMovingTargets()
         }
-        controller.selectedMovingTargetProperty.addListener { _, _, _ ->
+        designerController.selectedMovingTargetProperty.addListener { _, _, _ ->
             drawMovingTargets()
         }
 
@@ -117,11 +120,11 @@ class RadarScreenView : View() {
 
     private fun setupViewPort() {
 
-        val viewPort = controller.displayParameters.viewPort ?: BoundingBox(
-            -controller.radarParameters.maxRadarDistanceKm * 1.1,
-            -controller.radarParameters.maxRadarDistanceKm * 1.1,
-            2 * controller.radarParameters.maxRadarDistanceKm * 1.1,
-            2 * controller.radarParameters.maxRadarDistanceKm * 1.1
+        val viewPort = designerController.displayParameters.viewPort ?: BoundingBox(
+            -designerController.radarParameters.maxRadarDistanceKm * 1.1,
+            -designerController.radarParameters.maxRadarDistanceKm * 1.1,
+            2 * designerController.radarParameters.maxRadarDistanceKm * 1.1,
+            2 * designerController.radarParameters.maxRadarDistanceKm * 1.1
         )
 
         val destViewPort = BoundingBox(0.0, 0.0, root.width, root.height)
@@ -183,13 +186,13 @@ class RadarScreenView : View() {
         staticMarkersGroup.add(distanceMarkersGroup)
 
         // Distance markers
-        val step = if (controller.displayParameters.distanceStepKm == 0.0)
-            controller.radarParameters.maxRadarDistanceKm
+        val step = if (designerController.displayParameters.distanceStepKm == 0.0)
+            designerController.radarParameters.maxRadarDistanceKm
         else
-            controller.displayParameters.distanceStepKm
-        val distanceSequence = sequenceOf(controller.radarParameters.minRadarDistanceKm, controller.radarParameters.maxRadarDistanceKm) +
-            generateSequence(controller.radarParameters.minRadarDistanceKm) { it + step }
-                .takeWhile { it <= controller.radarParameters.maxRadarDistanceKm - step / 3 }
+            designerController.displayParameters.distanceStepKm
+        val distanceSequence = sequenceOf(designerController.radarParameters.minRadarDistanceKm, designerController.radarParameters.maxRadarDistanceKm) +
+            generateSequence(designerController.radarParameters.minRadarDistanceKm) { it + step }
+                .takeWhile { it <= designerController.radarParameters.maxRadarDistanceKm - step / 3 }
 
         val cp = combinedTransform.transform(0.0, 0.0)
         for (r in distanceSequence) {
@@ -204,30 +207,30 @@ class RadarScreenView : View() {
         staticMarkersGroup.add(angleMarkersGroup)
 
         val angleSequence: Sequence<Double>
-        if (controller.displayParameters.azimuthSteps >= 0) {
-            val deltaAngleStep = TWO_PI / controller.displayParameters.azimuthSteps
+        if (designerController.displayParameters.azimuthSteps >= 0) {
+            val deltaAngleStep = TWO_PI / designerController.displayParameters.azimuthSteps
             angleSequence = generateSequence(0.0) { it + deltaAngleStep }
                 .takeWhile { it < (TWO_PI - deltaAngleStep / 3) }
         } else {
             angleSequence = sequenceOf(0.0, HALF_PI, PI, 3 * HALF_PI, TWO_PI)
         }
-        if (controller.displayParameters.azimuthMarkerType == AzimuthMarkerType.FULL) {
+        if (designerController.displayParameters.azimuthMarkerType == AzimuthMarkerType.FULL) {
             // draw full lines (like a spiderweb)
             for (a in angleSequence) {
                 val p1 = combinedTransform.transform(
-                    controller.radarParameters.minRadarDistanceKm * Math.cos(a),
-                    controller.radarParameters.minRadarDistanceKm * Math.sin(a)
+                    designerController.radarParameters.minRadarDistanceKm * Math.cos(a),
+                    designerController.radarParameters.minRadarDistanceKm * Math.sin(a)
                 )
                 val p2 = combinedTransform.transform(
-                    controller.radarParameters.maxRadarDistanceKm * Math.cos(a),
-                    controller.radarParameters.maxRadarDistanceKm * Math.sin(a)
+                    designerController.radarParameters.maxRadarDistanceKm * Math.cos(a),
+                    designerController.radarParameters.maxRadarDistanceKm * Math.sin(a)
                 )
                 angleMarkersGroup.add(AzimuthMarkerLine(p1, p2))
             }
         } else {
             // draw only ticks on distance markers (circles)
             for (a in angleSequence) {
-                for (d in distanceSequence.filter { it > controller.radarParameters.minRadarDistanceKm }) {
+                for (d in distanceSequence.filter { it > designerController.radarParameters.minRadarDistanceKm }) {
                     val length = 5
                     val pc = combinedTransform
                         .transform(
@@ -251,8 +254,8 @@ class RadarScreenView : View() {
             val angle = angleToAzimuth(a) - HALF_PI
             val p = combinedTransform
                 .transform(
-                    controller.radarParameters.maxRadarDistanceKm * cos(angle),
-                    controller.radarParameters.maxRadarDistanceKm * sin(angle)
+                    designerController.radarParameters.maxRadarDistanceKm * cos(angle),
+                    designerController.radarParameters.maxRadarDistanceKm * sin(angle)
                 )
                 .add(
                     20 * cos(angle),
@@ -266,31 +269,49 @@ class RadarScreenView : View() {
     fun drawDynamicMarkers() {
         dynamicMarkersGroup.children.clear()
 
+        val rad = TWO_PI * (designerController.displayParameters.simulatedCurrentTimeSec / designerController.radarParameters.seekTimeSec)
+
         // draw simulation position markers
         val simPosGroup = Group()
         dynamicMarkersGroup.add(simPosGroup)
 
-        val a = TWO_PI * (controller.displayParameters.simulatedCurrentTimeSec / controller.radarParameters.seekTimeSec)
-        val pc = combinedTransform.transform(0.0, 0.0)
-        val p = combinedTransform.transform(0.0, controller.radarParameters.maxRadarDistanceKm)
-            .add(0.0, 0.0)
+        val center = combinedTransform.transform(0.0, 0.0)
+        val p = combinedTransform.transform(0.0, designerController.radarParameters.maxRadarDistanceKm)
         simPosGroup.add(Circle(p.x, p.y, 5.0, Color.RED))
-        simPosGroup.transforms.add(Rotate(toDegrees(a), pc.x, pc.y))
+
+        val deg = toDegrees(rad)
+        val rotTransform = Rotate(deg, center.x, center.y)
+        simPosGroup.transforms.setAll(rotTransform)
+
+        if (simulationController.simulationRunningProperty.get()) {
+            timeline {
+                keyframe(Duration.seconds(designerController.radarParameters.seekTimeSec)) {
+                    keyvalue(rotTransform.angleProperty(), deg + 360, Interpolator.LINEAR)
+                }
+            }.apply {
+                simulationController.simulationRunningProperty.addListener { _, _, newValue ->
+                    if (!newValue) {
+                        stop()
+                    }
+                }
+            }
+
+        }
 
     }
 
     fun drawStationaryTargets() {
 
         stationaryTargetsGroup.children.clear()
-        if (controller.scenario.clutter == null) {
+        if (designerController.scenario.clutter == null) {
             return
         }
 
         // draw stationary targets
-        val width = (2.0 * controller.radarParameters.maxRadarDistanceKm)
-        val height = (2.0 * controller.radarParameters.maxRadarDistanceKm)
+        val width = (2.0 * designerController.radarParameters.maxRadarDistanceKm)
+        val height = (2.0 * designerController.radarParameters.maxRadarDistanceKm)
 
-        val rasterMapImage = controller.scenario.clutter.getImage(width.toInt(), height.toInt())
+        val rasterMapImage = designerController.scenario.clutter.getImage(width.toInt(), height.toInt())
 
         val transformedBounds = combinedTransform.transform(BoundingBox(
             -width / 2.0,
@@ -325,16 +346,16 @@ class RadarScreenView : View() {
         }
         hitsGroup.children.setAll(movingHitsGroup)
 
-        val currentTimeS = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
+        val currentTimeS = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
         val currentTimeUs = S_TO_US * currentTimeS
 
         // draw moving targets
-        val noneSelected = controller.selectedMovingTarget !in controller.scenario.movingTargets
-        val movingTargetCount = controller.scenario.movingTargets.size
-        controller.scenario.movingTargets
+        val noneSelected = designerController.selectedMovingTarget !in designerController.scenario.movingTargets
+        val movingTargetCount = designerController.scenario.movingTargets.size
+        designerController.scenario.movingTargets
             .sortedBy { it.name }
             // show only if the target is selected or marked as display
-            .filter { it == controller.selectedMovingTarget || controller.displayParameters.targetDisplayFilter.isEmpty() || it.name in controller.displayParameters.targetDisplayFilter }
+            .filter { it == designerController.selectedMovingTarget || designerController.displayParameters.targetDisplayFilter.isEmpty() || it.name in designerController.displayParameters.targetDisplayFilter }
             .forEachIndexed { i, target ->
 
                 val type = target.type ?: return@forEachIndexed
@@ -353,7 +374,7 @@ class RadarScreenView : View() {
                     1.0
                 )
 
-                val group = if (target != controller.selectedMovingTarget) nonSelectedTargetsGroup else selectedTargetGroup
+                val group = if (target != designerController.selectedMovingTarget) nonSelectedTargetsGroup else selectedTargetGroup
                 group.add(
                     MovingTargetPathMarker(p).apply {
                         stroke = color
@@ -446,10 +467,10 @@ az=${angleStringConverter.toString(az)}"""
 
             }
 
-        controller.scenario.movingTargets
+        designerController.scenario.movingTargets
             .sortedBy { it.name }
             // show only if the target is selected or marked as display
-            .filter { it == controller.selectedMovingTarget || controller.displayParameters.targetDisplayFilter.isEmpty() || it.name in controller.displayParameters.targetDisplayFilter }
+            .filter { it == designerController.selectedMovingTarget || designerController.displayParameters.targetDisplayFilter.isEmpty() || it.name in designerController.displayParameters.targetDisplayFilter }
             .forEach { target ->
                 val type = target.type ?: return@forEach
 
@@ -457,9 +478,9 @@ az=${angleStringConverter.toString(az)}"""
                 // HACK: not real plot points ....
                 if (type == MovingTargetType.Point) {
                     val n = 6
-                    val fromTimeUs = S_TO_US * controller.radarParameters.seekTimeSec * (floor(currentTimeS / controller.radarParameters.seekTimeSec) - n)
+                    val fromTimeUs = S_TO_US * designerController.radarParameters.seekTimeSec * (floor(currentTimeS / designerController.radarParameters.seekTimeSec) - n)
 
-                    val timeIterator = generateSequence(fromTimeUs) { t -> t + S_TO_US * controller.radarParameters.seekTimeSec }
+                    val timeIterator = generateSequence(fromTimeUs) { t -> t + S_TO_US * designerController.radarParameters.seekTimeSec }
                         .takeWhile { t -> t < currentTimeUs }
                         .iterator()
 
@@ -473,7 +494,7 @@ az=${angleStringConverter.toString(az)}"""
 
                                 // range check
                                 val distance = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
-                                if (distance < controller.radarParameters.minRadarDistanceKm || distance > controller.radarParameters.maxRadarDistanceKm) {
+                                if (distance < designerController.radarParameters.minRadarDistanceKm || distance > designerController.radarParameters.maxRadarDistanceKm) {
                                     return@inner
                                 }
 
@@ -493,8 +514,8 @@ az=${angleStringConverter.toString(az)}"""
                                     MovingTargetType.Test2 -> Test2TargetHitMarker(
                                         x = transformedPlot.x,
                                         y = transformedPlot.y,
-                                        maxDistance = controller.radarParameters.maxRadarDistanceKm,
-                                        angleResolutionDeg = controller.radarParameters.horizontalAngleBeamWidthDeg
+                                        maxDistance = designerController.radarParameters.maxRadarDistanceKm,
+                                        angleResolutionDeg = designerController.radarParameters.horizontalAngleBeamWidthDeg
                                     )
                                 }
                                 if (movingTarget != null) {

@@ -4,7 +4,6 @@ import hr.franp.*
 import hr.franp.rsim.models.*
 import hr.franp.rsim.models.AzimuthMarkerType.*
 import hr.franp.rsim.models.DistanceUnit.*
-import javafx.application.*
 import javafx.beans.property.*
 import javafx.embed.swing.*
 import javafx.geometry.*
@@ -13,16 +12,12 @@ import javafx.scene.image.*
 import javafx.scene.layout.*
 import javafx.scene.text.*
 import javafx.stage.*
-import javafx.util.converter.*
-import net.schmizz.sshj.*
-import net.schmizz.sshj.common.*
 import net.schmizz.sshj.xfer.*
 import org.controlsfx.glyphfont.*
 import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 import java.io.*
 import java.nio.*
-import java.util.concurrent.*
 import java.util.zip.*
 import javax.imageio.*
 import javax.json.Json.*
@@ -32,7 +27,10 @@ class DesignerView : View() {
     val status: TaskStatus by inject()
 
     private var fontAwesome = GlyphFontRegistry.font("FontAwesome")
-    private val controller: DesignerController by inject()
+
+    private val designerController: DesignerController by inject()
+    private val simulationController: SimulatorController by inject()
+
     private val radarScreen: RadarScreenView by inject()
     private val movingTargetEditor: MovingTargetEditorView by inject()
     private val movingTargetSelector: MovingTargetSelectorView by inject()
@@ -61,7 +59,10 @@ class DesignerView : View() {
                     paddingAll = 4
 
                     button("", fontAwesome.create(FOLDER_OPEN)) {
-                        disableProperty().bind(calculatingHitsProperty)
+                        disableProperty().bind(
+                            calculatingHitsProperty
+                                .or(simulationController.simulationRunningProperty)
+                        )
 
                         tooltip("Open scenario")
 
@@ -74,14 +75,17 @@ class DesignerView : View() {
                                     val newScenario = Scenario()
                                     newScenario.updateModel(jsonReader.readObject())
 
-                                    newScenario.copy(controller.scenario)
+                                    newScenario.copy(designerController.scenario)
                                 }
                             }
                         }
                     }
 
                     button("", fontAwesome.create(FLOPPY_ALT)) {
-                        disableProperty().bind(calculatingHitsProperty)
+                        disableProperty().bind(
+                            calculatingHitsProperty
+                                .or(simulationController.simulationRunningProperty)
+                        )
 
                         tooltip("Save scenario")
 
@@ -91,72 +95,32 @@ class DesignerView : View() {
 
                             file?.bufferedWriter()?.use { fileBufferWriter ->
                                 createWriter(fileBufferWriter)?.use { jsonWriter ->
-                                    jsonWriter.writeObject(controller.scenario.toJSON())
+                                    jsonWriter.writeObject(designerController.scenario.toJSON())
                                 }
                             }
                         }
                     }
 
                     button("", fontAwesome.create(COGS)) {
-                        disableProperty().bind(calculatingHitsProperty)
+                        disableProperty().bind(
+                            calculatingHitsProperty
+                                .or(simulationController.simulationRunningProperty)
+                        )
 
                         tooltip("Compute scenario")
 
                         setOnAction {
                             calculatingHitsProperty.set(true)
 
-                            try {
-                                runAsync {
+                            runAsync {
+                                try {
 
-                                    SSHClient().apply {
-                                        // no need to verify, not really security oriented
-                                        addHostKeyVerifier { _, _, _ -> true }
+                                    simulationController.stopSimulation()
 
-                                        useCompression()
-
-                                        connect("192.168.0.108")
-
-                                        // again security here is not an issue - petalinux default login
-                                        authPassword("root", "root")
-
-                                        // cleanup
-                                        startSession().use { it.exec("killall -9 radar-sim-test").join() }
-                                        startSession().use { it.exec("killall radar-sim-test").join() }
-
-                                        var arpUs = controller.radarParameters.seekTimeSec
-                                        var acpCnt = controller.radarParameters.azimuthChangePulse
-                                        var trigUs = controller.radarParameters.impulsePeriodUs
-                                        var calibrated = false
-                                        val valueRegex = "\\w+=(\\d+)".toRegex()
-
-                                        // calibrate sim
-                                        startSession().use { session ->
-                                            val cmd = session.exec("/mnt/radar-sim-test -c")
-                                            cmd.inputStream.use command@ { stdout ->
-                                                InputStreamReader(stdout).use { stdOutReader ->
-                                                    stdOutReader.forEachLine {
-                                                        log.info { it }
-                                                        val matchedValue = valueRegex.matchEntire(it)?.groups?.get(1)?.value
-                                                        if (it.startsWith("SIM_ARP_US")) {
-                                                            arpUs = matchedValue?.toDouble() ?: controller.radarParameters.seekTimeSec
-                                                        } else if (it.startsWith("SIM_ACP_CNT")) {
-                                                            acpCnt = matchedValue?.toInt() ?: controller.radarParameters.azimuthChangePulse
-                                                        } else if (it.startsWith("SIM_TRIG_US")) {
-                                                            trigUs = matchedValue?.toDouble() ?: controller.radarParameters.impulsePeriodUs
-                                                        } else if (it.startsWith("SIM_CAL")) {
-                                                            calibrated = (matchedValue?.toInt() ?: 0) > 0
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            cmd.join(1, TimeUnit.MINUTES)
-                                        }
-
-                                        if (calibrated) {
-                                            controller.radarParameters.seekTimeSec = arpUs / S_TO_US
-                                            controller.radarParameters.azimuthChangePulse = acpCnt
-                                            controller.radarParameters.impulsePeriodUs = trigUs
-                                        }
+                                    simulationController.calibrate().apply {
+                                        designerController.radarParameters.seekTimeSec = first
+                                        designerController.radarParameters.azimuthChangePulse = second
+                                        designerController.radarParameters.impulsePeriodUs = third
                                     }
 
                                     FileOutputStream("clutter.bin.gz").use { fileOutputStream ->
@@ -164,25 +128,25 @@ class DesignerView : View() {
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt((controller.radarParameters.seekTimeSec * S_TO_US).toInt())
+                                                    .putInt((designerController.radarParameters.seekTimeSec * S_TO_US).toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(controller.radarParameters.azimuthChangePulse.toInt())
+                                                    .putInt(designerController.radarParameters.azimuthChangePulse.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(controller.radarParameters.impulsePeriodUs.toInt())
+                                                    .putInt(designerController.radarParameters.impulsePeriodUs.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
+                                                    .putInt(designerController.radarParameters.maxImpulsePeriodUs.toInt())
                                                     .array()
                                             )
                                             stream.write(
@@ -194,12 +158,12 @@ class DesignerView : View() {
 
                                             updateMessage("Writing clutter sim")
                                             updateProgress(0.0, 1.0)
-                                            val clutterHits = controller.calculateClutterHits()
+                                            val clutterHits = designerController.calculateClutterHits()
                                             clutterHits.writeTo(stream)
 
                                             // DEBUG
                                             ImageIO.write(
-                                                SwingFXUtils.fromFXImage(generateRadarHitImage(clutterHits, controller.radarParameters), null),
+                                                SwingFXUtils.fromFXImage(generateRadarHitImage(clutterHits, designerController.radarParameters), null),
                                                 "png",
                                                 File("clutter.png")
                                             )
@@ -214,31 +178,31 @@ class DesignerView : View() {
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt((controller.radarParameters.seekTimeSec * S_TO_US).toInt())
+                                                    .putInt((designerController.radarParameters.seekTimeSec * S_TO_US).toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(controller.radarParameters.azimuthChangePulse.toInt())
+                                                    .putInt(designerController.radarParameters.azimuthChangePulse.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(controller.radarParameters.impulsePeriodUs.toInt())
+                                                    .putInt(designerController.radarParameters.impulsePeriodUs.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(controller.radarParameters.maxImpulsePeriodUs.toInt())
+                                                    .putInt(designerController.radarParameters.maxImpulsePeriodUs.toInt())
                                                     .array()
                                             )
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt((controller.scenario.simulationDurationMin * MIN_TO_S / controller.radarParameters.seekTimeSec).toInt())
+                                                    .putInt((designerController.scenario.simulationDurationMin * MIN_TO_S / designerController.radarParameters.seekTimeSec).toInt())
                                                     .array()
                                             )
 
@@ -248,10 +212,10 @@ class DesignerView : View() {
                                             updateProgress(0.0, 1.0)
 
                                             var seekTime = 0.0
-                                            controller.calculateTargetHits().forEach {
-                                                seekTime += controller.radarParameters.seekTimeSec
+                                            designerController.calculateTargetHits().forEach {
+                                                seekTime += designerController.radarParameters.seekTimeSec
                                                 updateProgress(
-                                                    seekTime / (controller.scenario.simulationDurationMin * MIN_TO_S),
+                                                    seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
                                                     1.0
                                                 )
                                                 mergedHits.or(it)
@@ -260,7 +224,7 @@ class DesignerView : View() {
 
                                             // DEBUG
                                             ImageIO.write(
-                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, controller.radarParameters), null),
+                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, designerController.radarParameters), null),
                                                 "png",
                                                 File("targets.png")
                                             )
@@ -270,136 +234,66 @@ class DesignerView : View() {
                                         }
                                     }
 
-                                    SSHClient().apply {
-                                        // no need to verify, not really security oriented
-                                        addHostKeyVerifier { _, _, _ -> true }
-
-                                        useCompression()
-
-                                        connect("192.168.0.108")
-
-                                        // again security here is not an issue - petalinux default login
-                                        authPassword("root", "root")
-
-                                        newSCPFileTransfer().apply {
-                                            transferListener = object : TransferListener {
-                                                override fun directory(name: String?): TransferListener {
-                                                    return this
-                                                }
-
-                                                override fun file(name: String?, size: Long): StreamCopier.Listener {
-                                                    return StreamCopier.Listener { transferred ->
-                                                        updateMessage("Transferring $name")
-                                                        updateProgress(transferred, size)
-                                                    }
-                                                }
-                                            }
-                                            upload(FileSystemFile("clutter.bin.gz"), "/var/")
-                                            upload(FileSystemFile("targets.bin.gz"), "/var/")
+                                    simulationController.uploadClutterFile(
+                                        FileSystemFile("clutter.bin.gz"),
+                                        { progress, message ->
+                                            updateMessage(message)
+                                            updateProgress(progress, 1.0)
                                         }
+                                    )
+                                    simulationController.uploadTargetsFile(
+                                        FileSystemFile("targets.bin.gz"),
+                                        { progress, message ->
+                                            updateMessage(message)
+                                            updateProgress(progress, 1.0)
+                                        }
+                                    )
 
-                                        // cleanup
-                                        startSession().use { it.exec("killall -9 radar-sim-test").join() }
-                                        startSession().use { it.exec("killall radar-sim-test").join() }
-                                        startSession().use { it.exec("rm -rf /var/clutter.bin").join() }
-                                        startSession().use { it.exec("rm -rf /var/targets.bin").join() }
-
-                                        updateMessage("Unpacking")
-                                        updateProgress(0.0, 1.0)
-                                        startSession().use { it.exec("gunzip /var/clutter.bin.gz").join() }
-                                        updateProgress(0.5, 1.0)
-                                        startSession().use { it.exec("gunzip /var/targets.bin.gz").join() }
-                                        updateProgress(1.0, 1.0)
-                                    }
-
-
-                                } ui {
+                                } finally {
                                     calculatingHitsProperty.set(false)
                                 }
-                            } finally {
-                                calculatingHitsProperty.set(false)
                             }
-
                         }
                     }
 
                     button("", fontAwesome.create(PLAY)) {
-                        disableProperty().bind(calculatingHitsProperty)
+                        disableProperty().bind(
+                            simulationController.simulationRunningProperty
+                                .or(calculatingHitsProperty)
+                        )
 
-                        tooltip("Transfer and begin simulation")
+                        tooltip("Begin simulation")
 
                         setOnAction {
 
-                            runAsync {
-
-                                SSHClient().apply {
-                                    // no need to verify, not really security oriented
-                                    addHostKeyVerifier { _, _, _ -> true }
-
-                                    useCompression()
-
-                                    connect("192.168.0.108")
-
-                                    // again security here is not an issue - petalinux default login
-                                    authPassword("root", "root")
-
-                                    // cleanup
-                                    startSession().use { it.exec("killall radar-sim-test").join() }
-                                    startSession().use { it.exec("killall -9 radar-sim-test").join() }
-
-                                    // start sim
-                                    val reg = "\\w+=(\\d+)/(\\d+)".toRegex()
-                                    startSession().use { session ->
-                                        val cmd = session.exec("/mnt/radar-sim-test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bin")
-                                        cmd.inputStream.use { stdout ->
-                                            updateMessage("Running simulation")
-                                            updateProgress(0.0, controller.scenario.simulationDurationMin * MIN_TO_S)
-                                            InputStreamReader(stdout).use { stdOutReader ->
-                                                stdOutReader.forEachLine { line ->
-                                                    if (line.startsWith("SIM_ACP_IDX")) {
-                                                        val simCurrentTimeSec = (reg.matchEntire(line)?.groups?.get(1)?.value ?: "0").toDouble() / controller.radarParameters.azimuthChangePulse * controller.radarParameters.seekTimeSec
-
-                                                        if (simCurrentTimeSec <= controller.scenario.simulationDurationMin * MIN_TO_S) {
-                                                            updateProgress(simCurrentTimeSec, controller.scenario.simulationDurationMin * MIN_TO_S)
-                                                            Platform.runLater {
-                                                                controller.displayParameters.simulatedCurrentTimeSec = simCurrentTimeSec
-                                                            }
-                                                        }
-                                                    }
-                                                    log.info { line }
-                                                }
-                                            }
-                                        }
-                                        cmd.join()
-                                    }
+                            simulationController.currentTimeSecProperty.addListener { _, _, newValue ->
+                                val simCurrentTimeSec = newValue.toDouble()
+                                if (simCurrentTimeSec.isNaN()) {
+                                    return@addListener
                                 }
 
+                                if (simCurrentTimeSec <= designerController.scenario.simulationDurationMin * MIN_TO_S) {
+                                    designerController.displayParameters.simulatedCurrentTimeSec = simCurrentTimeSec
+                                }
+                            }
+
+                            runAsync {
+                                simulationController.startSimulation({ progress, message ->
+                                    updateMessage(message)
+                                    updateProgress(progress, 1.0)
+                                })
                             }
 
                         }
                     }
 
                     button("", fontAwesome.create(STOP)) {
-                        disableProperty().bind(calculatingHitsProperty)
+                        disableProperty().bind(simulationController.simulationRunningProperty.not())
 
                         tooltip("Stop simulation")
 
                         setOnAction {
-                            SSHClient().apply {
-                                // no need to verify, not really security oriented
-                                addHostKeyVerifier { _, _, _ -> true }
-
-                                useCompression()
-
-                                connect("192.168.0.108")
-
-                                // again security here is not an issue - petalinux default login
-                                authPassword("root", "root")
-
-                                // cleanup
-                                startSession().use { it.exec("killall radar-sim-test").join() }
-                                startSession().use { it.exec("killall -9 radar-sim-test").join() }
-                            }
+                            simulationController.stopSimulation()
                         }
                     }
 
@@ -426,13 +320,13 @@ class DesignerView : View() {
                                     togglebutton(Km.toString()) {
                                         isSelected = true
                                         setOnAction {
-                                            controller.displayParameters.distanceUnit = Km
+                                            designerController.displayParameters.distanceUnit = Km
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
                                     togglebutton(NM.toString()) {
                                         setOnAction {
-                                            controller.displayParameters.distanceUnit = NM
+                                            designerController.displayParameters.distanceUnit = NM
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
@@ -440,17 +334,17 @@ class DesignerView : View() {
 
                                 togglegroup {
                                     togglebutton("0").setOnAction {
-                                        controller.displayParameters.distanceStepKm = 0.0
+                                        designerController.displayParameters.distanceStepKm = 0.0
                                         radarScreen.drawStaticMarkers()
                                     }
                                     togglebutton("10").setOnAction {
-                                        controller.displayParameters.distanceStepKm = 10.0
+                                        designerController.displayParameters.distanceStepKm = 10.0
                                         radarScreen.drawStaticMarkers()
                                     }
                                     togglebutton("50") {
                                         isSelected = true
                                         setOnAction {
-                                            controller.displayParameters.distanceStepKm = 50.0
+                                            designerController.displayParameters.distanceStepKm = 50.0
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
@@ -467,13 +361,13 @@ class DesignerView : View() {
                                     togglebutton(FULL.toString()) {
                                         isSelected = true
                                         setOnAction {
-                                            controller.displayParameters.azimuthMarkerType = FULL
+                                            designerController.displayParameters.azimuthMarkerType = FULL
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
                                     togglebutton(MIN.toString()) {
                                         setOnAction {
-                                            controller.displayParameters.azimuthMarkerType = MIN
+                                            designerController.displayParameters.azimuthMarkerType = MIN
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
@@ -481,17 +375,17 @@ class DesignerView : View() {
 
                                 togglegroup {
                                     togglebutton("0").setOnAction {
-                                        controller.displayParameters.azimuthSteps = 0
+                                        designerController.displayParameters.azimuthSteps = 0
                                         radarScreen.drawStaticMarkers()
                                     }
                                     togglebutton("5").setOnAction {
-                                        controller.displayParameters.azimuthSteps = 72
+                                        designerController.displayParameters.azimuthSteps = 72
                                         radarScreen.drawStaticMarkers()
                                     }
                                     togglebutton("10") {
                                         isSelected = true
                                         setOnAction {
-                                            controller.displayParameters.azimuthSteps = 36
+                                            designerController.displayParameters.azimuthSteps = 36
                                             radarScreen.drawStaticMarkers()
                                         }
                                     }
@@ -542,10 +436,10 @@ class DesignerView : View() {
                                             .firstOrNull()
 
                                         if (file != null) {
-                                            controller.scenario.clutter = Clutter(file)
+                                            designerController.scenario.clutter = Clutter(file)
                                             radarScreen.draw()
                                             this.tooltip = Tooltip("Select clutter map").apply {
-                                                graphic = ImageView(controller.scenario.clutter.getImage(100, 100))
+                                                graphic = ImageView(designerController.scenario.clutter.getImage(100, 100))
                                             }
                                         }
                                     }
@@ -557,55 +451,74 @@ class DesignerView : View() {
                             field("Tsim") {
 
                                 button("", fontAwesome.create(STEP_BACKWARD)) {
-                                    disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0))
+                                    disableProperty().bind(
+                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0)
+                                            .or(simulationController.simulationRunningProperty)
+                                    )
                                     setOnAction {
-                                        controller.displayParameters.simulatedCurrentTimeSec = 0.0
+                                        designerController.displayParameters.simulatedCurrentTimeSec = 0.0
                                     }
                                 }
                                 button("", fontAwesome.create(FAST_BACKWARD)) {
-                                    disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0))
+                                    disableProperty().bind(
+                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0)
+                                            .or(simulationController.simulationRunningProperty)
+                                    )
                                     minWidth = Font.getDefault().size * 3
                                     setOnAction {
-                                        val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
-                                        val newTime = simulatedCurrentTimeSec - 10 * controller.radarParameters.seekTimeSec
-                                        controller.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
+                                        val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val newTime = simulatedCurrentTimeSec - 10 * designerController.radarParameters.seekTimeSec
+                                        designerController.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
                                     }
                                 }
                                 button("", fontAwesome.create(BACKWARD)) {
-                                    disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0))
+                                    disableProperty().bind(
+                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(0.0)
+                                            .or(simulationController.simulationRunningProperty)
+                                    )
                                     setOnAction {
-                                        val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
-                                        val newTime = simulatedCurrentTimeSec - controller.radarParameters.seekTimeSec
-                                        controller.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
+                                        val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val newTime = simulatedCurrentTimeSec - designerController.radarParameters.seekTimeSec
+                                        designerController.displayParameters.simulatedCurrentTimeSec = Math.max(newTime, 0.0)
                                     }
                                 }
 
                                 textfield {
-                                    textProperty().bindBidirectional(controller.displayParameters.simulatedCurrentTimeSecProperty(), DoubleStringConverter())
+                                    disableProperty().bind(simulationController.simulationRunningProperty)
+                                    textProperty().bindBidirectional(designerController.displayParameters.simulatedCurrentTimeSecProperty(), SecondsStringConverter())
                                     minWidth = Font.getDefault().size * 5
                                 }
 
                                 button("", fontAwesome.create(FORWARD)) {
-                                    disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(controller.scenario.simulationDurationMin * MIN_TO_S))
+                                    disableProperty().bind(
+                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                            .or(simulationController.simulationRunningProperty)
+                                    )
                                     setOnAction {
-                                        val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
-                                        val newTime = simulatedCurrentTimeSec + controller.radarParameters.seekTimeSec
-                                        controller.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, controller.scenario.simulationDurationMin * MIN_TO_S)
+                                        val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val newTime = simulatedCurrentTimeSec + designerController.radarParameters.seekTimeSec
+                                        designerController.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S)
                                     }
                                 }
                                 button("", fontAwesome.create(FAST_FORWARD)) {
-                                    disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(controller.scenario.simulationDurationMin * MIN_TO_S))
+                                    disableProperty().bind(
+                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                            .or(simulationController.simulationRunningProperty)
+                                    )
                                     minWidth = Font.getDefault().size * 3
                                     setOnAction {
-                                        val simulatedCurrentTimeSec = controller.displayParameters.simulatedCurrentTimeSec ?: 0.0
-                                        val newTime = simulatedCurrentTimeSec + 10 * controller.radarParameters.seekTimeSec
-                                        controller.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, controller.scenario.simulationDurationMin * MIN_TO_S)
+                                        val simulatedCurrentTimeSec = designerController.displayParameters.simulatedCurrentTimeSec ?: 0.0
+                                        val newTime = simulatedCurrentTimeSec + 10 * designerController.radarParameters.seekTimeSec
+                                        designerController.displayParameters.simulatedCurrentTimeSec = Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S)
                                     }
                                 }
                                 button("", fontAwesome.create(STEP_FORWARD)) {
-                                    disableProperty().bind(controller.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(controller.scenario.simulationDurationMin * MIN_TO_S))
+                                    disableProperty().bind(
+                                        designerController.displayParameters.simulatedCurrentTimeSecProperty().isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                            .or(simulationController.simulationRunningProperty)
+                                    )
                                     setOnAction {
-                                        controller.displayParameters.simulatedCurrentTimeSec = controller.scenario.simulationDurationMin * MIN_TO_S
+                                        designerController.displayParameters.simulatedCurrentTimeSec = designerController.scenario.simulationDurationMin * MIN_TO_S
                                     }
                                 }
 
