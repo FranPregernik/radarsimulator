@@ -167,7 +167,15 @@ class RadarScreenView : View() {
 
         }
 
-        return null
+        return PathSegment(
+            p1 = p1,
+            p2 = p1,
+            t1Us = t1,
+            t2Us = currentTimeUs,
+            vxKmUs = 0.0,
+            vyKmUs = 0.0,
+            type = movingTarget.type
+        )
     }
 
     fun draw() {
