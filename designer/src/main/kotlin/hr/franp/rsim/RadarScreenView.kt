@@ -148,16 +148,16 @@ class RadarScreenView : View() {
      * Read the view config from file.
      */
     private fun readConfig(): DisplayParameters = DisplayParameters(
-        distanceStep = (config["distanceStep"] as String?)?.toDouble() ?: 50.0,
+        distanceStep = config.double("distanceStep") ?: 50.0,
         distanceUnit = DistanceUnit.valueOf(
-            config.getOrDefault("distanceUnit", DistanceUnit.Km.toString()) as String
+            config.string("distanceUnit", DistanceUnit.Km.toString())
         ),
-        azimuthSteps = (config["azimuthSteps"] as String?)?.toInt() ?: 36,
+        azimuthSteps = config.string("azimuthSteps")?.toInt() ?: 36,
         azimuthMarkerType = AzimuthMarkerType.valueOf(
-            config.getOrDefault("azimuthMarkerType", AzimuthMarkerType.FULL.toString()) as String
+            config.string("azimuthMarkerType", AzimuthMarkerType.FULL.toString())
         ),
         coordinateSystem = CoordinateSystem.valueOf(
-            config.getOrDefault("coordinateSystem", CoordinateSystem.R_AZ.toString()) as String
+            config.string("coordinateSystem", CoordinateSystem.R_AZ.toString())
         ),
         viewPort = null,
         targetDisplayFilter = emptySequence()
