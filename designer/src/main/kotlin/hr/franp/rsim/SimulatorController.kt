@@ -31,10 +31,13 @@ class SimulatorController : Controller(), AutoCloseable {
 
         useCompression()
 
-        connect("192.168.0.108")
+        connect(config.string("simulatorIp"))
 
         // again security here is not an issue - petalinux default login
-        authPassword("root", "root")
+        authPassword(
+            config.string("username", "root"),
+            config.string("password", "root")
+        )
     }
 
     override fun close() {
