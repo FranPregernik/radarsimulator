@@ -507,8 +507,8 @@ class RadarScreenView : View() {
                 val plotPosCart = plotPos.toCartesian()
                 val pt = combinedTransform.transform(plotPosCart)
 
-                val distanceKm = sqrt(pow(pt.x, 2.0) + pow(pt.y, 2.0))
-                val az = toDegrees(angleToAzimuth(atan2(pt.y, pt.x)))
+                val distanceKm = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
+                val az = toDegrees(angleToAzimuth(atan2(plotPosCart.y, plotPosCart.x)))
 
                 val text = """${target.name}
 hdg=${angleStringConverter.toString(plotPathSegment.headingDeg)}
