@@ -14,6 +14,7 @@ class SimulatorController : Controller() {
 
     var radarParameters by property(RadarParameters(
         impulsePeriodUs = 3003.0,
+        impulseSignalUs = 3.0,
         maxImpulsePeriodUs = 3072.0,
         seekTimeSec = 12.0,
         azimuthChangePulse = 4096,

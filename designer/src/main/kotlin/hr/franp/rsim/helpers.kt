@@ -430,10 +430,20 @@ fun calculatePointTargetHits(hits: Bits, position: RadarCoordinate, sweepHeading
 
     val sweepIdx = round(sweepHeadingRad / cParam.c1).toInt()
     val normSweepIdx = ((sweepIdx % cParam.azimuthChangePulseCount) + cParam.azimuthChangePulseCount) % cParam.azimuthChangePulseCount
-    val bitIdx = normSweepIdx * cParam.maxImpulsePeriodUs + signalTimeUs
 
-    // set signal hit
-    hits.setBit(bitIdx, true)
+    // response must be as long as the radar impulse signal duration
+    val fromBitIdx = normSweepIdx * cParam.maxImpulsePeriodUs + signalTimeUs
+    val toSignalTimeUs = min(
+        signalTimeUs + cParam.radarParameters.impulseSignalUs.toInt() - 1,
+        cParam.maxSignalTimeUs.toInt()
+    )
+    val toBitIdx = normSweepIdx * cParam.maxImpulsePeriodUs + toSignalTimeUs
+
+    // set signal hits taking into account the impulse signal duration
+    (fromBitIdx..toBitIdx).forEach { i ->
+        // set signal hit
+        hits.setBit(i, true)
+    }
 
 }
 
@@ -454,11 +464,20 @@ fun calculateTest1TargetHits(hits: Bits, position: RadarCoordinate, sweepHeading
 
     val sweepIdx = round(sweepHeadingRad / cParam.c1).toInt()
     val normSweepIdx = ((sweepIdx % cParam.azimuthChangePulseCount) + cParam.azimuthChangePulseCount) % cParam.azimuthChangePulseCount
-    val bitIdx = normSweepIdx * cParam.maxImpulsePeriodUs + signalTimeUs
 
-    // set signal hit
-    hits.setBit(bitIdx, true)
+    // response must be as long as the radar impulse signal duration
+    val fromBitIdx = normSweepIdx * cParam.maxImpulsePeriodUs + signalTimeUs
+    val toSignalTimeUs = min(
+        signalTimeUs + cParam.radarParameters.impulseSignalUs.toInt() - 1,
+        cParam.maxSignalTimeUs.toInt()
+    )
+    val toBitIdx = normSweepIdx * cParam.maxImpulsePeriodUs + toSignalTimeUs
 
+    // set signal hits taking into account the impulse signal duration
+    (fromBitIdx..toBitIdx).forEach { i ->
+        // set signal hit
+        hits.setBit(i, true)
+    }
 }
 
 /**

@@ -334,7 +334,9 @@ data class RadarParameters(
     /**
      * Minimum radar distance - Rcmin
      */
-    val minRadarDistanceKm: Double
+    val minRadarDistanceKm: Double,
+
+    val impulseSignalUs: Double
 )
 
 /**
