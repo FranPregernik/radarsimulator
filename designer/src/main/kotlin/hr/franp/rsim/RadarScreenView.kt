@@ -22,14 +22,14 @@ import java.util.stream.StreamSupport.*
 
 class RadarScreenView : View() {
 
-    val displayParameters: DisplayParameters = DisplayParameters().apply {
-        distanceStep = 50.0
-        distanceUnit = DistanceUnit.Km
-        azimuthSteps = 36
-        azimuthMarkerType = AzimuthMarkerType.FULL
-        coordinateSystem = CoordinateSystem.R_AZ
-        simulatedCurrentTimeSec = 0.0
-    }
+    /**
+     * Current time in the simulation
+     */
+    val simulatedCurrentTimeSecProperty = SimpleDoubleProperty(0.0)
+
+    var displayParameters by property(readConfig())
+
+    val displayParametersProperty = getProperty(RadarScreenView::displayParameters)
 
     private var combinedTransform: Transform = Affine()
     private var invCombinedTransform: Transform = combinedTransform.createInverse()
@@ -75,7 +75,6 @@ class RadarScreenView : View() {
     private val speedStringConverter = SpeedStringConverter()
     private val distanceStringConverter = DistanceStringConverter()
 
-
     init {
 
         with(root) {
@@ -92,14 +91,13 @@ class RadarScreenView : View() {
 
             addSelectionRectangleGesture(this, selectionRect, EventHandler {
                 if (it.isConsumed) {
-                    if (selectionRect.width == 0.0 && selectionRect.height == 0.0) {
-                        displayParameters.viewPort = null
-                    } else {
-                        displayParameters.viewPort = invCombinedTransform.transform(selectionRect.boundsInLocal)
-                    }
-
-                    // refresh screen
-                    draw()
+                    displayParameters = displayParameters.copy(
+                        viewPort = if (selectionRect.width == 0.0 && selectionRect.height == 0.0) {
+                            null
+                        } else {
+                            invCombinedTransform.transform(selectionRect.boundsInLocal)
+                        }
+                    )
                 }
             })
 
@@ -116,15 +114,63 @@ class RadarScreenView : View() {
         root.heightProperty().addListener(boundsChangeListener)
 
         // redraw after model changes
-        displayParameters.simulatedCurrentTimeSecProperty().addListener { _, _, _ ->
-            drawDynamicMarkers()
-            drawMovingTargets()
+        simulatedCurrentTimeSecProperty.addListener { _, _, _ ->
+            draw()
         }
         designerController.selectedMovingTargetProperty.addListener { _, _, _ ->
             drawMovingTargets()
         }
+        displayParametersProperty.addListener { _, _, _ ->
+            draw()
+        }
+
+        // config
+        writeConfig()
+        displayParametersProperty.addListener { _, _, _ ->
+            writeConfig()
+        }
 
     }
+
+    /**
+     * Write the view config to file.
+     */
+    private fun writeConfig() {
+        config["distanceStep"] = displayParameters.distanceStep.toString()
+        config["distanceUnit"] = displayParameters.distanceUnit.toString()
+        config["azimuthSteps"] = displayParameters.azimuthSteps.toString()
+        config["azimuthMarkerType"] = displayParameters.azimuthMarkerType.toString()
+        config["coordinateSystem"] = displayParameters.coordinateSystem.toString()
+        config.save()
+    }
+
+    /**
+     * Read the view config from file.
+     */
+    private fun readConfig(): DisplayParameters = DisplayParameters(
+        distanceStep = (config["distanceStep"] as String?)?.toDouble() ?: 50.0,
+        distanceUnit = DistanceUnit.valueOf(
+            config.getOrDefault("distanceUnit", DistanceUnit.Km.toString()) as String
+        ),
+        azimuthSteps = (config["azimuthSteps"] as String?)?.toInt() ?: 36,
+        azimuthMarkerType = AzimuthMarkerType.valueOf(
+            config.getOrDefault("azimuthMarkerType", AzimuthMarkerType.FULL.toString()) as String
+        ),
+        coordinateSystem = CoordinateSystem.valueOf(
+            config.getOrDefault("coordinateSystem", CoordinateSystem.R_AZ.toString()) as String
+        ),
+        viewPort = null,
+        targetDisplayFilter = emptySequence()
+    )
+
+
+    /**
+     * Calculates the scale of conversion between the selected display units and the native Km
+     */
+    private fun distanceToKmScale() = if (displayParameters.distanceUnit == DistanceUnit.NM)
+        1.852
+    else
+        1.0
 
 
     private fun setupViewPort() {
@@ -196,6 +242,24 @@ class RadarScreenView : View() {
 
     }
 
+    fun configDistanceDisplay(distanceUnit: DistanceUnit, step: Double? = 0.0) {
+        displayParametersProperty.set(
+            displayParameters.copy(
+                distanceUnit = distanceUnit,
+                distanceStep = step ?: displayParameters.distanceStep
+            )
+        )
+    }
+
+    fun configAzimuthDisplay(azimuthMarkerType: AzimuthMarkerType, step: Int? = 0) {
+        displayParametersProperty.set(
+            displayParameters.copy(
+                azimuthMarkerType = azimuthMarkerType,
+                azimuthSteps = step ?: displayParameters.azimuthSteps
+            )
+        )
+    }
+
     fun draw() {
         setupViewPort()
         drawStationaryTargets()
@@ -212,7 +276,7 @@ class RadarScreenView : View() {
         staticMarkersGroup.add(distanceMarkersGroup)
 
         // scale in case of nautical miles
-        val distanceToKmScale = displayParameters.distanceToKmScale()
+        val distanceToKmScale = distanceToKmScale()
 
         // Distance markers
         val stepKm = if (displayParameters.distanceStep == 0.0)
@@ -303,7 +367,7 @@ class RadarScreenView : View() {
     fun drawDynamicMarkers() {
         dynamicMarkersGroup.children.clear()
 
-        val rad = TWO_PI * (displayParameters.simulatedCurrentTimeSec / simulatorController.radarParameters.seekTimeSec)
+        val rad = TWO_PI * (simulatedCurrentTimeSecProperty.get() / simulatorController.radarParameters.seekTimeSec)
 
         // draw simulation position markers
         val simPosGroup = Group()
@@ -380,7 +444,7 @@ class RadarScreenView : View() {
         }
         hitsGroup.children.setAll(movingHitsGroup)
 
-        val currentTimeS = displayParameters.simulatedCurrentTimeSec ?: 0.0
+        val currentTimeS = simulatedCurrentTimeSecProperty.get()
         val currentTimeUs = S_TO_US * currentTimeS
 
         // draw moving targets
@@ -389,7 +453,7 @@ class RadarScreenView : View() {
         designerController.scenario.movingTargets
             .sortedBy { it.name }
             // show only if the target is selected or marked as display
-            .filter { it == designerController.selectedMovingTarget || displayParameters.targetDisplayFilter.isEmpty() || it.name in displayParameters.targetDisplayFilter }
+            .filter { it == designerController.selectedMovingTarget || displayParameters.targetDisplayFilter.none() || it.name in displayParameters.targetDisplayFilter }
             .forEachIndexed { i, target ->
 
                 val type = target.type ?: return@forEachIndexed
@@ -447,7 +511,7 @@ class RadarScreenView : View() {
                 val text = """${target.name}
 hdg=${angleStringConverter.toString(plotPathSegment.headingDeg)}
 spd=${speedStringConverter.toString(plotPathSegment.vKmh)}
-r=${distanceStringConverter.toString(distanceKm / displayParameters.distanceToKmScale())}
+r=${distanceStringConverter.toString(distanceKm / distanceToKmScale())}
 az=${angleStringConverter.toString(az)}"""
 
                 val movingTarget = when (type) {
@@ -508,7 +572,7 @@ az=${angleStringConverter.toString(az)}"""
         designerController.scenario.movingTargets
             .sortedBy { it.name }
             // show only if the target is selected or marked as display
-            .filter { it == designerController.selectedMovingTarget || displayParameters.targetDisplayFilter.isEmpty() || it.name in displayParameters.targetDisplayFilter }
+            .filter { it == designerController.selectedMovingTarget || displayParameters.targetDisplayFilter.none() || it.name in displayParameters.targetDisplayFilter }
             .forEach { target ->
                 val type = target.type ?: return@forEach
 
@@ -547,7 +611,7 @@ az=${angleStringConverter.toString(az)}"""
                                 MovingTargetType.Test1 -> Test1TargetHitMarker(cp, transformedPlot.distance(cp))
                                 MovingTargetType.Test2 -> Test2TargetHitMarker(
                                     cp,
-                                    plotPos?.azDeg,
+                                    plotPos.azDeg,
                                     maxDistance = bp.distance(cp),
                                     angleResolutionDeg = simulatorController.radarParameters.horizontalAngleBeamWidthDeg
                                 )

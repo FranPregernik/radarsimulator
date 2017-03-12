@@ -202,6 +202,7 @@ class RectangleSelectionController(private val root: Parent,
 
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun performDragEnd(root: Parent, event: MouseEvent) {
         rectangle.removeFromParent()
     }
@@ -296,7 +297,7 @@ class DistanceStringConverter : StringConverter<Double>() {
     override fun toString(value: Double?) = if (value == null) "" else decimalFormat.format(value)
 }
 
-class SecondsStringConverter : StringConverter<Double>() {
+class SecondsStringConverter : StringConverter<Number>() {
 
     companion object {
         val decimalFormat = DecimalFormat().apply {
@@ -308,7 +309,7 @@ class SecondsStringConverter : StringConverter<Double>() {
     }
 
     /** {@inheritDoc}  */
-    override fun fromString(value: String?): Double? {
+    override fun fromString(value: String?): Number? {
         val safeValue = value?.trim() ?: return null
 
         if (safeValue.isEmpty()) {
@@ -319,7 +320,7 @@ class SecondsStringConverter : StringConverter<Double>() {
     }
 
     /** {@inheritDoc}  */
-    override fun toString(value: Double?) = if (value == null) "" else decimalFormat.format(value)
+    override fun toString(value: Number?) = if (value == null) "" else decimalFormat.format(value)
 }
 
 class AngleStringConverter : StringConverter<Double>() {

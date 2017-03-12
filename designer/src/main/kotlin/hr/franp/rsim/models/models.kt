@@ -355,63 +355,42 @@ enum class AzimuthMarkerType {
     FULL, MIN
 }
 
-class DisplayParameters {
+data class DisplayParameters(
+
     /**
      * Draw distance marker circles around the radar
      */
-    var distanceStep by property<Double>()
-
-    fun distanceStepProperty() = getProperty(DisplayParameters::distanceStep)
+    val distanceStep: Double,
 
     /**
      * Current displayed distance unit
      */
-    var distanceUnit by property<DistanceUnit>()
-
-    fun distanceUnitProperty() = getProperty(DisplayParameters::distanceUnit)
-
-    fun distanceToKmScale() = if (distanceUnit == DistanceUnit.NM)
-        1.852
-    else
-        1.0
+    val distanceUnit: DistanceUnit,
 
     /**
      * Draw azimuth lines
      */
-    var azimuthSteps by property<Int>()
-
-    fun azimuthStepsProperty() = getProperty(DisplayParameters::azimuthSteps)
+    val azimuthSteps: Int,
 
     /**
      * Type of azimuth display
      */
-    var azimuthMarkerType by property<AzimuthMarkerType>()
-
-    fun azimuthMarkerTypeProperty() = getProperty(DisplayParameters::azimuthMarkerType)
+    val azimuthMarkerType: AzimuthMarkerType,
 
     /**
      * Current coordinate display system
      */
-    var coordinateSystem by property<CoordinateSystem>()
-
-    fun coordinateSystemProperty() = getProperty(DisplayParameters::coordinateSystem)
+    val coordinateSystem: CoordinateSystem,
 
     /**
-     * Current time in the simulation
+     * Display viewport (zoomed in region)
      */
-    var simulatedCurrentTimeSec by property<Double>()
-
-    fun simulatedCurrentTimeSecProperty() = getProperty(DisplayParameters::simulatedCurrentTimeSec)
-
-
-    var viewPort by property<Bounds?>()
-    fun viewPortProperty() = getProperty(DisplayParameters::viewPort)
+    val viewPort: Bounds?,
 
     /**
      * List of targets to display.
      * If empty then all targets are displayed
      */
-    var targetDisplayFilter by property(observableArrayList<String>())
+    val targetDisplayFilter: Sequence<String>
 
-    fun targetDisplayFilterProperty() = getProperty(DisplayParameters::targetDisplayFilter)
-}
+)
