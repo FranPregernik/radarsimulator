@@ -446,8 +446,8 @@ class RadarScreenView : View() {
         }
         hitsGroup.children.setAll(movingHitsGroup)
 
-        val currentTimeS = simulatedCurrentTimeSecProperty.get()
-        val currentTimeUs = S_TO_US * currentTimeS
+        val currentTimeSec = simulatedCurrentTimeSecProperty.get()
+        val currentTimeUs = S_TO_US * currentTimeSec
 
         // draw moving targets
         val noneSelected = designerController.selectedMovingTarget !in designerController.scenario.movingTargets
@@ -571,6 +571,8 @@ az=${angleStringConverter.toString(az)}"""
         // HACK: not real plot points ....
         val cp = combinedTransform.transform(0.0, 0.0)
         val bp = combinedTransform.transform(simulatorController.radarParameters.maxRadarDistanceKm, 0.0)
+        val horizontalAngleBeamWidthRad = toRadians(simulatorController.radarParameters.horizontalAngleBeamWidthDeg)
+        val seekTimeUs = S_TO_US * simulatorController.radarParameters.seekTimeSec
         designerController.scenario.movingTargets
             .sortedBy { it.name }
             // show only if the target is selected or marked as display
@@ -580,51 +582,58 @@ az=${angleStringConverter.toString(az)}"""
 
 
                 val n = 6
-                val fromTimeUs = S_TO_US * simulatorController.radarParameters.seekTimeSec * (floor(currentTimeS / simulatorController.radarParameters.seekTimeSec) - n)
+                val fromTimeUs = max(
+                    0.0,
+                    seekTimeUs * (round(currentTimeSec / simulatorController.radarParameters.seekTimeSec) - n)
+                )
 
-                val timeIterator = generateSequence(fromTimeUs) { t -> t + S_TO_US * simulatorController.radarParameters.seekTimeSec }
-                    .takeWhile { t -> t < currentTimeUs }
+                val timeIterator = generateSequence(fromTimeUs) { t -> t + designerController.scenario.simulationStepUs }
+                    .takeWhile { t -> t <= currentTimeUs }
                     .iterator()
 
                 stream(spliteratorUnknownSize(timeIterator, Spliterator.ORDERED), false)
-                    .forEach inner@ { t ->
+                    .forEach inner@ { tUs ->
 
-                        val plotPathSegment = getCurrentPathSegment(target, t)
-                        val plotPos = plotPathSegment?.getPositionForTime(t)
-                        val plotPosCart = plotPos?.toCartesian()
+                        val plotPathSegment = getCurrentPathSegment(target, tUs)
+                        val plotPos = plotPathSegment?.getPositionForTime(tUs) ?: return@inner
+                        val plotPosCart = plotPos.toCartesian()
 
-                        if (plotPosCart != null) {
-
-                            // range check
-                            val distance = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
-                            if (distance < simulatorController.radarParameters.minRadarDistanceKm || distance > simulatorController.radarParameters.maxRadarDistanceKm) {
-                                return@inner
-                            }
-
-                            val transformedPlot = combinedTransform.transform(plotPosCart)
-
-                            val movingTarget = when (type) {
-                                MovingTargetType.Cloud1 -> null
-                                MovingTargetType.Cloud2 -> null
-                                MovingTargetType.Point -> MovingTargetPlotMarker(
-                                    x = transformedPlot.x,
-                                    y = transformedPlot.y
-                                )
-                                MovingTargetType.Test1 -> Test1TargetHitMarker(cp, transformedPlot.distance(cp))
-                                MovingTargetType.Test2 -> Test2TargetHitMarker(
-                                    cp,
-                                    plotPos.azDeg,
-                                    maxDistance = bp.distance(cp),
-                                    angleResolutionDeg = simulatorController.radarParameters.horizontalAngleBeamWidthDeg
-                                )
-
-                            }
-                            if (movingTarget != null) {
-                                movingHitsGroup.add(movingTarget)
-                            }
+                        val sweepHeadingRad = TWO_PI / seekTimeUs * tUs
+                        val targetHeadingRad = toRadians(plotPos.azDeg)
+                        val diff = abs(((abs(targetHeadingRad - sweepHeadingRad) + PI) % TWO_PI) - PI)
+                        if (diff > horizontalAngleBeamWidthRad / 2.0) {
+                            return@inner
                         }
-                    }
 
+                        // range check
+                        val distance = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
+                        if (distance < simulatorController.radarParameters.minRadarDistanceKm || distance > simulatorController.radarParameters.maxRadarDistanceKm) {
+                            return@inner
+                        }
+
+                        val transformedPlot = combinedTransform.transform(plotPosCart)
+
+                        val movingTarget = when (type) {
+                            MovingTargetType.Cloud1 -> null
+                            MovingTargetType.Cloud2 -> null
+                            MovingTargetType.Point -> MovingTargetPlotMarker(
+                                x = transformedPlot.x,
+                                y = transformedPlot.y
+                            )
+                            MovingTargetType.Test1 -> Test1TargetHitMarker(cp, transformedPlot.distance(cp))
+                            MovingTargetType.Test2 -> Test2TargetHitMarker(
+                                cp,
+                                plotPos.azDeg,
+                                maxDistance = bp.distance(cp),
+                                angleResolutionDeg = simulatorController.radarParameters.horizontalAngleBeamWidthDeg
+                            )
+
+                        }
+                        if (movingTarget != null) {
+                            movingHitsGroup.add(movingTarget)
+                        }
+
+                    }
             }
 
         // fade non selected targets
