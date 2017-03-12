@@ -28,16 +28,28 @@ class SimulatorController : Controller(), AutoCloseable {
     private val sshClient = SSHClient().apply {
         // no need to verify, not really security oriented
         addHostKeyVerifier { _, _, _ -> true }
-
         useCompression()
+    }
 
-        connect(config.string("simulatorIp"))
+    private fun connect() {
+        sshClient.apply {
+            if (isConnected)
+                return
 
-        // again security here is not an issue - petalinux default login
-        authPassword(
-            config.string("username", "root"),
-            config.string("password", "root")
-        )
+            try {
+                connect(config.string("simulatorIp"))
+
+                // again security here is not an issue - petalinux default login
+                authPassword(
+                    config.string("username", "root"),
+                    config.string("password", "root")
+                )
+            } catch (ex: Exception) {
+                throw RuntimeException("Unable to connect to simulator HW")
+            }
+
+        }
+
     }
 
     override fun close() {
@@ -55,6 +67,7 @@ class SimulatorController : Controller(), AutoCloseable {
         file: FileSystemFile,
         progressConsumer: (Double, String) -> Unit) {
 
+        connect()
         stopSimulation()
 
         sshClient.apply {
@@ -88,6 +101,7 @@ class SimulatorController : Controller(), AutoCloseable {
         file: FileSystemFile,
         progressConsumer: (Double, String) -> Unit) {
 
+        connect()
         stopSimulation()
 
         sshClient.apply {
@@ -116,6 +130,7 @@ class SimulatorController : Controller(), AutoCloseable {
 
     fun startSimulation(progressConsumer: (Double, String) -> Unit) {
 
+        connect()
         stopSimulation()
 
         sshClient.apply {
@@ -168,6 +183,8 @@ class SimulatorController : Controller(), AutoCloseable {
     }
 
     fun stopSimulation() {
+        connect()
+
         try {
             sshClient.apply {
                 // cleanup
@@ -183,6 +200,7 @@ class SimulatorController : Controller(), AutoCloseable {
 
     fun calibrate() {
 
+        connect()
         stopSimulation()
 
         var arpUs = 0.0
@@ -228,5 +246,5 @@ class SimulatorController : Controller(), AutoCloseable {
         )
 
     }
-
 }
+
