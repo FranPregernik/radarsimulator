@@ -7,6 +7,8 @@ import tornadofx.*
 
 class Main : App(DesignerView::class, Styles::class) {
 
+    val simController = find(SimulatorController::class)
+
     init {
         // Optionally remove existing handlers attached to j.u.l root logger
         SLF4JBridgeHandler.removeHandlersForRootLogger()  // (since SLF4J 1.6.5)
@@ -28,5 +30,10 @@ class Main : App(DesignerView::class, Styles::class) {
             minHeight = 768.0
             isFullScreen = true
         })
+    }
+
+    override fun stop() {
+        super.stop()
+        simController.close()
     }
 }

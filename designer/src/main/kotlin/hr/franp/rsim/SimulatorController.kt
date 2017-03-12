@@ -10,8 +10,7 @@ import tornadofx.*
 import java.io.*
 import java.util.concurrent.*
 
-class SimulatorController : Controller() {
-
+class SimulatorController : Controller(), AutoCloseable {
     var radarParameters by property(RadarParameters(
         impulsePeriodUs = 3003.0,
         impulseSignalUs = 3.0,
@@ -36,6 +35,10 @@ class SimulatorController : Controller() {
 
         // again security here is not an issue - petalinux default login
         authPassword("root", "root")
+    }
+
+    override fun close() {
+        sshClient.close()
     }
 
     val simulationRunningProperty = SimpleBooleanProperty(false)
