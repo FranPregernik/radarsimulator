@@ -17,9 +17,9 @@ class DesignerController : Controller() {
 
     private val simulationController: SimulatorController by inject()
 
-    val scenario: Scenario = Scenario().apply {
+    var scenario by property(Scenario().apply {
         simulationDurationMin = 120.0
-        simulationStepUs = 1000.0
+        simulationStepUs = 100000.0
         movingTargets = mutableListOf(
             MovingTarget().apply {
                 name = "T1"
@@ -75,7 +75,9 @@ class DesignerController : Controller() {
                 ).observable()
             }
         ).observable()
-    }
+    })
+
+    val scenarioProperty = getProperty(DesignerController::scenario)
 
     /**
      * Selected moving target name

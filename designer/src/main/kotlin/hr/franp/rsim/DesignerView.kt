@@ -74,8 +74,7 @@ class DesignerView : View() {
                                 createReader(fileBufferReader)?.use { jsonReader ->
                                     val newScenario = Scenario()
                                     newScenario.updateModel(jsonReader.readObject())
-
-                                    newScenario.copy(designerController.scenario)
+                                    designerController.scenario = newScenario
                                 }
                             }
                         }

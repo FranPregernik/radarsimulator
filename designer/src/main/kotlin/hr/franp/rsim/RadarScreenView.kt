@@ -77,6 +77,10 @@ class RadarScreenView : View() {
 
     init {
 
+        designerController.scenarioProperty.addListener { _, _, _ ->
+            draw()
+        }
+
         with(root) {
 
             setOnMouseMoved {
@@ -395,7 +399,6 @@ class RadarScreenView : View() {
                     }
                 }
             }
-
         }
 
     }
