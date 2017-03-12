@@ -207,35 +207,37 @@ class RadarScreenView : View() {
                 type = movingTarget.type
             )
         } else {
-            movingTarget.directions
-                .forEach { direction ->
-                    val p2 = direction.destination
-                    val speedKmUs = direction.speedKmh / HOUR_TO_US
+            run breaker@ {
+                movingTarget.directions
+                    .forEach { direction ->
+                        val p2 = direction.destination
+                        val speedKmUs = direction.speedKmh / HOUR_TO_US
 
-                    // distance from last course change point
-                    val p1c = p1.toCartesian()
-                    val p2c = p2.toCartesian()
-                    val dx = p2c.x - p1c.x
-                    val dy = p2c.y - p1c.y
-                    val distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0))
-                    val dt = distance / speedKmUs
-                    if (currentTimeUs >= t1 && currentTimeUs < t1 + dt) {
-                        ps = PathSegment(
-                            p1 = p1,
-                            p2 = p2,
-                            t1Us = t1,
-                            t2Us = t1 + dt,
-                            vxKmUs = speedKmUs * dx / distance,
-                            vyKmUs = speedKmUs * dy / distance,
-                            type = movingTarget.type
-                        )
-                        return@forEach
+                        // distance from last course change point
+                        val p1c = p1.toCartesian()
+                        val p2c = p2.toCartesian()
+                        val dx = p2c.x - p1c.x
+                        val dy = p2c.y - p1c.y
+                        val distance = sqrt(pow(dx, 2.0) + pow(dy, 2.0))
+                        val dt = distance / speedKmUs
+                        if (currentTimeUs >= t1 && currentTimeUs < t1 + dt) {
+                            ps = PathSegment(
+                                p1 = p1,
+                                p2 = p2,
+                                t1Us = t1,
+                                t2Us = t1 + dt,
+                                vxKmUs = speedKmUs * dx / distance,
+                                vyKmUs = speedKmUs * dy / distance,
+                                type = movingTarget.type
+                            )
+                            return@breaker
+                        }
+
+                        p1 = p2
+                        t1 += dt
+
                     }
-
-                    p1 = p2
-                    t1 += dt
-
-                }
+            }
         }
 
         return ps
