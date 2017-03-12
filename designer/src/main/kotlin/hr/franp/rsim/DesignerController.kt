@@ -193,8 +193,6 @@ class DesignerController : Controller() {
         return stream(spliteratorUnknownSize(arpTimeIterator, Spliterator.ORDERED), false)
             .map { minTimeSec ->
 
-                println("$minTimeSec/$simulationDurationSec")
-
                 val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
 
                 val minTimeUs = minTimeSec * S_TO_US
