@@ -44,10 +44,6 @@ class RadarScreenView : View() {
         fill = Color.DARKGRAY.deriveColor(3.0, 1.0, 1.0, 0.4)
     }
 
-    val movingHitsLayerOpacityProperty = SimpleDoubleProperty(1.0)
-    val stationaryTargetLayerOpacityProperty = SimpleDoubleProperty(1.0)
-    val movingTargetsLayerOpacityProperty = SimpleDoubleProperty(1.0)
-
     override val root = Pane().apply {
         addClass(Styles.radarScreen)
     }
@@ -62,13 +58,8 @@ class RadarScreenView : View() {
 
     private val staticMarkersGroup = Pane()
     private val dynamicMarkersGroup = Pane()
-    private val movingTargetsGroup = Pane().apply {
-        opacityProperty().bind(movingTargetsLayerOpacityProperty)
-    }
-
-    private val stationaryTargetsGroup = Pane().apply {
-        opacityProperty().bind(stationaryTargetLayerOpacityProperty)
-    }
+    private val movingTargetsGroup = Pane()
+    private val stationaryTargetsGroup = Pane()
     private val hitsGroup = Pane()
 
     private val angleStringConverter = AngleStringConverter()
@@ -122,6 +113,12 @@ class RadarScreenView : View() {
         }
         displayParametersProperty.addListener { _, _, _ ->
             draw()
+            movingTargetsGroup.apply {
+                opacity = displayParameters.targetLayerOpacity
+            }
+            stationaryTargetsGroup.apply {
+                opacity = displayParameters.clutterLayerOpacity
+            }
         }
         designerController.scenarioProperty.addListener { _, _, _ ->
             draw()
@@ -144,6 +141,9 @@ class RadarScreenView : View() {
         config["azimuthSteps"] = displayParameters.azimuthSteps.toString()
         config["azimuthMarkerType"] = displayParameters.azimuthMarkerType.toString()
         config["coordinateSystem"] = displayParameters.coordinateSystem.toString()
+        config["targetLayerOpacity"] = displayParameters.targetLayerOpacity.toString()
+        config["targetHitLayerOpacity"] = displayParameters.targetHitLayerOpacity.toString()
+        config["clutterLayerOpacity"] = displayParameters.clutterLayerOpacity.toString()
         config.save()
     }
 
@@ -163,7 +163,10 @@ class RadarScreenView : View() {
             config.string("coordinateSystem", CoordinateSystem.R_AZ.toString())
         ),
         viewPort = null,
-        targetDisplayFilter = emptySequence()
+        targetDisplayFilter = emptySequence(),
+        targetLayerOpacity = config.double("targetLayerOpacity") ?: 1.0,
+        targetHitLayerOpacity = config.double("targetHitLayerOpacity") ?: 1.0,
+        clutterLayerOpacity = config.double("clutterLayerOpacity") ?: 1.0
     )
 
 
@@ -248,20 +251,34 @@ class RadarScreenView : View() {
     }
 
     fun configDistanceDisplay(distanceUnit: DistanceUnit, step: Double? = 0.0) {
-        displayParametersProperty.set(
-            displayParameters.copy(
-                distanceUnit = distanceUnit,
-                distanceStep = step ?: displayParameters.distanceStep
-            )
+        displayParameters = displayParameters.copy(
+            distanceUnit = distanceUnit,
+            distanceStep = step ?: displayParameters.distanceStep
         )
     }
 
     fun configAzimuthDisplay(azimuthMarkerType: AzimuthMarkerType, step: Int? = 0) {
-        displayParametersProperty.set(
-            displayParameters.copy(
-                azimuthMarkerType = azimuthMarkerType,
-                azimuthSteps = step ?: displayParameters.azimuthSteps
-            )
+        displayParameters = displayParameters.copy(
+            azimuthMarkerType = azimuthMarkerType,
+            azimuthSteps = step ?: displayParameters.azimuthSteps
+        )
+    }
+
+    fun configTargetLayerOpacity(opacity: Double) {
+        displayParameters = displayParameters.copy(
+            targetLayerOpacity = opacity
+        )
+    }
+
+    fun configTargetHitLayerOpacity(opacity: Double) {
+        displayParameters = displayParameters.copy(
+            targetHitLayerOpacity = opacity
+        )
+    }
+
+    fun configClutterLayerOpacity(opacity: Double) {
+        displayParameters = displayParameters.copy(
+            clutterLayerOpacity = opacity
         )
     }
 
@@ -444,7 +461,7 @@ class RadarScreenView : View() {
         movingTargetsGroup.add(selectedTargetGroup)
 
         val movingHitsGroup = Group().apply {
-            opacityProperty().bind(movingHitsLayerOpacityProperty)
+            opacity = displayParameters.targetHitLayerOpacity
         }
         hitsGroup.children.setAll(movingHitsGroup)
 

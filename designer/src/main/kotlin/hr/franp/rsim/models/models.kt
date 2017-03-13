@@ -393,6 +393,12 @@ data class DisplayParameters(
      * List of targets to display.
      * If empty then all targets are displayed
      */
-    val targetDisplayFilter: Sequence<String>
+    val targetDisplayFilter: Sequence<String>,
+
+    val targetLayerOpacity: Double,
+
+    val targetHitLayerOpacity: Double,
+
+    val clutterLayerOpacity: Double
 
 )

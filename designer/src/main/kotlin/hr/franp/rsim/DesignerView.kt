@@ -431,7 +431,12 @@ class DesignerView : View() {
                                     min = 0.0
                                     max = 1.0
                                     blockIncrement = 0.1
-                                    bind(radarScreen.movingTargetsLayerOpacityProperty)
+
+                                    value = radarScreen.displayParameters.targetLayerOpacity
+
+                                    valueProperty().addListener { _, _, newValue ->
+                                        radarScreen.configTargetLayerOpacity(newValue.toDouble())
+                                    }
                                 }
                             }
 
@@ -443,7 +448,11 @@ class DesignerView : View() {
                                     min = 0.0
                                     max = 1.0
                                     blockIncrement = 0.1
-                                    bind(radarScreen.movingHitsLayerOpacityProperty)
+
+                                    value = radarScreen.displayParameters.targetHitLayerOpacity
+                                    valueProperty().addListener { _, _, newValue ->
+                                        radarScreen.configTargetHitLayerOpacity(newValue.toDouble())
+                                    }
                                 }
                             }
 
@@ -455,7 +464,11 @@ class DesignerView : View() {
                                     min = 0.0
                                     max = 1.0
                                     blockIncrement = 0.1
-                                    bind(radarScreen.stationaryTargetLayerOpacityProperty)
+
+                                    value = radarScreen.displayParameters.clutterLayerOpacity
+                                    valueProperty().addListener { _, _, newValue ->
+                                        radarScreen.configClutterLayerOpacity(newValue.toDouble())
+                                    }
                                 }
                             }
 
