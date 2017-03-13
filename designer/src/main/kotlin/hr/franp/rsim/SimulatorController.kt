@@ -153,13 +153,13 @@ class SimulatorController : Controller(), AutoCloseable {
                     progressConsumer(0.0, "Running simulation")
                     InputStreamReader(stdout).use { stdOutReader ->
                         stdOutReader.forEachLine { line ->
-                            log.info { line }
+                            log.finest { line }
                             if (line.startsWith("SIM_ACP_CNT")) {
                                 azimuthChangePulse = reg.matchEntire(line)?.groups?.get(1)?.value?.toDouble() ?: 0.0
-                                log.info { azimuthChangePulse.toString() }
+                                log.finest { azimuthChangePulse.toString() }
                             } else if (line.startsWith("SIM_ARP_US")) {
                                 seekTimeSec = (reg.matchEntire(line)?.groups?.get(1)?.value?.toDouble() ?: 0.0) / S_TO_US
-                                log.info { seekTimeSec.toString() }
+                                log.finest { seekTimeSec.toString() }
                             } else if (line.startsWith("SIM_ACP_IDX")) {
                                 if (!(azimuthChangePulse.isNaN() || seekTimeSec.isNaN())) {
                                     runLater {
@@ -176,7 +176,21 @@ class SimulatorController : Controller(), AutoCloseable {
                         }
                     }
                 }
+
+                cmd.errorStream.use { stdout ->
+                    InputStreamReader(stdout).use { stdOutReader ->
+                        stdOutReader.forEachLine { line ->
+                            log.severe { line }
+                        }
+                    }
+                }
+
+                // wait for termination
                 cmd.join()
+
+                if (cmd.exitStatus > 0) {
+                    throw RuntimeException("Error running simulation, see logs.")
+                }
             }
         }
 
@@ -189,7 +203,6 @@ class SimulatorController : Controller(), AutoCloseable {
             sshClient.apply {
                 // cleanup
                 startSession().use { it.exec("killall radar-sim-test").join() }
-                startSession().use { it.exec("killall -9 radar-sim-test").join() }
             }
         } finally {
             runLater {
@@ -213,6 +226,7 @@ class SimulatorController : Controller(), AutoCloseable {
 
             // calibrate sim
             startSession().use { session ->
+
                 val cmd = session.exec("/mnt/radar-sim-test -c")
                 cmd.inputStream.use command@ { stdout ->
                     InputStreamReader(stdout).use { stdOutReader ->
@@ -231,7 +245,21 @@ class SimulatorController : Controller(), AutoCloseable {
                         }
                     }
                 }
+
+                cmd.errorStream.use { stdout ->
+                    InputStreamReader(stdout).use { stdOutReader ->
+                        stdOutReader.forEachLine { line ->
+                            log.severe { line }
+                        }
+                    }
+                }
+
+                // wait for termination
                 cmd.join(1, TimeUnit.MINUTES)
+
+                if (!calibrated && cmd.exitStatus > 0) {
+                    throw RuntimeException("Error calibrating simulation, see logs.")
+                }
             }
         }
 
