@@ -460,11 +460,6 @@ class RadarScreenView : View() {
         val selectedTargetGroup = Group()
         movingTargetsGroup.add(selectedTargetGroup)
 
-        val movingHitsGroup = Group().apply {
-            opacity = displayParameters.targetHitLayerOpacity
-        }
-        hitsGroup.children.setAll(movingHitsGroup)
-
         val currentTimeSec = simulatedCurrentTimeSecProperty.get()
         val currentTimeUs = S_TO_US * currentTimeSec
 
@@ -586,6 +581,29 @@ az=${angleStringConverter.toString(az)}"""
 
             }
 
+        // fade non selected targets
+        if (!noneSelected) {
+            nonSelectedTargetsGroup.opacity = 0.3
+            selectedTargetGroup.opacity = 1.0
+        }
+
+        selectedTargetGroup.children
+            .union(nonSelectedTargetsGroup.children)
+            .filter { it is MovingTargetPathMarker || it is MovingTargetPositionMarker }
+            .forEach(Node::toFront)
+
+    }
+
+    fun drawTargetHits() {
+
+        val movingHitsGroup = Group().apply {
+            opacity = displayParameters.targetHitLayerOpacity
+        }
+        hitsGroup.children.setAll(movingHitsGroup)
+
+        val currentTimeSec = simulatedCurrentTimeSecProperty.get()
+        val currentTimeUs = S_TO_US * currentTimeSec
+
         // TEMP: draw last N plots relative to current time
         // HACK: not real plot points ....
         val cp = combinedTransform.transform(0.0, 0.0)
@@ -646,25 +664,14 @@ az=${angleStringConverter.toString(az)}"""
                                 maxDistance = bp.distance(cp),
                                 angleResolutionDeg = simulatorController.radarParameters.horizontalAngleBeamWidthDeg
                             )
-
                         }
+
                         if (movingTarget != null) {
                             movingHitsGroup.add(movingTarget)
                         }
 
                     }
             }
-
-        // fade non selected targets
-        if (!noneSelected) {
-            nonSelectedTargetsGroup.opacity = 0.3
-            selectedTargetGroup.opacity = 1.0
-        }
-
-        selectedTargetGroup.children
-            .union(nonSelectedTargetsGroup.children)
-            .filter { it is MovingTargetPathMarker || it is MovingTargetPositionMarker }
-            .forEach(Node::toFront)
     }
 
 }
