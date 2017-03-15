@@ -140,7 +140,7 @@ class SimulatorController : Controller(), AutoCloseable {
 
             startSession().use { session ->
 
-                val cmd = session.exec("/mnt/radar-sim-test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bin")
+                val cmd = session.exec("radar-sim-test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bin")
 
                 runLater {
                     simulationRunningProperty.set(true)
@@ -227,7 +227,7 @@ class SimulatorController : Controller(), AutoCloseable {
             // calibrate sim
             startSession().use { session ->
 
-                val cmd = session.exec("/mnt/radar-sim-test -c")
+                val cmd = session.exec("radar-sim-test -c")
                 cmd.inputStream.use command@ { stdout ->
                     InputStreamReader(stdout).use { stdOutReader ->
                         stdOutReader.forEachLine {
