@@ -259,6 +259,56 @@ class Scenario : JsonModel {
             clutter = getJsonObject("clutter")?.toModel() ?: Clutter()
         }
     }
+
+    fun getAllPathSegments() = movingTargets
+        .filter { it.type == MovingTargetType.Point || it.type == MovingTargetType.Test1 || it.type == MovingTargetType.Test2 }
+        .flatMap { movingTarget ->
+            var p1 = movingTarget.initialPosition
+            var t1 = 0.0
+
+            if (movingTarget.directions?.size == 0) {
+                // hovering or standing still
+                listOf(PathSegment(
+                    p1 = p1,
+                    p2 = p1,
+                    t1Us = t1,
+                    t2Us = simulationDurationMin * MIN_TO_US,
+                    vxKmUs = 0.0,
+                    vyKmUs = 0.0,
+                    type = movingTarget.type
+                ))
+            } else {
+                // moving targets
+                movingTarget.directions.map { direction ->
+                    val p2 = direction.destination
+                    val speedKmUs = direction.speedKmh / HOUR_TO_US
+
+                    // distance from last course change point
+                    val p1c = p1.toCartesian()
+                    val p2c = p2.toCartesian()
+                    val dx = p2c.x - p1c.x
+                    val dy = p2c.y - p1c.y
+                    val distance = Math.sqrt(Math.pow(dx, 2.0) + Math.pow(dy, 2.0))
+                    val dt = distance / speedKmUs
+
+
+                    val pathSegment = PathSegment(
+                        p1 = p1,
+                        p2 = p2,
+                        t1Us = t1,
+                        t2Us = t1 + dt,
+                        vxKmUs = speedKmUs * dx / distance,
+                        vyKmUs = speedKmUs * dy / distance,
+                        type = movingTarget.type
+                    )
+
+                    p1 = p2
+                    t1 += dt
+
+                    pathSegment
+                }
+            }
+        }
 }
 
 data class PathSegment(
@@ -278,8 +328,10 @@ data class PathSegment(
 
     val vKmh = sqrt(pow(vxKmUs, 2.0) + pow(vyKmUs, 2.0)) * HOUR_TO_US
 
+    fun inTimeRange(timeUs: Double) = timeUs >= t1Us && timeUs < t2Us
+
     fun getPositionForTime(timeUs: Double): RadarCoordinate? {
-        if (timeUs < t1Us || timeUs > t2Us) {
+        if (!inTimeRange(timeUs)) {
             return null
         }
 
