@@ -33,7 +33,8 @@ module acp_generator(
 
     );
 
-    clk_divider #(292969) cd(
+    // 100_000_000 MHz / 146484 = 682 Hz
+    clk_divider #(146484) cd(
         .IN_SIG(IN_CLK),
         .OUT_SIG(RADAR_ACP)
     );

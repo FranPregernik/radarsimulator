@@ -38,7 +38,11 @@ module radar_statistics_sim;
     wire arp;  
     wire acp;    
     wire trig;
-    
+    wire arp_pe;  
+    wire acp_pe;    
+    wire trig_pe;
+    wire us_pe;
+       
     // Outputs
     wire [DATA_WIDTH-1:0] ARP_US;
     wire [DATA_WIDTH-1:0] ACP_CNT;
@@ -47,21 +51,41 @@ module radar_statistics_sim;
     
     // Instantiate the Unit Under Test (UUT)
     radar_statistics #(DATA_WIDTH) uut(
-        .ARP(arp),
-        .ACP(acp),
-        .TRIG(trig),
-        .USEC(us_clk),
-        .SYS_CLK(in_clk),
+        .RADAR_ARP_PE(arp_pe),
+        .RADAR_ACP_PE(acp_pe),
+        .RADAR_TRIG_PE(trig_pe),
+        .USEC_PE(us_pe),
+        .S_AXIS_ACLK(in_clk),
         .CALIBRATED(CALIBRATED),
-        .ARP_US(ARP_US),
-        .ACP_CNT(ACP_CNT),
-        .TRIG_US(TRIG_US)
+        .RADAR_ARP_US(ARP_US),
+        .RADAR_ACP_CNT(ACP_CNT),
+        .RADAR_TRIG_US(TRIG_US)
     );
     
     clk_divider #(US_RATIO) c1 (in_clk, us_clk);
+    edge_detect c1_ed (
+        .async_sig(us_clk),
+        .clk(in_clk),
+        .rise(us_pe)
+    );
     clk_divider #(ARP_RATIO) c2 (in_clk, arp);
+    edge_detect c2_ed (
+        .async_sig(arp),
+        .clk(in_clk),
+        .rise(arp_pe)
+    );    
     clk_divider #(ACP_RATIO) c3 (in_clk, acp);
+    edge_detect c3_ed (
+        .async_sig(acp),
+        .clk(in_clk),
+        .rise(acp_pe)
+    );     
     clk_divider #(TRIG_RATIO) c4 (in_clk, trig);
+    edge_detect c4_ed (
+        .async_sig(trig),
+        .clk(in_clk),
+        .rise(trig_pe)
+    );       
  
     initial
     begin

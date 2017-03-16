@@ -61,6 +61,10 @@ set_property IOSTANDARD LVCMOS33 [get_ports {LEDS[7]}]
 ############################
 # On-board Slide Switches  #
 ############################
-set_property PACKAGE_PIN M15 [get_ports SW_7]
-set_property IOSTANDARD LVCMOS33 [get_ports SW_7]
+set_property PACKAGE_PIN H18 [get_ports SW5]
+set_property IOSTANDARD LVCMOS33 [get_ports SW5]
+set_property PACKAGE_PIN H17 [get_ports SW6]
+set_property IOSTANDARD LVCMOS33 [get_ports SW6]
+set_property PACKAGE_PIN M15 [get_ports SW7]
+set_property IOSTANDARD LVCMOS33 [get_ports SW7]
 
