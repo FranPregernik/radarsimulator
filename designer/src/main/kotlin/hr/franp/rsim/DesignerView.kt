@@ -575,6 +575,13 @@ class DesignerView : View() {
                 })
 
                 titledpane("Moving targets", vbox {
+
+                    disableProperty().bind(
+                        calculatingHitsProperty.or(
+                            simulationController.simulationRunningProperty
+                        )
+                    )
+
                     padding = Insets.EMPTY
                     this += movingTargetSelector.root
                     this += movingTargetEditor.root
