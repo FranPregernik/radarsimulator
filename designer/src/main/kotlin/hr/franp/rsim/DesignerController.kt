@@ -94,7 +94,7 @@ class DesignerController : Controller() {
         val scenarioClone = scenario.copy<Scenario>()
 
         val targetPathSegments = scenarioClone.getAllPathSegments()
-        val simulationDurationSec = scenarioClone.simulationDurationMin * 60.0
+        val simulationDurationSec = scenarioClone.simulationDurationMin * MIN_TO_S
 
         val arpTimeIterator = generateSequence(0.0) { it + radarParameters.seekTimeSec }
             .takeWhile { it < simulationDurationSec }
