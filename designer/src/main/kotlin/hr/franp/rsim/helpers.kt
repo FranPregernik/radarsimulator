@@ -235,32 +235,37 @@ fun processHitMaskImage(img: Image): Image {
  */
 fun generateRadarHitImage(hits: Bits, radarParameters: RadarParameters): WritableImage {
 
+    val cParam = CalculationParameters(radarParameters)
+
     val outputImage = WritableImage(
         2 * radarParameters.maxRadarDistanceKm.toInt(),
         2 * radarParameters.maxRadarDistanceKm.toInt()
     )
     val writer = outputImage.pixelWriter
 
-    val c1 = TWO_PI / radarParameters.azimuthChangePulse
-    val maxImpulsePeriodUs = radarParameters.maxImpulsePeriodUs.toInt()
-
     var idx = hits.nextSetBit(0)
     while (idx >= 0 && idx < hits.size()) {
 
-        val sweepIdx = idx / maxImpulsePeriodUs
-        val signalTimeUs = idx % maxImpulsePeriodUs
-
-        val sweepHeadingRad = sweepIdx * c1
+        val sweepIdx = idx / cParam.maxImpulsePeriodUs
+        val signalTimeUs = idx % cParam.maxImpulsePeriodUs
         val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM
 
+        idx = hits.nextSetBit(idx + 1)
+
+        if (signalTimeUs < cParam.minSignalTimeUs || signalTimeUs > cParam.maxSignalTimeUs) {
+            continue
+        }
+
+        if (distanceKm < cParam.minRadarDistanceKm || distanceKm > cParam.maxRadarDistanceKm) {
+            continue
+        }
+
+        val sweepHeadingRad = sweepIdx * cParam.c1
         val angle = azimuthToAngle(sweepHeadingRad)
         val x = (radarParameters.maxRadarDistanceKm + distanceKm * cos(angle)).toInt()
         val y = (2 * radarParameters.maxRadarDistanceKm - 1 - (radarParameters.maxRadarDistanceKm + distanceKm * sin(angle))).toInt()
 
         writer.setColor(x, y, Color.RED)
-
-        idx = hits.nextSetBit(idx + 1)
-
     }
 
     return outputImage
