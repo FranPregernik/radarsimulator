@@ -129,7 +129,7 @@ class DesignerView : View() {
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(radarParameters.azimuthChangePulse.toInt())
+                                                    .putInt(radarParameters.azimuthChangePulse)
                                                     .array()
                                             )
                                             stream.write(
@@ -180,7 +180,7 @@ class DesignerView : View() {
                                             stream.write(
                                                 ByteBuffer.allocate(4)
                                                     .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(radarParameters.azimuthChangePulse.toInt())
+                                                    .putInt(radarParameters.azimuthChangePulse)
                                                     .array()
                                             )
                                             stream.write(
@@ -261,25 +261,12 @@ class DesignerView : View() {
                         tooltip("Begin simulation")
 
                         setOnAction {
-
-                            simulationController.currentTimeSecProperty.addListener { _, _, newValue ->
-                                val simCurrentTimeSec = newValue.toDouble()
-                                if (simCurrentTimeSec.isNaN()) {
-                                    return@addListener
-                                }
-
-                                if (simCurrentTimeSec <= designerController.scenario.simulationDurationMin * MIN_TO_S) {
-                                    radarScreen.simulatedCurrentTimeSecProperty.set(simCurrentTimeSec)
-                                }
-                            }
-
                             runAsync {
                                 simulationController.startSimulation({ progress, message ->
                                     updateMessage(message)
                                     updateProgress(progress, 1.0)
                                 })
                             }
-
                         }
                     }
 

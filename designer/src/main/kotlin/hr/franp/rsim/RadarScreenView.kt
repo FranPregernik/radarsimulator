@@ -13,7 +13,6 @@ import javafx.scene.layout.*
 import javafx.scene.paint.*
 import javafx.scene.shape.*
 import javafx.scene.transform.*
-import javafx.util.*
 import tornadofx.*
 import java.lang.Math.*
 import java.util.*
@@ -34,8 +33,8 @@ class RadarScreenView : View() {
     private var combinedTransform: Transform = Affine()
     private var invCombinedTransform: Transform = combinedTransform.createInverse()
 
-    val cloudOneImage = processHitMaskImage(Image(resources["/cloud1.png"]))
-    val cloudTwoImage = processHitMaskImage(Image(resources["/cloud2.png"]))
+    private val cloudOneImage = processHitMaskImage(Image(resources["/cloud1.png"]))
+    private val cloudTwoImage = processHitMaskImage(Image(resources["/cloud2.png"]))
 
     val mousePositionProperty = SimpleObjectProperty<RadarCoordinate>()
     val mouseClickProperty = SimpleObjectProperty<RadarCoordinate>()
@@ -44,13 +43,34 @@ class RadarScreenView : View() {
         fill = Color.DARKGRAY.deriveColor(3.0, 1.0, 1.0, 0.4)
     }
 
+    private val timer = object : AnimationTimer() {
+        var lastRefresh: Long = 0
+        override fun handle(now: Long) {
+            if (simulatorController.simulationRunningProperty.get()) {
+                // refresh often when running sim
+                simulatedCurrentTimeSecProperty.set(simulatorController.approxSimTime())
+                drawMovingTargets()
+                drawDynamicMarkers()
+            }
+
+            // full refresh less often when not running
+            if (now - lastRefresh > 5e8) {
+                log.info { "Normal refresh" }
+                lastRefresh = now
+                draw()
+            }
+
+        }
+    }.apply {
+        start()
+    }
+
     override val root = Pane().apply {
         addClass(Styles.radarScreen)
     }
 
     val boundsChangeListener = ChangeListener<Number> { _, _, _ ->
         root.clip = Rectangle(0.0, 0.0, root.width, root.height)
-        draw()
     }
 
     private val designerController: DesignerController by inject()
@@ -106,22 +126,17 @@ class RadarScreenView : View() {
 
         // redraw after model changes
         simulatedCurrentTimeSecProperty.addListener { _, _, _ ->
-            draw()
+            //drawMovingTargets()
+            //drawDynamicMarkers()
         }
         designerController.selectedMovingTargetProperty.addListener { _, _, _ ->
-            drawMovingTargets()
+            //drawMovingTargets()
         }
         displayParametersProperty.addListener { _, _, _ ->
-            draw()
-            movingTargetsGroup.apply {
-                opacity = displayParameters.targetLayerOpacity
-            }
-            stationaryTargetsGroup.apply {
-                opacity = displayParameters.clutterLayerOpacity
-            }
+            //draw()
         }
         designerController.scenarioProperty.addListener { _, _, _ ->
-            draw()
+            //draw()
         }
 
         // config
@@ -403,25 +418,15 @@ class RadarScreenView : View() {
         val rotTransform = Rotate(deg, center.x, center.y)
         simPosGroup.transforms.setAll(rotTransform)
 
-        if (simulatorController.simulationRunningProperty.get()) {
-            timeline {
-                keyframe(Duration.seconds(simulatorController.radarParameters.seekTimeSec)) {
-                    keyvalue(rotTransform.angleProperty(), deg + 360, Interpolator.LINEAR)
-                }
-            }.apply {
-                simulatorController.simulationRunningProperty.addListener { _, _, newValue ->
-                    if (!newValue) {
-                        stop()
-                    }
-                }
-            }
-        }
-
     }
 
     fun drawStationaryTargets() {
 
-        stationaryTargetsGroup.children.clear()
+        stationaryTargetsGroup.apply {
+            children.clear()
+            opacity = displayParameters.clutterLayerOpacity
+        }
+
         if (designerController.scenario.clutter == null) {
             return
         }
@@ -452,7 +457,10 @@ class RadarScreenView : View() {
 
     fun drawMovingTargets() {
 
-        movingTargetsGroup.children.clear()
+        movingTargetsGroup.apply {
+            children.clear()
+            opacity = displayParameters.targetLayerOpacity
+        }
 
         val nonSelectedTargetsGroup = Group()
         movingTargetsGroup.add(nonSelectedTargetsGroup)

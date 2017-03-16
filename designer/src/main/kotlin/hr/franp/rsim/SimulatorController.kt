@@ -6,6 +6,7 @@ import javafx.beans.property.*
 import net.schmizz.sshj.*
 import net.schmizz.sshj.common.*
 import net.schmizz.sshj.xfer.*
+import org.apache.commons.math3.stat.regression.*
 import tornadofx.*
 import java.io.*
 import java.util.concurrent.*
@@ -24,6 +25,10 @@ class SimulatorController : Controller(), AutoCloseable {
     ))
 
     val radarParametersProperty = getProperty(SimulatorController::radarParameters)
+
+
+    private val timeShiftFunc = SimpleRegression()
+    private val acpIdxFunc = SimpleRegression()
 
     private val sshClient = SSHClient().apply {
         // no need to verify, not really security oriented
@@ -57,11 +62,6 @@ class SimulatorController : Controller(), AutoCloseable {
     }
 
     val simulationRunningProperty = SimpleBooleanProperty(false)
-
-    /**
-     * Current time in the simulation
-     */
-    val currentTimeSecProperty = SimpleDoubleProperty(0.0)
 
     fun uploadClutterFile(
         file: FileSystemFile,
@@ -132,6 +132,10 @@ class SimulatorController : Controller(), AutoCloseable {
 
         connect()
         stopSimulation()
+        calibrate()
+
+        timeShiftFunc.clear()
+        acpIdxFunc.clear()
 
         sshClient.apply {
 
@@ -146,27 +150,24 @@ class SimulatorController : Controller(), AutoCloseable {
                     simulationRunningProperty.set(true)
                 }
 
-                var azimuthChangePulse: Double = Double.NaN
-                var seekTimeSec: Double = Double.NaN
-
                 cmd.inputStream.use { stdout ->
                     progressConsumer(0.0, "Running simulation")
                     InputStreamReader(stdout).use { stdOutReader ->
                         stdOutReader.forEachLine { line ->
+                            val t = System.currentTimeMillis().toDouble()
                             log.finest { line }
-                            if (line.startsWith("SIM_ACP_CNT")) {
-                                azimuthChangePulse = reg.matchEntire(line)?.groups?.get(1)?.value?.toDouble() ?: 0.0
-                                log.finest { azimuthChangePulse.toString() }
-                            } else if (line.startsWith("SIM_ARP_US")) {
-                                seekTimeSec = (reg.matchEntire(line)?.groups?.get(1)?.value?.toDouble() ?: 0.0) / S_TO_US
-                                log.finest { seekTimeSec.toString() }
-                            } else if (line.startsWith("SIM_ACP_IDX")) {
-                                if (!(azimuthChangePulse.isNaN() || seekTimeSec.isNaN())) {
-                                    runLater {
-                                        currentTimeSecProperty.set(
-                                            (reg.matchEntire(line)?.groups?.get(1)?.value?.toDouble() ?: 0.0) / azimuthChangePulse * seekTimeSec
-                                        )
-                                    }
+                            if (line.startsWith("SIM_ACP_IDX")) {
+                                val matchResult = reg.matchEntire(line) ?: return@forEachLine
+                                val values = matchResult.groupValues
+                                if (values.size < 3) {
+                                    return@forEachLine
+                                }
+
+                                val acpIdx = values[1].toLong()
+                                val simTime = values[3].toLong()
+                                timeShiftFunc.addData(t, simTime.toDouble())
+                                if (acpIdx > 0) {
+                                    acpIdxFunc.addData(simTime.toDouble(), acpIdx.toDouble())
                                 }
                             } else if (line.startsWith("DISABLE_SIM")) {
                                 runLater {
@@ -194,8 +195,17 @@ class SimulatorController : Controller(), AutoCloseable {
                 }
             }
         }
-
     }
+
+    fun approxSimAcp(t: Double = System.currentTimeMillis().toDouble()): Long {
+        val simTime = timeShiftFunc.predict(t)
+        val acpIdx = acpIdxFunc.predict(simTime)
+        return acpIdx.toLong()
+    }
+
+    fun approxSimTime(t: Double = System.currentTimeMillis().toDouble()) =
+        approxSimAcp(t).toDouble() / radarParameters.azimuthChangePulse * radarParameters.seekTimeSec
+
 
     fun stopSimulation() {
         connect()
