@@ -188,7 +188,8 @@ class SimulatorController : Controller(), AutoCloseable {
                 // wait for termination
                 cmd.join()
 
-                if (cmd.exitStatus > 0) {
+                val exitStatus = cmd.exitStatus ?: 0
+                if (exitStatus > 0) {
                     throw RuntimeException("Error running simulation, see logs.")
                 }
             }
@@ -257,7 +258,8 @@ class SimulatorController : Controller(), AutoCloseable {
                 // wait for termination
                 cmd.join(1, TimeUnit.MINUTES)
 
-                if (!calibrated && cmd.exitStatus > 0) {
+                val exitStatus = cmd.exitStatus ?: 0
+                if (!calibrated && exitStatus > 0) {
                     throw RuntimeException("Error calibrating simulation, see logs.")
                 }
             }
