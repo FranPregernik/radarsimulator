@@ -3005,3 +3005,4 @@ CONFIG_radar-sim-test=y
 # PetaLinux RootFS Settings
 #
 CONFIG_ROOTFS_ROOT_PASSWD="root"
+CONFIG_eth01-config=y

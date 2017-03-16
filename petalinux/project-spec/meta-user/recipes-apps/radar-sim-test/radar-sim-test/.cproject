@@ -20,6 +20,7 @@
 							<targetPlatform binaryParser="com.xilinx.sdk.managedbuilder.XELF.arm.a53.x32.linux" id="xilinx.armv7.linux.target.gnu.base.626842841" isAbstract="false" name="Debug Platform" superClass="xilinx.armv7.linux.target.gnu.base"/>
 							<builder buildPath="${workspace_loc:/radar-sim-test}" enableAutoBuild="true" id="xilinx.gnu.armv7.linux.toolchain.builder.1280499138" keepEnvironmentInBuildfile="true" managedBuildOn="true" name="GNU make" parallelBuildOn="true" parallelizationNumber="optimal" superClass="xilinx.gnu.armv7.linux.toolchain.builder"/>
 							<tool id="xilinx.gnu.armv7.linux.c.toolchain.assembler.1655126670" name="ARM v7 Linux gcc assembler" superClass="xilinx.gnu.armv7.linux.c.toolchain.assembler">
+								<option id="xilinx.gnu.both.asm.option.include.paths.836137016" name="Include Paths (-I)" superClass="xilinx.gnu.both.asm.option.include.paths" valueType="includePath"/>
 								<inputType id="xilinx.gnu.assembler.input.116368677" superClass="xilinx.gnu.assembler.input"/>
 							</tool>
 							<tool id="xilinx.gnu.armv7.linux.c.toolchain.compiler.363628894" name="ARM v7 Linux gcc compiler" superClass="xilinx.gnu.armv7.linux.c.toolchain.compiler"/>
@@ -41,7 +42,7 @@
 									<listOptionValue builtIn="false" value="/home/fpregernik/Documents/003/petalinux/build/tmp/sysroots/plnx_arm/lib"/>
 									<listOptionValue builtIn="false" value="/opt/Xilinx/SDK/2016.4/gnu/arm/lin/arm-xilinx-linux-gnueabi/lib"/>
 								</option>
-								<option id="xilinx.gnu.c.link.option.libs.1889402250" name="Libraries (-l)" superClass="xilinx.gnu.c.link.option.libs" valueType="libs"/>
+								<option id="xilinx.gnu.c.link.option.libs.1889402250" name="Libraries (-l)" superClass="xilinx.gnu.c.link.option.libs"/>
 								<option id="xilinx.gnu.c.link.option.ldflags.916204301" name="Linker Flags" superClass="xilinx.gnu.c.link.option.ldflags" value="" valueType="string"/>
 								<option id="xilinx.gnu.c.link.option.userobjs.64762194" name="Other Objects" superClass="xilinx.gnu.c.link.option.userobjs"/>
 								<option id="xilinx.gnu.c.link.option.other.649458044" name="Other options (-XLinker [option])" superClass="xilinx.gnu.c.link.option.other"/>

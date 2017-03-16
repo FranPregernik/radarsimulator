@@ -292,9 +292,6 @@ RadarSimulator::RadarSimulator() {
     }
 
     ctrl = (Simulator *) mmap(NULL, DESCRIPTOR_REGISTERS_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, devMemHandle, RSIM_CTRL_REGISTER_LOCATION);
-    if (!ctrl->calibrated) {
-        RAISE(RadarSignalNotCalibratedException, "Radar signal not calibrated");
-    }
 
     scratchMem = (u32*) mmap(NULL, MEM_HIGH_ADDR - MEM_BASE_ADDR + 1, PROT_READ | PROT_WRITE, MAP_SHARED, devMemHandle, MEM_BASE_ADDR);
     memset((u8*) scratchMem, 0x0, MEM_HIGH_ADDR - MEM_BASE_ADDR + 1);
@@ -316,6 +313,11 @@ RadarSimulator::~RadarSimulator() {
 }
 
 void RadarSimulator::enable() {
+
+    if (!ctrl->calibrated) {
+        RAISE(RadarSignalNotCalibratedException, "Radar signal not calibrated");
+    }
+
     startDmaTransfer(&clutterDma, addrToPhysical((UINTPTR) clutterMemPtr), blockByteSize, CL_BLK_CNT);
     startDmaTransfer(&targetDma, addrToPhysical((UINTPTR) targetMemPtr), blockByteSize, MT_BLK_CNT);
     ctrl->enabled = 0x1;

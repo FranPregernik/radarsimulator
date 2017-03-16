@@ -103,7 +103,6 @@ int main(int argc, char* argv[]) {
         cout << "ENABLE_SIM" << endl;
 
         auto startTime = chrono::steady_clock::now();
-        auto lastStatTime = startTime;
         chrono::milliseconds timeSinceEpoch = chrono::duration_cast < chrono::milliseconds > (startTime.time_since_epoch());
 
         cout << "SIM_EN=" << status.enabled << endl;
@@ -120,19 +119,6 @@ int main(int argc, char* argv[]) {
         while (!rsim.isScenarioFinished()) {
 
             status = rsim.getStatus();
-
-            auto secSinceFullStat = chrono::duration_cast < chrono::seconds > (chrono::steady_clock::now() - lastStatTime);
-            if (secSinceFullStat.count() > 5 /* [s] */) {
-                lastStatTime = chrono::steady_clock::now();
-                cout << "SIM_EN=" << status.enabled << endl;
-                cout << "SIM_CAL=" << status.calibrated << endl;
-                cout << "SIM_ARP_US=" << dec << status.arpUs << endl;
-                cout << "SIM_ACP_CNT=" << dec << status.acpCnt << endl;
-                cout << "SIM_TRIG_US=" << dec << status.trigUs << endl;
-                cout << "SIM_MT_FIFO_CNT=" << dec << status.targetFifoCnt << endl;
-                cout << "SIM_CL_FIFO_CNT=" << dec << status.clutterFifoCnt << endl;
-            }
-
             chrono::milliseconds timeSinceEpoch = chrono::duration_cast < chrono::milliseconds > (chrono::steady_clock::now().time_since_epoch());
             cout << "SIM_ACP_IDX=" << dec << status.simAcpIdx << "/" << timeSinceEpoch.count() << endl;
 
