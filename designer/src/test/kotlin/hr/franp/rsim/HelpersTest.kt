@@ -17,6 +17,7 @@ class HelpersTest : Spek({
     val radarParameters = RadarParameters(
         impulsePeriodUs = 3003.0,
         maxImpulsePeriodUs = 3072.0,
+        impulseSignalUs = 3.0,
         seekTimeSec = 12.0,
         azimuthChangePulse = 4096,
         horizontalAngleBeamWidthDeg = 1.4,
