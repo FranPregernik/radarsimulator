@@ -567,7 +567,7 @@ class DesignerView : View() {
                                         textProperty().set(
                                             angleConverter.toString(
                                                 normalizeAngleDeg(
-                                                    360.0 * (newValue.toDouble() / designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                                    360.0 * (newValue.toDouble() / simulationController.radarParameters.seekTimeSec)
                                                 )
                                             )
                                         )
