@@ -260,7 +260,7 @@ class Scenario : JsonModel {
         }
     }
 
-    fun getAllPathSegments() = movingTargets
+    fun getAllPathSegments() = (movingTargets ?: emptyObservableList())
         .filter { it.type == MovingTargetType.Point || it.type == MovingTargetType.Test1 || it.type == MovingTargetType.Test2 }
         .flatMap { movingTarget ->
             var p1 = movingTarget.initialPosition
