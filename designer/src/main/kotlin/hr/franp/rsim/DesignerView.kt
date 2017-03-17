@@ -556,13 +556,12 @@ class DesignerView : View() {
                                 }
 
                             }
+
                             field("AZ") {
 
-                                textfield {
+                                label {
                                     val angleConverter = AngleStringConverter()
 
-                                    editableProperty().set(false)
-                                    disableProperty().set(true)
                                     radarScreen.simulatedCurrentTimeSecProperty.addListener { _, _, newValue ->
                                         textProperty().set(
                                             angleConverter.toString(
@@ -572,10 +571,6 @@ class DesignerView : View() {
                                             )
                                         )
                                     }
-                                    minWidth = Font.getDefault().size * 3
-                                    maxWidth = Font.getDefault().size * 5
-                                    prefWidth = Font.getDefault().size * 4
-                                    alignment = Pos.BASELINE_CENTER
                                 }
 
                             }
