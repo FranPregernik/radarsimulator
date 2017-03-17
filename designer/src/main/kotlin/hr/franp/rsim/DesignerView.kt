@@ -556,6 +556,29 @@ class DesignerView : View() {
                                 }
 
                             }
+                            field("AZ") {
+
+                                textfield {
+                                    val angleConverter = AngleStringConverter()
+
+                                    editableProperty().set(false)
+                                    disableProperty().set(true)
+                                    radarScreen.simulatedCurrentTimeSecProperty.addListener { _, _, newValue ->
+                                        textProperty().set(
+                                            angleConverter.toString(
+                                                normalizeAngleDeg(
+                                                    360.0 * (newValue.toDouble() / designerController.scenario.simulationDurationMin * MIN_TO_S)
+                                                )
+                                            )
+                                        )
+                                    }
+                                    minWidth = Font.getDefault().size * 3
+                                    maxWidth = Font.getDefault().size * 5
+                                    prefWidth = Font.getDefault().size * 4
+                                    alignment = Pos.BASELINE_CENTER
+                                }
+
+                            }
                         }
                     }
 
