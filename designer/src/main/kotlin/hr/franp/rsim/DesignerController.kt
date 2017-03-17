@@ -20,61 +20,6 @@ class DesignerController : Controller() {
     var scenario by property(Scenario().apply {
         simulationDurationMin = 120.0
         simulationStepUs = 100000.0
-        movingTargets = mutableListOf(
-            MovingTarget().apply {
-                name = "T1"
-                type = MovingTargetType.Point
-                initialPosition = RadarCoordinate.fromCartesian(10.0, -100.0)
-                directions = mutableListOf(
-                    Direction(
-                        speedKmh = 750.0,
-                        destination = RadarCoordinate.fromCartesian(50.0, 50.0)
-                    ),
-                    Direction(
-                        speedKmh = 750.0,
-                        destination = RadarCoordinate.fromCartesian(300.0, 300.0)
-                    ),
-                    Direction(
-                        speedKmh = 750.0,
-                        destination = RadarCoordinate.fromCartesian(-200.0, 300.0)
-                    )
-                ).observable()
-            },
-            MovingTarget().apply {
-                name = "T2"
-                type = MovingTargetType.Point
-                initialPosition = RadarCoordinate.fromCartesian(-100.0, 10.0)
-                directions = mutableListOf(
-                    Direction(
-                        speedKmh = 1200.0,
-                        destination = RadarCoordinate.fromCartesian(55.0, 55.0)
-                    ),
-                    Direction(
-                        speedKmh = 1200.0,
-                        destination = RadarCoordinate.fromCartesian(305.0, 305.0)
-                    ),
-                    Direction(
-                        speedKmh = 1200.0,
-                        destination = RadarCoordinate.fromCartesian(-205.0, 305.0)
-                    )
-                ).observable()
-            },
-            MovingTarget().apply {
-                name = "T3"
-                type = MovingTargetType.Point
-                initialPosition = RadarCoordinate.fromCartesian(400.0, -350.0)
-                directions = mutableListOf(
-                    Direction(
-                        speedKmh = 900.0,
-                        destination = RadarCoordinate.fromCartesian(-400.0, -320.0)
-                    ),
-                    Direction(
-                        speedKmh = 900.0,
-                        destination = RadarCoordinate.fromCartesian(-320.0, -100.0)
-                    )
-                ).observable()
-            }
-        ).observable()
     })
 
     val scenarioProperty = getProperty(DesignerController::scenario)
