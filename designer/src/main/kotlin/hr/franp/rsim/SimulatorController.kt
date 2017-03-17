@@ -9,6 +9,7 @@ import net.schmizz.sshj.xfer.*
 import org.apache.commons.math3.stat.regression.*
 import tornadofx.*
 import java.io.*
+import java.lang.Math.*
 import java.util.concurrent.*
 
 class SimulatorController : Controller(), AutoCloseable {
@@ -206,6 +207,9 @@ class SimulatorController : Controller(), AutoCloseable {
     fun approxSimTime(t: Double = System.currentTimeMillis().toDouble()) =
         approxSimAcp(t).toDouble() / radarParameters.azimuthChangePulse * radarParameters.seekTimeSec
 
+    fun approxAzimuth(t: Double = System.currentTimeMillis().toDouble()) = toDegrees(
+        azimuthToAngle(TWO_PI * approxSimAcp(t) / radarParameters.azimuthChangePulse)
+    )
 
     fun stopSimulation() {
         connect()

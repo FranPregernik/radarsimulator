@@ -54,8 +54,7 @@ class RadarScreenView : View() {
             }
 
             // full refresh less often when not running
-            if (now - lastRefresh > 5e8) {
-                log.info { "Normal refresh" }
+            if (now - lastRefresh > 1e8) {
                 lastRefresh = now
                 draw()
             }
@@ -71,6 +70,7 @@ class RadarScreenView : View() {
 
     val boundsChangeListener = ChangeListener<Number> { _, _, _ ->
         root.clip = Rectangle(0.0, 0.0, root.width, root.height)
+        draw()
     }
 
     private val designerController: DesignerController by inject()
@@ -123,21 +123,6 @@ class RadarScreenView : View() {
         // Redraw canvas when size changes.
         root.widthProperty().addListener(boundsChangeListener)
         root.heightProperty().addListener(boundsChangeListener)
-
-        // redraw after model changes
-        simulatedCurrentTimeSecProperty.addListener { _, _, _ ->
-            //drawMovingTargets()
-            //drawDynamicMarkers()
-        }
-        designerController.selectedMovingTargetProperty.addListener { _, _, _ ->
-            //drawMovingTargets()
-        }
-        displayParametersProperty.addListener { _, _, _ ->
-            //draw()
-        }
-        designerController.scenarioProperty.addListener { _, _, _ ->
-            //draw()
-        }
 
         // config
         writeConfig()
