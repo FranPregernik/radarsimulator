@@ -115,7 +115,7 @@ class DesignerController : Controller() {
     }
 
 
-    fun calculateClutterHits(): Bits {
+    fun calculateClutterHits(): Stream<Bits> {
 
         val radarParameters = simulationController.radarParameters
         val cParams = CalculationParameters(radarParameters)
@@ -131,11 +131,11 @@ class DesignerController : Controller() {
         val width = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
         val height = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
 
-        val raster = scenario.clutter?.getImage(width, height)?.getRasterHitMap() ?: return hits
+        val raster = scenario.clutter?.getImage(width, height)?.getRasterHitMap() ?: return Stream.of(hits)
 
         calculateClutterHits(hits, raster, cParams)
 
-        return hits
+        return Stream.of(hits)
     }
 
 

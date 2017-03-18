@@ -153,12 +153,19 @@ class DesignerView : View() {
 
                                             updateMessage("Writing clutter sim")
                                             updateProgress(0.0, 1.0)
-                                            val clutterHits = designerController.calculateClutterHits()
-                                            clutterHits.writeTo(stream)
+
+                                            val mergedHits = Bits(0)
+                                            var seekTime = 0.0
+                                            designerController.calculateClutterHits()
+                                                .forEach {
+                                                    seekTime += radarParameters.seekTimeSec
+                                                    mergedHits.or(it)
+                                                    it.writeTo(stream)
+                                                }
 
                                             // DEBUG
                                             ImageIO.write(
-                                                SwingFXUtils.fromFXImage(generateRadarHitImage(clutterHits, radarParameters), null),
+                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, radarParameters), null),
                                                 "png",
                                                 File("clutter.png")
                                             )
@@ -208,15 +215,16 @@ class DesignerView : View() {
                                             updateProgress(0.0, 1.0)
 
                                             var seekTime = 0.0
-                                            designerController.calculateTargetHits().forEach {
-                                                seekTime += radarParameters.seekTimeSec
-                                                updateProgress(
-                                                    seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
-                                                    1.0
-                                                )
-                                                mergedHits.or(it)
-                                                it.writeTo(stream)
-                                            }
+                                            designerController.calculateTargetHits()
+                                                .forEach {
+                                                    seekTime += radarParameters.seekTimeSec
+                                                    updateProgress(
+                                                        seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
+                                                        1.0
+                                                    )
+                                                    mergedHits.or(it)
+                                                    it.writeTo(stream)
+                                                }
 
                                             // DEBUG
                                             ImageIO.write(
