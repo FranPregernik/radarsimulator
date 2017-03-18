@@ -389,11 +389,11 @@ class DesignerView : View() {
                                         }
                                     }
                                     togglebutton("5") {
-                                        isSelected = radarScreen.displayParameters.azimuthSteps == 5
+                                        isSelected = radarScreen.displayParameters.azimuthSteps == 18
                                         setOnAction {
                                             radarScreen.configAzimuthDisplay(
                                                 radarScreen.displayParameters.azimuthMarkerType,
-                                                5
+                                                18
                                             )
                                         }
                                     }
@@ -467,7 +467,6 @@ class DesignerView : View() {
 
                                         if (file != null) {
                                             designerController.scenario.clutter = Clutter(file)
-                                            radarScreen.draw()
                                             this.tooltip = Tooltip("Select clutter map").apply {
                                                 graphic = ImageView(designerController.scenario.clutter.getImage(100, 100))
                                             }

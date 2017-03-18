@@ -1,23 +1,19 @@
 package hr.franp.rsim
 
 import hr.franp.rsim.models.*
-import hr.franp.rsim.shapes.*
-import javafx.animation.*
 import javafx.beans.property.*
 import javafx.beans.value.*
 import javafx.event.*
 import javafx.geometry.*
-import javafx.scene.*
+import javafx.scene.canvas.*
 import javafx.scene.image.*
 import javafx.scene.layout.*
 import javafx.scene.paint.*
 import javafx.scene.shape.*
+import javafx.scene.text.*
 import javafx.scene.transform.*
 import tornadofx.*
 import java.lang.Math.*
-import java.util.*
-import java.util.Spliterators.*
-import java.util.stream.StreamSupport.*
 
 class RadarScreenView : View() {
 
@@ -43,62 +39,44 @@ class RadarScreenView : View() {
         fill = Color.DARKGRAY.deriveColor(3.0, 1.0, 1.0, 0.4)
     }
 
-    private val timer = object : AnimationTimer() {
-        var lastRefresh: Long = 0
-        override fun handle(now: Long) {
-            if (simulatorController.simulationRunningProperty.get()) {
-                // refresh often when running sim
-                simulatedCurrentTimeSecProperty.set(simulatorController.approxSimTime())
-                drawMovingTargets()
-                drawDynamicMarkers()
-            }
-
-            // full refresh less often when not running
-            if (now - lastRefresh > 1e8) {
-                lastRefresh = now
-                draw()
-            }
-
-        }
-    }.apply {
-        start()
-    }
-
     override val root = Pane().apply {
         addClass(Styles.radarScreen)
     }
 
+    private var clutterRaster: Image? = null;
     val boundsChangeListener = ChangeListener<Number> { _, _, _ ->
         root.clip = Rectangle(0.0, 0.0, root.width, root.height)
-        draw()
+
     }
 
     private val designerController: DesignerController by inject()
     private val simulatorController: SimulatorController by inject()
 
-    private val staticMarkersGroup = Pane()
-    private val dynamicMarkersGroup = Pane()
-    private val movingTargetsGroup = Pane()
-    private val stationaryTargetsGroup = Pane()
-    private val hitsGroup = Pane()
-
     private val angleStringConverter = AngleStringConverter()
     private val speedStringConverter = SpeedStringConverter()
     private val distanceStringConverter = DistanceStringConverter()
 
+    val sketch = Sketch {
+        mouseClicked {
+            val displayPoint = invCombinedTransform.transform(it.x, it.y)
+            mouseClickProperty.set(RadarCoordinate.fromCartesian(displayPoint.x, displayPoint.y))
+        }
+        mouseMoved {
+            val displayPoint = invCombinedTransform.transform(it.x, it.y)
+            mousePositionProperty.set(RadarCoordinate.fromCartesian(displayPoint.x, displayPoint.y))
+        }
+        draw {
+            if (simulatorController.simulationRunningProperty.get()) {
+                simulatedCurrentTimeSecProperty.set(simulatorController.approxSimTime())
+            }
+            clearRect(0.0, 0.0, width, height)
+            drawScene(this)
+        }
+    }
+
     init {
 
         with(root) {
-
-            setOnMouseMoved {
-                val displayPoint = invCombinedTransform.transform(it.x, it.y)
-                mousePositionProperty.set(RadarCoordinate.fromCartesian(displayPoint.x, displayPoint.y))
-            }
-
-            setOnMousePressed {
-                val displayPoint = invCombinedTransform.transform(it.x, it.y)
-                mouseClickProperty.set(RadarCoordinate.fromCartesian(displayPoint.x, displayPoint.y))
-            }
 
             addSelectionRectangleGesture(this, selectionRect, EventHandler {
                 if (it.isConsumed) {
@@ -112,17 +90,12 @@ class RadarScreenView : View() {
                 }
             })
 
-            this += staticMarkersGroup
-            this += dynamicMarkersGroup
-            this += stationaryTargetsGroup
-            this += hitsGroup
-            // draw shapes on top of hits
-            this += movingTargetsGroup
+            root.children.add(Canvas2D(sketch).apply {
+                widthProperty().bind(root.widthProperty())
+                heightProperty().bind(root.heightProperty())
+                start()
+            })
         }
-
-        // Redraw canvas when size changes.
-        root.widthProperty().addListener(boundsChangeListener)
-        root.heightProperty().addListener(boundsChangeListener)
 
         // config
         writeConfig()
@@ -207,7 +180,7 @@ class RadarScreenView : View() {
                 p1 = p1,
                 p2 = p1,
                 t1Us = t1,
-                t2Us = currentTimeUs,
+                t2Us = designerController.scenario.simulationDurationMin * MIN_TO_US,
                 vxKmUs = 0.0,
                 vyKmUs = 0.0,
                 type = movingTarget.type
@@ -282,20 +255,19 @@ class RadarScreenView : View() {
         )
     }
 
-    fun draw() {
+    fun drawScene(gc: GraphicsContext) {
         setupViewPort()
-        drawStationaryTargets()
-        drawStaticMarkers()
-        drawDynamicMarkers()
-        drawMovingTargets()
+        drawStationaryTargets(gc)
+        drawStaticMarkers(gc)
+        drawDynamicMarkers(gc)
+        drawTargetHits(gc)
+        drawMovingTargets(gc)
     }
 
-    fun drawStaticMarkers() {
-        staticMarkersGroup.children.clear()
+    fun drawStaticMarkers(gc: GraphicsContext) {
 
-        // draw distance markers
-        val distanceMarkersGroup = Group()
-        staticMarkersGroup.add(distanceMarkersGroup)
+        gc.stroke = Styles.radarFgColor
+        gc.fill = Styles.radarFgColor
 
         // scale in case of nautical miles
         val distanceToKmScale = distanceToKmScale()
@@ -318,60 +290,76 @@ class RadarScreenView : View() {
         for (r in distanceSequence) {
             val dp = combinedTransform.transform(r, 0.0)
             val dist = cp.distance(dp)
-            distanceMarkersGroup.add(DistanceMarkerCircle(cp, dist))
-            distanceMarkersGroup.add(DistanceMarkerLabel(dp, (r / distanceToKmScale).toInt().toString()))
+            gc.strokeOval(cp.x - dist, cp.y - dist, 2 * dist, 2 * dist)
+
+            gc.textAlign = TextAlignment.CENTER
+            gc.textBaseline = VPos.TOP
+            gc.fillText(
+                (r / distanceToKmScale).toInt().toString(),
+                dp.x,
+                dp.y
+            )
         }
 
         // draw angle markers
-        val angleMarkersGroup = Group()
-        staticMarkersGroup.add(angleMarkersGroup)
-
-        val angleSequence: Sequence<Double>
-        if (displayParameters.azimuthSteps >= 0) {
+        val azimuthSequence = if (displayParameters.azimuthSteps >= 0) {
             val deltaAngleStep = TWO_PI / displayParameters.azimuthSteps
-            angleSequence = generateSequence(0.0) { it + deltaAngleStep }
+            generateSequence(0.0) { it + deltaAngleStep }
                 .takeWhile { it < (TWO_PI - deltaAngleStep / 3) }
         } else {
-            angleSequence = sequenceOf(0.0, HALF_PI, PI, 3 * HALF_PI, TWO_PI)
+            sequenceOf(0.0, HALF_PI, PI, 3 * HALF_PI, TWO_PI)
         }
+
         if (displayParameters.azimuthMarkerType == AzimuthMarkerType.FULL) {
             // draw full lines (like a spiderweb)
-            for (a in angleSequence) {
+            azimuthSequence.forEach { azimuth ->
+                val angle = azimuthToAngle(azimuth)
                 val p1 = combinedTransform.transform(
-                    simulatorController.radarParameters.minRadarDistanceKm * Math.cos(a),
-                    simulatorController.radarParameters.minRadarDistanceKm * Math.sin(a)
+                    simulatorController.radarParameters.minRadarDistanceKm * cos(angle),
+                    simulatorController.radarParameters.minRadarDistanceKm * sin(angle)
                 )
                 val p2 = combinedTransform.transform(
-                    simulatorController.radarParameters.maxRadarDistanceKm * Math.cos(a),
-                    simulatorController.radarParameters.maxRadarDistanceKm * Math.sin(a)
+                    simulatorController.radarParameters.maxRadarDistanceKm * cos(angle),
+                    simulatorController.radarParameters.maxRadarDistanceKm * sin(angle)
                 )
-                angleMarkersGroup.add(AzimuthMarkerLine(p1, p2))
+
+                gc.strokeLine(
+                    p1.x, p1.y,
+                    p2.x, p2.y
+                )
             }
         } else {
-            // draw only ticks on distance markers (circles)
-            for (a in angleSequence) {
-                for (d in distanceSequence.filter { it > simulatorController.radarParameters.minRadarDistanceKm }) {
-                    val length = 5
-                    val pc = combinedTransform
-                        .transform(
-                            d * Math.cos(a),
-                            d * Math.sin(a)
+            // draw only ticks on distance circles
+            azimuthSequence.forEach { a ->
+                distanceSequence
+                    .filter { it > simulatorController.radarParameters.minRadarDistanceKm }
+                    .forEach { d ->
+
+                        val length = 5
+                        val pc = combinedTransform
+                            .transform(
+                                d * Math.cos(a),
+                                d * Math.sin(a)
+                            )
+                        val p1 = pc.add(
+                            -length / 2.0 * Math.cos(a),
+                            length / 2.0 * Math.sin(a)
                         )
-                    val p1 = pc.add(
-                        -length / 2.0 * Math.cos(a),
-                        length / 2.0 * Math.sin(a)
-                    )
-                    val p2 = pc.add(
-                        length / 2.0 * Math.cos(a),
-                        -length / 2.0 * Math.sin(a)
-                    )
-                    angleMarkersGroup.add(AzimuthMarkerLine(p1, p2))
-                }
+                        val p2 = pc.add(
+                            length / 2.0 * Math.cos(a),
+                            -length / 2.0 * Math.sin(a)
+                        )
+
+                        gc.strokeLine(
+                            p1.x, p1.y,
+                            p2.x, p2.y
+                        )
+                    }
             }
         }
 
-        for (a in angleSequence) {
-            val angle = HALF_PI - angleToAzimuth(a)
+        azimuthSequence.forEach { azimuth ->
+            val angle = azimuthToAngle(azimuth)
             val p = combinedTransform
                 .transform(
                     simulatorController.radarParameters.maxRadarDistanceKm * cos(angle),
@@ -382,45 +370,47 @@ class RadarScreenView : View() {
                     -20 * sin(angle)
                 )
 
-            angleMarkersGroup.add(AzimuthMarkerLabel(p, a))
+            gc.textAlign = TextAlignment.CENTER
+            gc.textBaseline = VPos.CENTER
+            gc.fillText(
+                toDegrees(azimuth).toInt().toString(),
+                p.x,
+                p.y
+            )
         }
     }
 
-    fun drawDynamicMarkers() {
-        dynamicMarkersGroup.children.clear()
+    fun drawDynamicMarkers(gc: GraphicsContext) {
 
-        val rad = TWO_PI * (simulatedCurrentTimeSecProperty.get() / simulatorController.radarParameters.seekTimeSec)
+        val angleRad = azimuthToAngle(
+            TWO_PI * (simulatedCurrentTimeSecProperty.get() / simulatorController.radarParameters.seekTimeSec)
+        )
 
         // draw simulation position markers
-        val simPosGroup = Group()
-        dynamicMarkersGroup.add(simPosGroup)
-
-        val center = combinedTransform.transform(0.0, 0.0)
-        val p = combinedTransform.transform(0.0, simulatorController.radarParameters.maxRadarDistanceKm)
-        simPosGroup.add(Circle(p.x, p.y, 5.0, Color.RED))
-
-        val deg = toDegrees(rad)
-        val rotTransform = Rotate(deg, center.x, center.y)
-        simPosGroup.transforms.setAll(rotTransform)
+        val p = combinedTransform.transform(
+            simulatorController.radarParameters.maxRadarDistanceKm * cos(angleRad),
+            simulatorController.radarParameters.maxRadarDistanceKm * sin(angleRad)
+        )
+        gc.fill = Color.RED.deriveColor(0.0, 1.0, 1.0, 0.5)
+        gc.fillOval(p.x - 5.0, p.y - 5.0, 10.0, 10.0)
 
     }
 
-    fun drawStationaryTargets() {
+    val map: HashMap<Triple<Int, Int, Clutter>, Image> = HashMap()
+    fun drawStationaryTargets(gc: GraphicsContext) {
 
-        stationaryTargetsGroup.apply {
-            children.clear()
-            opacity = displayParameters.clutterLayerOpacity
-        }
-
-        if (designerController.scenario.clutter == null) {
-            return
-        }
+        val clutter = designerController.scenario.clutter ?: return
 
         // draw stationary targets
         val width = (2.0 * simulatorController.radarParameters.maxRadarDistanceKm)
         val height = (2.0 * simulatorController.radarParameters.maxRadarDistanceKm)
 
-        val rasterMapImage = designerController.scenario.clutter.getImage(width.toInt(), height.toInt())
+        val key = Triple(width.toInt(), height.toInt(), clutter)
+        if (!map.containsKey(key)) {
+            log.info { "Computing" }
+            map.put(key, clutter.getImage(width.toInt(), height.toInt()))
+        }
+        val rasterMapImage = map.get(key)
 
         val transformedBounds = combinedTransform.transform(BoundingBox(
             -width / 2.0,
@@ -429,36 +419,26 @@ class RadarScreenView : View() {
             height
         ))
 
-        stationaryTargetsGroup += imageview {
-            image = rasterMapImage
-            x = transformedBounds.minX
-            y = transformedBounds.minY
-            isPreserveRatio = true
-            fitWidth = transformedBounds.width
-            fitHeight = transformedBounds.height
-        }
-
+        val alpha = gc.globalAlpha
+        gc.globalAlpha = displayParameters.clutterLayerOpacity
+        gc.drawImage(
+            rasterMapImage,
+            transformedBounds.minX,
+            transformedBounds.minY,
+            transformedBounds.width,
+            transformedBounds.height
+        )
+        gc.globalAlpha = alpha
     }
 
-    fun drawMovingTargets() {
-
-        movingTargetsGroup.apply {
-            children.clear()
-            opacity = displayParameters.targetLayerOpacity
-        }
-
-        val nonSelectedTargetsGroup = Group()
-        movingTargetsGroup.add(nonSelectedTargetsGroup)
-
-        val selectedTargetGroup = Group()
-        movingTargetsGroup.add(selectedTargetGroup)
+    fun drawMovingTargets(gc: GraphicsContext) {
 
         val currentTimeSec = simulatedCurrentTimeSecProperty.get()
         val currentTimeUs = S_TO_US * currentTimeSec
 
         // draw moving targets
-        val noneSelected = designerController.selectedMovingTarget !in designerController.scenario.movingTargets
         val movingTargetCount = designerController.scenario.movingTargets.size
+        val selectedTarget = designerController.selectedMovingTarget
         designerController.scenario.movingTargets
             .sortedBy { it.name }
             // show only if the target is selected or marked as display
@@ -473,40 +453,41 @@ class RadarScreenView : View() {
                     initPosCart.y
                 )
 
+                val selectedTargetOpacityFactor = if (selectedTarget == null || selectedTarget == target) {
+                    1.0
+                } else {
+                    0.2
+                }
+
                 // shift colors for each target and if the target is selected display other targets semi-transparent
                 val color = Color.RED.deriveColor(
                     i * (360.0 / movingTargetCount),
                     1.0,
                     1.0,
-                    1.0
+                    displayParameters.targetLayerOpacity * selectedTargetOpacityFactor
                 )
 
-                val group = if (target != designerController.selectedMovingTarget) nonSelectedTargetsGroup else selectedTargetGroup
-                group.add(
-                    MovingTargetPathMarker(p).apply {
-                        stroke = color
-                    }
-                )
+                // draw course change point
+                gc.stroke = color
+                gc.fill = color
+                gc.fillOval(p.x - 0.5, p.y - 0.5, 1.0, 1.0)
 
                 // draw segments and point markers
-                var pFrom = combinedTransform.transform(
-                    initPosCart.x,
-                    initPosCart.y
-                )
+                var pFrom = Point2D(p.x, p.y)
                 target.directions.forEach { d ->
                     val dpc = combinedTransform.transform(d.destination.toCartesian())
-                    group.add(
-                        MovingTargetCourseLine(pFrom, dpc).apply {
-                            stroke = color
-                        }
+
+                    gc.stroke = color
+                    gc.strokeLine(
+                        pFrom.x, pFrom.y,
+                        dpc.x, dpc.y
                     )
-                    group.add(
-                        MovingTargetPathMarker(dpc).apply {
-                            stroke = color
-                        }
-                    )
+                    gc.fill = color
+                    gc.fillOval(p.x - 1.0, p.y - 1.0, 2.0, 2.0)
+
                     pFrom = dpc
                 }
+
 
                 // draw current simulated position marker
                 val plotPathSegment = getCurrentPathSegment(target, currentTimeUs) ?: return@forEachIndexed
@@ -523,7 +504,15 @@ spd=${speedStringConverter.toString(plotPathSegment.vKmh)}
 r=${distanceStringConverter.toString(distanceKm / distanceToKmScale())}
 az=${angleStringConverter.toString(az)}"""
 
-                val movingTarget = when (type) {
+                gc.fill = Styles.radarFgColor.deriveColor(
+                    0.0,
+                    1.0,
+                    1.0,
+                    displayParameters.targetLayerOpacity * selectedTargetOpacityFactor
+                )
+                gc.stroke = color
+
+                when (type) {
                     MovingTargetType.Cloud1 -> {
                         val bounds = combinedTransform.transform(BoundingBox(
                             plotPosCart.x - cloudOneImage.width / 2,
@@ -531,14 +520,27 @@ az=${angleStringConverter.toString(az)}"""
                             cloudOneImage.width,
                             cloudOneImage.height
                         ))
-                        MovingTargetPositionMarker(
-                            p = pt,
-                            text = text,
-                            color = color,
-                            image = cloudOneImage,
-                            imageBounds = bounds
+                        gc.strokeRect(
+                            pt.x - bounds.width / 2.0,
+                            pt.y - bounds.height / 2.0,
+                            bounds.width,
+                            bounds.height
+                        )
+                        gc.drawImage(
+                            cloudOneImage,
+                            pt.x - bounds.width / 2.0,
+                            pt.y - bounds.height / 2.0,
+                            bounds.width,
+                            bounds.height
+                        )
+                        gc.textBaseline = VPos.TOP
+                        gc.fillText(
+                            text,
+                            pt.x,
+                            pt.y + bounds.height / 2 + 1.5 * Font.getDefault().size
                         )
                     }
+
                     MovingTargetType.Cloud2 -> {
                         val bounds = combinedTransform.transform(BoundingBox(
                             plotPosCart.x - cloudTwoImage.width / 2,
@@ -546,53 +548,111 @@ az=${angleStringConverter.toString(az)}"""
                             cloudTwoImage.width,
                             cloudTwoImage.height
                         ))
-                        MovingTargetPositionMarker(
-                            p = pt,
-                            text = text,
-                            color = color,
-                            image = cloudTwoImage,
-                            imageBounds = bounds
+                        gc.strokeRect(
+                            pt.x - bounds.width / 2.0,
+                            pt.y - bounds.height / 2.0,
+                            bounds.width,
+                            bounds.height
+                        )
+                        gc.drawImage(
+                            cloudTwoImage,
+                            pt.x - bounds.width / 2.0,
+                            pt.y - bounds.height / 2.0,
+                            bounds.width,
+                            bounds.height
+                        )
+                        gc.textBaseline = VPos.TOP
+                        gc.fill = Styles.movingTargetPositionLabelColor.deriveColor(
+                            0.0,
+                            1.0,
+                            1.0,
+                            displayParameters.targetLayerOpacity * selectedTargetOpacityFactor
+                        )
+                        gc.fillText(
+                            text,
+                            pt.x,
+                            pt.y + bounds.height / 2 + 1.5 * Font.getDefault().size
                         )
                     }
-                    MovingTargetType.Point -> MovingTargetPositionMarker(
-                        p = pt,
-                        text = text,
-                        color = color
-                    )
-                    MovingTargetType.Test1 -> MovingTargetPositionMarker(
-                        p = pt,
-                        text = text,
-                        color = color
-                    )
-                    MovingTargetType.Test2 -> MovingTargetPositionMarker(
-                        p = pt,
-                        text = text,
-                        color = color
-                    )
+
+                    MovingTargetType.Point -> {
+                        gc.strokeRect(
+                            pt.x - 10.0 / 2.0,
+                            pt.y - 10.0 / 2.0,
+                            10.0,
+                            10.0
+                        )
+                        gc.textBaseline = VPos.TOP
+                        gc.fill = Styles.movingTargetPositionLabelColor.deriveColor(
+                            0.0,
+                            1.0,
+                            1.0,
+                            displayParameters.targetLayerOpacity * selectedTargetOpacityFactor
+                        )
+                        gc.fillText(
+                            text,
+                            pt.x,
+                            pt.y + 10.0 / 2 + 1.5 * Font.getDefault().size
+                        )
+                    }
+
+                    MovingTargetType.Test1 -> {
+                        gc.strokeRect(
+                            pt.x - 10.0 / 2.0,
+                            pt.y - 10.0 / 2.0,
+                            10.0,
+                            10.0
+                        )
+                        gc.textBaseline = VPos.TOP
+                        gc.fill = Styles.movingTargetPositionLabelColor.deriveColor(
+                            0.0,
+                            1.0,
+                            1.0,
+                            displayParameters.targetLayerOpacity * selectedTargetOpacityFactor
+                        )
+                        gc.fillText(
+                            text,
+                            pt.x,
+                            pt.y + 10.0 / 2 + 1.5 * Font.getDefault().size
+                        )
+                    }
+
+                    MovingTargetType.Test2 -> {
+                        gc.strokeRect(
+                            pt.x - 10.0 / 2.0,
+                            pt.y - 10.0 / 2.0,
+                            10.0,
+                            10.0
+                        )
+                        gc.textBaseline = VPos.TOP
+                        gc.fill = Styles.movingTargetPositionLabelColor.deriveColor(
+                            0.0,
+                            1.0,
+                            1.0,
+                            displayParameters.targetLayerOpacity * selectedTargetOpacityFactor
+                        )
+                        gc.fillText(
+                            text,
+                            pt.x,
+                            pt.y + 10.0 / 2 + 1.5 * Font.getDefault().size
+                        )
+                    }
                 }
-                group.add(movingTarget)
 
             }
 
-        // fade non selected targets
-        if (!noneSelected) {
-            nonSelectedTargetsGroup.opacity = 0.3
-            selectedTargetGroup.opacity = 1.0
-        }
-
-        selectedTargetGroup.children
-            .union(nonSelectedTargetsGroup.children)
-            .filter { it is MovingTargetPathMarker || it is MovingTargetPositionMarker }
-            .forEach(Node::toFront)
-
     }
 
-    fun drawTargetHits() {
-
-        val movingHitsGroup = Group().apply {
-            opacity = displayParameters.targetHitLayerOpacity
-        }
-        hitsGroup.children.setAll(movingHitsGroup)
+    fun drawTargetHits(gc: GraphicsContext) {
+        return
+        // set translucent fill color
+        gc.fill = Styles.hitColor.deriveColor(
+            0.0,
+            1.0,
+            1.0,
+            displayParameters.targetHitLayerOpacity
+        )
+        gc.stroke = gc.fill
 
         val currentTimeSec = simulatedCurrentTimeSecProperty.get()
         val currentTimeUs = S_TO_US * currentTimeSec
@@ -617,15 +677,12 @@ az=${angleStringConverter.toString(az)}"""
                     seekTimeUs * (round(currentTimeSec / simulatorController.radarParameters.seekTimeSec) - n)
                 )
 
-                val timeIterator = generateSequence(fromTimeUs) { t -> t + designerController.scenario.simulationStepUs }
+                generateSequence(fromTimeUs) { t -> t + designerController.scenario.simulationStepUs }
                     .takeWhile { t -> t <= currentTimeUs }
-                    .iterator()
-
-                stream(spliteratorUnknownSize(timeIterator, Spliterator.ORDERED), false)
                     .forEach inner@ { tUs ->
 
-                        val plotPathSegment = getCurrentPathSegment(target, tUs)
-                        val plotPos = plotPathSegment?.getPositionForTime(tUs) ?: return@inner
+                        val plotPathSegment = getCurrentPathSegment(target, tUs) ?: return@inner
+                        val plotPos = plotPathSegment.getPositionForTime(tUs) ?: return@inner
                         val plotPosCart = plotPos.toCartesian()
 
                         val sweepHeadingRad = TWO_PI / seekTimeUs * tUs
@@ -643,24 +700,42 @@ az=${angleStringConverter.toString(az)}"""
 
                         val transformedPlot = combinedTransform.transform(plotPosCart)
 
-                        val movingTarget = when (type) {
-                            MovingTargetType.Cloud1 -> null
-                            MovingTargetType.Cloud2 -> null
-                            MovingTargetType.Point -> MovingTargetPlotMarker(
-                                x = transformedPlot.x,
-                                y = transformedPlot.y
-                            )
-                            MovingTargetType.Test1 -> Test1TargetHitMarker(cp, transformedPlot.distance(cp))
-                            MovingTargetType.Test2 -> Test2TargetHitMarker(
-                                cp,
-                                plotPos.azDeg,
-                                maxDistance = bp.distance(cp),
-                                angleResolutionDeg = simulatorController.radarParameters.horizontalAngleBeamWidthDeg
-                            )
-                        }
-
-                        if (movingTarget != null) {
-                            movingHitsGroup.add(movingTarget)
+                        when (type) {
+                            MovingTargetType.Cloud1 -> {
+                                // noop
+                            }
+                            MovingTargetType.Cloud2 -> {
+                                // noop
+                            }
+                            MovingTargetType.Point -> {
+                                gc.fillOval(
+                                    transformedPlot.x - 2,
+                                    transformedPlot.y - 2,
+                                    4.0,
+                                    4.0
+                                )
+                            }
+                            MovingTargetType.Test1 -> {
+                                val d = transformedPlot.distance(cp)
+                                gc.strokeOval(
+                                    cp.x - d / 2,
+                                    cp.y - d / 2,
+                                    d,
+                                    d
+                                )
+                            }
+                            MovingTargetType.Test2 -> {
+                                val maxDistance = bp.distance(cp)
+                                gc.fillArc(
+                                    cp.x,
+                                    cp.y,
+                                    maxDistance,
+                                    maxDistance,
+                                    plotPos.azDeg - simulatorController.radarParameters.horizontalAngleBeamWidthDeg / 2,
+                                    plotPos.azDeg + simulatorController.radarParameters.horizontalAngleBeamWidthDeg / 2,
+                                    ArcType.CHORD
+                                )
+                            }
                         }
 
                     }

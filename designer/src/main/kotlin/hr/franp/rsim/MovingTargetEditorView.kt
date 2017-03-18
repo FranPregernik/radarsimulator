@@ -53,9 +53,6 @@ class MovingTargetEditorView : View() {
                                 MovingTargetType.Test2
                             ).observable()
 
-                            setOnAction {
-                                radarScreen.drawMovingTargets()
-                            }
                         }
                     }
 
@@ -76,9 +73,6 @@ class MovingTargetEditorView : View() {
 
                                 disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
 
-                                textProperty().addListener { observableValue, oldValue, newValue ->
-                                    radarScreen.drawMovingTargets()
-                                }
                             }
 
                             label("az [deg]:") {
@@ -95,9 +89,6 @@ class MovingTargetEditorView : View() {
 
                                 disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
 
-                                textProperty().addListener { observableValue, oldValue, newValue ->
-                                    radarScreen.drawMovingTargets()
-                                }
                             }
 
 
@@ -115,15 +106,13 @@ class MovingTargetEditorView : View() {
                                     if (coordinateClick != null) {
                                         radarScreen.mouseClickProperty.removeListener(coordinateClick)
                                     }
-                                    coordinateClick = ChangeListener { observableValue, oldValue, newValue ->
+                                    coordinateClick = ChangeListener { _, _, newValue ->
                                         radarScreen.mouseClickProperty.removeListener(coordinateClick)
 
                                         // modify model
                                         controller.selectedMovingTarget.initialPosition.rKm = newValue.rKm
                                         controller.selectedMovingTarget.initialPosition.azDeg = newValue.azDeg
 
-                                        // redraw
-                                        radarScreen.drawMovingTargets()
                                     }
                                     radarScreen.mouseClickProperty.addListener(coordinateClick)
                                 }
@@ -149,7 +138,6 @@ class MovingTargetEditorView : View() {
                                             destination = RadarCoordinate(0.0, 0.0),
                                             speedKmh = 0.0
                                         ))
-                                        radarScreen.drawMovingTargets()
                                     }
                                 }
                                 removeDirectionItemButton = button("", fontAwesome.create(TRASH)) {
@@ -158,7 +146,6 @@ class MovingTargetEditorView : View() {
                                     setOnAction {
                                         val direction = directionsTableView.selectionModel.selectedItem ?: return@setOnAction
                                         controller.selectedMovingTarget.directionsProperty().value.remove(direction)
-                                        radarScreen.drawMovingTargets()
                                     }
                                 }
                                 setDirectionEndpointButton = button("", fontAwesome.create(CROSSHAIRS)) {
@@ -179,8 +166,6 @@ class MovingTargetEditorView : View() {
                                             segment.destination.rKm = newValue.rKm
                                             segment.destination.azDeg = newValue.azDeg
 
-                                            // redraw
-                                            radarScreen.drawMovingTargets()
                                         }
                                         radarScreen.mouseClickProperty.addListener(coordinateClick)
                                     }
@@ -206,15 +191,11 @@ class MovingTargetEditorView : View() {
                                 columnResizePolicy = tornadofx.SmartResize.POLICY
 
                                 column("r [km]", Direction::rProperty).apply {
-                                    useTextField(dcsc) {
-                                        radarScreen.drawMovingTargets()
-                                    }
                                     pctWidth(25.0)
                                     isSortable = false
 
                                     setOnEditCommit {
                                         it.rowValue.rProperty().value = it.newValue
-                                        radarScreen.draw()
                                     }
                                 }
 
@@ -226,7 +207,6 @@ class MovingTargetEditorView : View() {
 
                                     setOnEditCommit {
                                         it.rowValue.azProperty().value = it.newValue
-                                        radarScreen.draw()
                                     }
                                 }
 
@@ -239,7 +219,6 @@ class MovingTargetEditorView : View() {
 
                                     setOnEditCommit {
                                         it.rowValue.speedKmhProperty().value = it.newValue
-                                        radarScreen.draw()
                                     }
                                 }
 
@@ -260,7 +239,7 @@ class MovingTargetEditorView : View() {
 
         }
 
-        controller.selectedMovingTargetProperty.addListener { observableValue, oldMovingTarget, newMovingTarget ->
+        controller.selectedMovingTargetProperty.addListener { _, oldMovingTarget, newMovingTarget ->
 
             // unbind/rebind
             oldMovingTarget?.apply {

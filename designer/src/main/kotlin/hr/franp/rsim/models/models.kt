@@ -225,6 +225,21 @@ class Clutter() : JsonModel {
             bytes = if (content != null) Base64.getDecoder().decode(content) else ByteArray(0)
         }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || javaClass != other.javaClass) return false
+
+        val o = other as Clutter
+
+        return Arrays.equals(o.bytes, bytes)
+
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hashCode(bytes)
+    }
+
 }
 
 class Scenario : JsonModel {
@@ -238,7 +253,7 @@ class Scenario : JsonModel {
     fun movingTargetsProperty() = getProperty(Scenario::movingTargets)
 
 
-    var clutter by property<Clutter>(Clutter())
+    var clutter by property(Clutter())
     fun clutterProperty() = getProperty(Scenario::clutter)
 
 
