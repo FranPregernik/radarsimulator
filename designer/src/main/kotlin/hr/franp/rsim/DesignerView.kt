@@ -527,15 +527,6 @@ class DesignerView : View() {
                                     }
                                 }
 
-                                textfield {
-                                    disableProperty().bind(simulationController.simulationRunningProperty)
-                                    textProperty().bindBidirectional(radarScreen.simulatedCurrentTimeSecProperty, SecondsStringConverter())
-                                    minWidth = Font.getDefault().size * 3
-                                    maxWidth = Font.getDefault().size * 5
-                                    prefWidth = Font.getDefault().size * 4
-                                    alignment = Pos.BASELINE_CENTER
-                                }
-
                                 button("", fontAwesome.create(FORWARD)) {
                                     disableProperty().bind(
                                         radarScreen.simulatedCurrentTimeSecProperty.isEqualTo(designerController.scenario.simulationDurationMin * MIN_TO_S, 0.001)
@@ -568,25 +559,6 @@ class DesignerView : View() {
                                         radarScreen.simulatedCurrentTimeSecProperty.set(designerController.scenario.simulationDurationMin * MIN_TO_S)
                                     }
                                 }
-
-                            }
-
-                            field("AZ") {
-
-                                label {
-                                    val angleConverter = AngleStringConverter()
-
-                                    radarScreen.simulatedCurrentTimeSecProperty.addListener { _, _, newValue ->
-                                        textProperty().set(
-                                            angleConverter.toString(
-                                                normalizeAngleDeg(
-                                                    360.0 * (newValue.toDouble() / simulationController.radarParameters.seekTimeSec)
-                                                )
-                                            )
-                                        )
-                                    }
-                                }
-
                             }
                         }
                     }

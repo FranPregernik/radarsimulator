@@ -14,6 +14,8 @@ import javafx.scene.text.*
 import javafx.scene.transform.*
 import tornadofx.*
 import java.lang.Math.*
+import java.time.*
+import java.time.format.*
 
 class RadarScreenView : View() {
 
@@ -257,11 +259,82 @@ class RadarScreenView : View() {
 
     fun drawScene(gc: GraphicsContext) {
         setupViewPort()
+        drawUI(gc)
         drawStationaryTargets(gc)
         drawStaticMarkers(gc)
         drawDynamicMarkers(gc)
         drawTargetHits(gc)
         drawMovingTargets(gc)
+    }
+
+    private val dateFormatPattern = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    private val timeFormatPattern = DateTimeFormatter.ofPattern("HH:mm:ss")
+    private val angleConverter = AngleStringConverter()
+
+    private fun drawUI(gc: GraphicsContext) {
+
+        val height = 60.0
+        val width = 200.0
+        val offset = 10.0
+
+        val originalFont = gc.font
+        gc.font = Font(30.0)
+        gc.textAlign = TextAlignment.CENTER
+        gc.textBaseline = VPos.CENTER
+
+        // display time in upper left
+        gc.fill = Styles.radarFgColor
+        gc.fillRect(offset, offset, width, height)
+        gc.fill = Styles.radarBgColor
+        gc.fillText(
+            LocalTime.now().format(timeFormatPattern),
+            offset + width / 2,
+            offset + height / 2,
+            width - offset
+        )
+
+        // display date in upper right
+        gc.fill = Styles.radarFgColor
+        gc.fillRect(sketch.width - offset - width, offset, width, height)
+        gc.fill = Styles.radarBgColor
+        gc.fillText(
+            LocalDate.now().format(dateFormatPattern),
+            sketch.width - offset - width / 2,
+            offset + height / 2,
+            width - offset
+        )
+
+        // display antenna azimuth in lower left
+        gc.fill = Styles.radarFgColor
+        gc.fillRect(offset, sketch.height - offset - height, width, height)
+        gc.fill = Styles.radarBgColor
+        gc.fillText(
+            angleConverter.toString(
+                normalizeAngleDeg(
+                    360.0 * (simulatedCurrentTimeSecProperty.get() / simulatorController.radarParameters.seekTimeSec)
+                )
+            ),
+            offset + width / 2,
+            sketch.height - offset - height / 2,
+            width - offset
+        )
+
+        // display simulation time in lower right
+        gc.fill = Styles.radarFgColor
+        gc.fillRect(sketch.width - offset - width, sketch.height - offset - height, width, height)
+        gc.fill = Styles.radarBgColor
+        gc.fillText(
+            LocalTime.MIDNIGHT
+                .plus(
+                    Duration.ofSeconds(simulatedCurrentTimeSecProperty.get().toLong())
+                )
+                .format(timeFormatPattern),
+            sketch.width - offset - width / 2,
+            sketch.height - offset - height / 2,
+            width - offset
+        )
+
+        gc.font = originalFont
     }
 
     fun drawStaticMarkers(gc: GraphicsContext) {
