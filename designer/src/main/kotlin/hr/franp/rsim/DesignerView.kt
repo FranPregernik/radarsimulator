@@ -5,7 +5,6 @@ import hr.franp.rsim.models.*
 import hr.franp.rsim.models.AzimuthMarkerType.*
 import hr.franp.rsim.models.DistanceUnit.*
 import javafx.beans.property.*
-import javafx.embed.swing.*
 import javafx.geometry.*
 import javafx.scene.control.*
 import javafx.scene.image.*
@@ -19,7 +18,6 @@ import tornadofx.*
 import java.io.*
 import java.nio.*
 import java.util.zip.*
-import javax.imageio.*
 import javax.json.Json.*
 
 class DesignerView : View() {
@@ -114,7 +112,12 @@ class DesignerView : View() {
                             runAsync {
                                 try {
 
+                                    updateMessage("Calibrating")
+                                    updateProgress(0.0, 1.0)
                                     simulationController.calibrate()
+                                    updateProgress(1.0, 1.0)
+                                    updateMessage("Calibrated")
+
                                     val radarParameters = simulationController.radarParameters
 
                                     // TODO: move into SimulatorController.uploadClutterFile
@@ -159,16 +162,20 @@ class DesignerView : View() {
                                             designerController.calculateClutterHits()
                                                 .forEach {
                                                     seekTime += radarParameters.seekTimeSec
+                                                    updateProgress(
+                                                        seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
+                                                        1.0
+                                                    )
                                                     mergedHits.or(it)
                                                     it.writeTo(stream)
                                                 }
 
-                                            // DEBUG
-                                            ImageIO.write(
-                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, radarParameters), null),
-                                                "png",
-                                                File("clutter.png")
-                                            )
+//                                            // DEBUG
+//                                            ImageIO.write(
+//                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, radarParameters), null),
+//                                                "png",
+//                                                File("clutter.png")
+//                                            )
 
                                             updateMessage("Wrote clutter sim")
                                             updateProgress(1.0, 1.0)
@@ -226,12 +233,12 @@ class DesignerView : View() {
                                                     it.writeTo(stream)
                                                 }
 
-                                            // DEBUG
-                                            ImageIO.write(
-                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, radarParameters), null),
-                                                "png",
-                                                File("targets.png")
-                                            )
+//                                            // DEBUG
+//                                            ImageIO.write(
+//                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, radarParameters), null),
+//                                                "png",
+//                                                File("targets.png")
+//                                            )
 
                                             updateMessage("Wrote target sim")
                                             updateProgress(1.0, 1.0)
