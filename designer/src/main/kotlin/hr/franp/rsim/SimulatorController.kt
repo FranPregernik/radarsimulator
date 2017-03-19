@@ -193,7 +193,6 @@ class SimulatorController : Controller(), AutoCloseable {
                 val exitStatus = cmd.exitStatus ?: 0
                 if (exitStatus > 0) {
                     log.info { "Command exited with $exitStatus and message: \"${cmd.exitErrorMessage}\"" }
-                    throw RuntimeException("Error running simulation, see logs.")
                 }
             }
         }
@@ -275,7 +274,7 @@ class SimulatorController : Controller(), AutoCloseable {
 
                 val exitStatus = cmd.exitStatus ?: 0
                 if (!calibrated && exitStatus > 0) {
-                    throw RuntimeException("Error calibrating simulation, see logs.")
+                    log.info { "Command exited with $exitStatus and message: \"${cmd.exitErrorMessage}\"" }
                 }
             }
         }

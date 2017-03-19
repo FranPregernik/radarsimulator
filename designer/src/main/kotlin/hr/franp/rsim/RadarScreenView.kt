@@ -1,5 +1,6 @@
 package hr.franp.rsim
 
+import hr.franp.*
 import hr.franp.rsim.models.*
 import javafx.beans.property.*
 import javafx.event.*
@@ -13,10 +14,11 @@ import javafx.scene.text.*
 import javafx.scene.transform.*
 import org.apache.commons.collections4.map.*
 import tornadofx.*
-import java.io.*
 import java.lang.Math.*
 import java.time.*
 import java.time.format.*
+import java.util.*
+import java.util.stream.*
 
 class RadarScreenView : View() {
 
@@ -711,51 +713,65 @@ az=${angleStringConverter.toString(az)}"""
 
     }
 
-    val lruHitImages = LRUMap<String, Image>(10)
+    var lruHits = LRUMap<Int, Bits>(10)
 
     fun drawTargetHits(gc: GraphicsContext) {
-
-        val radarParameters = simulatorController.radarParameters
-
-        val n = 6
-        val currentTimeSec = simulatedCurrentTimeSecProperty.get()
-        val currentArpIdx = floor(currentTimeSec / radarParameters.seekTimeSec).toInt()
-
-        // draw stationary targets
-        val width = (2.0 * radarParameters.maxRadarDistanceKm)
-        val height = (2.0 * radarParameters.maxRadarDistanceKm)
-        val transformedBounds = combinedTransform.transform(BoundingBox(
-            -width / 2.0,
-            -height / 2.0,
-            width,
-            height
-        ))
 
         val alpha = gc.globalAlpha
         gc.globalAlpha = displayParameters.clutterLayerOpacity
 
-        // draw images
-        ((currentArpIdx - 1 - n)..(currentArpIdx - 1))
-            .dropWhile { it < 0 }
+        val radarParameters = simulatorController.radarParameters
+        val cParams = CalculationParameters(radarParameters)
+
+        val n = 6
+
+        val currentTimeSec = simulatedCurrentTimeSecProperty.get()
+        val currentArpIdx = floor(currentTimeSec / radarParameters.seekTimeSec).toInt()
+
+        val fromArpIdx = max(
+            0,
+            (currentArpIdx - n)
+        )
+
+        // merge current ARP till the current time
+        val fromCurrArpSec = floor(currentTimeSec / radarParameters.seekTimeSec) * radarParameters.seekTimeSec
+        if (currentTimeSec > fromCurrArpSec) {
+            log.finer { "Calculate current hits for range $fromCurrArpSec to $currentTimeSec" }
+            val hits = designerController.calculateTargetHits(
+                fromCurrArpSec,
+                currentTimeSec
+            ).reduce(
+                Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt()),
+                { acc, curr ->
+                    acc.or(curr)
+                    acc
+                }
+            )
+
+            drawRadarHitImage(gc, hits, cParams, combinedTransform)
+        }
+
+        // merge history
+        IntStream.range(fromArpIdx, currentArpIdx)
             .forEach { arpIdx ->
 
-                val seekTime = (arpIdx * radarParameters.seekTimeSec).toInt()
+                val hits = lruHits.computeIfAbsent(arpIdx, { arpIdx ->
 
-                val file = File("tmp/target_$seekTime.png")
-                if (!file.exists()) {
-                    return@forEach
-                }
+                    val fromTimeSec = arpIdx * radarParameters.seekTimeSec
+                    val toTimeSec = (arpIdx + 1) * radarParameters.seekTimeSec
 
-                val key = file.toURI().toString()
-                val image = lruHitImages.computeIfAbsent(key, ::Image)
+                    log.finer { "Calculate hits for range $fromTimeSec to $toTimeSec" }
+                    designerController.calculateTargetHits(fromTimeSec, toTimeSec)
+                        .reduce(
+                            Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt()),
+                            { acc, curr ->
+                                acc.or(curr)
+                                acc
+                            }
+                        )
+                })
 
-                gc.drawImage(
-                    image,
-                    transformedBounds.minX,
-                    transformedBounds.minY,
-                    transformedBounds.width,
-                    transformedBounds.height
-                )
+                drawRadarHitImage(gc, hits, cParams, combinedTransform)
             }
 
         gc.globalAlpha = alpha

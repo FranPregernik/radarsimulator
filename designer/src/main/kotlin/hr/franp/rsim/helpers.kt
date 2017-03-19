@@ -18,7 +18,6 @@ import javafx.util.*
 import jfxtras.labs.util.*
 import jfxtras.labs.util.event.*
 import tornadofx.*
-import java.awt.image.*
 import java.lang.Math.*
 import java.text.*
 
@@ -237,14 +236,7 @@ fun processHitMaskImage(img: Image): Image {
 /**
  * Helper debug function to convert radar hits format to an image for easier viewing.
  */
-fun generateRadarHitImage(hits: Bits, cParams: CalculationParameters): BufferedImage {
-
-    val outputImage = BufferedImage(
-        2 * cParams.maxRadarDistanceKm.toInt(),
-        2 * cParams.maxRadarDistanceKm.toInt(),
-        BufferedImage.TYPE_4BYTE_ABGR
-    )
-    val gc = outputImage.createGraphics()
+fun drawRadarHitImage(gc: GraphicsContext, hits: Bits, cParams: CalculationParameters, combinedTransform: Transform) {
 
     var idx = hits.nextSetBit(0)
     while (idx >= 0 && idx < hits.size()) {
@@ -265,19 +257,17 @@ fun generateRadarHitImage(hits: Bits, cParams: CalculationParameters): BufferedI
 
         val sweepHeadingRad = sweepIdx * cParams.c1
         val angle = azimuthToAngle(sweepHeadingRad)
-        val x = (cParams.maxRadarDistanceKm + distanceKm * cos(angle)).toInt()
-        val y = (2 * cParams.maxRadarDistanceKm - 1 - (cParams.maxRadarDistanceKm + distanceKm * sin(angle))).toInt()
-
-        gc.color = java.awt.Color(
-            Styles.hitColor.red.toFloat(),
-            Styles.hitColor.green.toFloat(),
-            Styles.hitColor.blue.toFloat(),
-            Styles.hitColor.opacity.toFloat()
+        val x = distanceKm * cos(angle)
+        val y = distanceKm * sin(angle)
+        val hitPoint = combinedTransform.transform(x, y)
+        gc.fill = Styles.hitColor
+        gc.fillOval(
+            hitPoint.x - 1.5,
+            hitPoint.y - 1.5,
+            3.0,
+            3.0
         )
-        gc.fillOval(x - 1, y - 1, 2, 2)
     }
-
-    return outputImage
 }
 
 val DECIMAL_SYMBOLS = DecimalFormatSymbols().apply {

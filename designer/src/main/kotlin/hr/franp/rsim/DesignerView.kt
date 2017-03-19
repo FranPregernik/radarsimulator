@@ -17,7 +17,6 @@ import tornadofx.*
 import java.io.*
 import java.nio.*
 import java.util.zip.*
-import javax.imageio.*
 import javax.json.Json.*
 
 class DesignerView : View() {
@@ -163,13 +162,6 @@ class DesignerView : View() {
                                             designerController.calculateClutterHits()
                                                 .forEach {
 
-                                                    // fast drawing
-                                                    ImageIO.write(
-                                                        generateRadarHitImage(it, cParams),
-                                                        "png",
-                                                        File("tmp/clutter_${seekTime.toInt()}.png")
-                                                    )
-
                                                     spreadHits(it, cParams)
                                                         .writeTo(stream)
 
@@ -225,12 +217,6 @@ class DesignerView : View() {
                                             designerController.calculateTargetHits()
                                                 .forEach {
 
-                                                    ImageIO.write(
-                                                        generateRadarHitImage(it, cParams),
-                                                        "png",
-                                                        File("tmp/target_${seekTime.toInt()}.png")
-                                                    )
-
                                                     spreadHits(it, cParams)
                                                         .writeTo(stream)
 
@@ -248,15 +234,15 @@ class DesignerView : View() {
 
                                     simulationController.uploadClutterFile(
                                         FileSystemFile("tmp/clutter.bin.gz"),
-                                        { progress, message ->
-                                            updateMessage(message)
+                                        { progress, _ ->
+                                            updateMessage("Sending clutter sim")
                                             updateProgress(progress, 1.0)
                                         }
                                     )
                                     simulationController.uploadTargetsFile(
                                         FileSystemFile("tmp/targets.bin.gz"),
-                                        { progress, message ->
-                                            updateMessage(message)
+                                        { progress, _ ->
+                                            updateMessage("Sending targets sim")
                                             updateProgress(progress, 1.0)
                                         }
                                     )

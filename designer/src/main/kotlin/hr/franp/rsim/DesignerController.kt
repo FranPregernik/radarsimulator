@@ -4,6 +4,7 @@ import hr.franp.*
 import hr.franp.rsim.models.*
 import javafx.scene.image.*
 import tornadofx.*
+import java.lang.Math.*
 import java.util.*
 import java.util.Spliterators.*
 import java.util.stream.*
@@ -50,8 +51,11 @@ class DesignerController : Controller() {
 
                 val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
 
-                val minTimeUs = minTimeSec * S_TO_US
-                val maxTimeUs = (minTimeSec + radarParameters.seekTimeSec) * S_TO_US
+                val minTimeUs = S_TO_US * minTimeSec
+                val maxTimeUs = S_TO_US * min(
+                    toTimeSec,
+                    minTimeSec + radarParameters.seekTimeSec
+                )
 
                 targetPathSegments.forEach tps@ { pathSegment ->
 
