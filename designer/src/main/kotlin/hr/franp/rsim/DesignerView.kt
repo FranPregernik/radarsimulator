@@ -1,6 +1,5 @@
 package hr.franp.rsim
 
-import hr.franp.*
 import hr.franp.rsim.models.*
 import hr.franp.rsim.models.AzimuthMarkerType.*
 import hr.franp.rsim.models.DistanceUnit.*
@@ -18,6 +17,7 @@ import tornadofx.*
 import java.io.*
 import java.nio.*
 import java.util.zip.*
+import javax.imageio.*
 import javax.json.Json.*
 
 class DesignerView : View() {
@@ -119,9 +119,11 @@ class DesignerView : View() {
                                     updateMessage("Calibrated")
 
                                     val radarParameters = simulationController.radarParameters
+                                    val cParams = CalculationParameters(simulationController.radarParameters)
 
-                                    // TODO: move into SimulatorController.uploadClutterFile
-                                    FileOutputStream("clutter.bin.gz").use { fileOutputStream ->
+                                    File("tmp").mkdir()
+
+                                    FileOutputStream("tmp/clutter.bin.gz").use { fileOutputStream ->
                                         GZIPOutputStream(fileOutputStream).use { stream ->
                                             stream.write(
                                                 ByteBuffer.allocate(4)
@@ -157,33 +159,33 @@ class DesignerView : View() {
                                             updateMessage("Writing clutter sim")
                                             updateProgress(0.0, 1.0)
 
-                                            val mergedHits = Bits(0)
                                             var seekTime = 0.0
                                             designerController.calculateClutterHits()
                                                 .forEach {
+
+                                                    // fast drawing
+                                                    ImageIO.write(
+                                                        generateRadarHitImage(it, cParams),
+                                                        "png",
+                                                        File("tmp/clutter_${seekTime.toInt()}.png")
+                                                    )
+
+                                                    spreadHits(it, cParams)
+                                                        .writeTo(stream)
+
                                                     seekTime += radarParameters.seekTimeSec
                                                     updateProgress(
                                                         seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
                                                         1.0
                                                     )
-                                                    mergedHits.or(it)
-                                                    it.writeTo(stream)
                                                 }
-
-//                                            // DEBUG
-//                                            ImageIO.write(
-//                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, radarParameters), null),
-//                                                "png",
-//                                                File("clutter.png")
-//                                            )
 
                                             updateMessage("Wrote clutter sim")
                                             updateProgress(1.0, 1.0)
                                         }
                                     }
 
-                                    // TODO: move into SimulatorController.uploadTargetsFile
-                                    FileOutputStream("targets.bin.gz").use { fileOutputStream ->
+                                    FileOutputStream("tmp/targets.bin.gz").use { fileOutputStream ->
                                         GZIPOutputStream(fileOutputStream).use { stream ->
                                             stream.write(
                                                 ByteBuffer.allocate(4)
@@ -216,29 +218,28 @@ class DesignerView : View() {
                                                     .array()
                                             )
 
-                                            val mergedHits = Bits(0)
-
                                             updateMessage("Writing target sim")
                                             updateProgress(0.0, 1.0)
 
                                             var seekTime = 0.0
                                             designerController.calculateTargetHits()
                                                 .forEach {
+
+                                                    ImageIO.write(
+                                                        generateRadarHitImage(it, cParams),
+                                                        "png",
+                                                        File("tmp/target_${seekTime.toInt()}.png")
+                                                    )
+
+                                                    spreadHits(it, cParams)
+                                                        .writeTo(stream)
+
                                                     seekTime += radarParameters.seekTimeSec
                                                     updateProgress(
                                                         seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
                                                         1.0
                                                     )
-                                                    mergedHits.or(it)
-                                                    it.writeTo(stream)
                                                 }
-
-//                                            // DEBUG
-//                                            ImageIO.write(
-//                                                SwingFXUtils.fromFXImage(generateRadarHitImage(mergedHits, radarParameters), null),
-//                                                "png",
-//                                                File("targets.png")
-//                                            )
 
                                             updateMessage("Wrote target sim")
                                             updateProgress(1.0, 1.0)
@@ -246,14 +247,14 @@ class DesignerView : View() {
                                     }
 
                                     simulationController.uploadClutterFile(
-                                        FileSystemFile("clutter.bin.gz"),
+                                        FileSystemFile("tmp/clutter.bin.gz"),
                                         { progress, message ->
                                             updateMessage(message)
                                             updateProgress(progress, 1.0)
                                         }
                                     )
                                     simulationController.uploadTargetsFile(
-                                        FileSystemFile("targets.bin.gz"),
+                                        FileSystemFile("tmp/targets.bin.gz"),
                                         { progress, message ->
                                             updateMessage(message)
                                             updateProgress(progress, 1.0)

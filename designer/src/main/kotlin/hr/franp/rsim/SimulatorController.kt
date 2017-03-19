@@ -192,6 +192,7 @@ class SimulatorController : Controller(), AutoCloseable {
 
                 val exitStatus = cmd.exitStatus ?: 0
                 if (exitStatus > 0) {
+                    log.info { "Command exited with $exitStatus and message: \"${cmd.exitErrorMessage}\"" }
                     throw RuntimeException("Error running simulation, see logs.")
                 }
             }

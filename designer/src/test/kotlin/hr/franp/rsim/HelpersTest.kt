@@ -27,146 +27,146 @@ class HelpersTest : Spek({
     )
     val cParams = CalculationParameters(radarParameters)
 
-    given("A point target in distance detection range") {
-
-        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
-        val position = RadarCoordinate(100.0, 10.0)
-
-        beforeEachTest { hits.clear() }
-
-
-        on("calculating the hit for sweep angle just prior heading range") {
-
-            val sweepHeadingRad = toRadians(position.azDeg - radarParameters.horizontalAngleBeamWidthDeg)
-
-            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-
-            it("should result in no detection") {
-                hits.nextSetBit(0) shouldEqual -1
-            }
-        }
-
-        on("calculating the hit for sweep angle just after heading range") {
-
-            val sweepHeadingRad = toRadians(position.azDeg + radarParameters.horizontalAngleBeamWidthDeg)
-
-            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-
-            it("should result in no detection") {
-                hits.nextSetBit(0) shouldEqual -1
-            }
-        }
-
-        on("calculating the hit for sweep angle inside heading range") {
-
-            val sweepHeadingRad = toRadians(position.azDeg)
-
-            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-
-            it("should result in detection") {
-                hits.nextSetBit(0) shouldNotEqual -1
-            }
-        }
-    }
-
-    given("A point target outside distance detection range") {
-
-        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
-        val azDeg = 10.0
-        val sweepHeadingRad = toRadians(azDeg)
-
-        beforeEachTest { hits.clear() }
-
-        on("calculating the close target hit") {
-
-            val position = RadarCoordinate(radarParameters.minRadarDistanceKm - 1, azDeg)
-
-            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-
-            it("should result in no detection") {
-                hits.nextSetBit(0) shouldEqual -1
-            }
-        }
-
-        on("calculating the far target hit") {
-
-            val position = RadarCoordinate(radarParameters.maxRadarDistanceKm + 1, azDeg)
-
-            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-
-            it("should result in no detection") {
-                hits.nextSetBit(0) shouldEqual -1
-            }
-        }
-
-    }
-
-    given("Targets in all quadrants") {
-
-        on("calculating the 1st quadrant") {
-
-            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
-            val position = RadarCoordinate(100.0, 45.0)
-
-            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
-                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
-                .forEach { sweepHeadingRad ->
-                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-                }
-
-            it("should result in detection") {
-                hits.nextSetBit(0) shouldNotEqual -1
-            }
-        }
-
-        on("calculating the 2nd quadrant") {
-
-            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
-            val position = RadarCoordinate(100.0, 135.0)
-
-            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
-                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
-                .forEach { sweepHeadingRad ->
-                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-                }
-
-            it("should result in detection") {
-                hits.nextSetBit(0) shouldNotEqual -1
-            }
-        }
-
-        on("calculating the 3rd quadrant") {
-
-            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
-            val position = RadarCoordinate(100.0, 225.0)
-
-            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
-                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
-                .forEach { sweepHeadingRad ->
-                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-                }
-
-            it("should result in detection") {
-                hits.nextSetBit(0) shouldNotEqual -1
-            }
-        }
-
-        on("calculating the 4th quadrant") {
-
-            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
-            val position = RadarCoordinate(100.0, 315.0)
-
-            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
-                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
-                .forEach { sweepHeadingRad ->
-                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-                }
-
-            it("should result in detection") {
-                hits.nextSetBit(0) shouldNotEqual -1
-            }
-        }
-    }
+//    given("A point target in distance detection range") {
+//
+//        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+//        val position = RadarCoordinate(100.0, 10.0)
+//
+//        beforeEachTest { hits.clear() }
+//
+//
+//        on("calculating the hit for sweep angle just prior heading range") {
+//
+//            val sweepHeadingRad = toRadians(position.azDeg - radarParameters.horizontalAngleBeamWidthDeg)
+//
+//            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+//
+//            it("should result in no detection") {
+//                hits.nextSetBit(0) shouldEqual -1
+//            }
+//        }
+//
+//        on("calculating the hit for sweep angle just after heading range") {
+//
+//            val sweepHeadingRad = toRadians(position.azDeg + radarParameters.horizontalAngleBeamWidthDeg)
+//
+//            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+//
+//            it("should result in no detection") {
+//                hits.nextSetBit(0) shouldEqual -1
+//            }
+//        }
+//
+//        on("calculating the hit for sweep angle inside heading range") {
+//
+//            val sweepHeadingRad = toRadians(position.azDeg)
+//
+//            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+//
+//            it("should result in detection") {
+//                hits.nextSetBit(0) shouldNotEqual -1
+//            }
+//        }
+//    }
+//
+//    given("A point target outside distance detection range") {
+//
+//        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+//        val azDeg = 10.0
+//        val sweepHeadingRad = toRadians(azDeg)
+//
+//        beforeEachTest { hits.clear() }
+//
+//        on("calculating the close target hit") {
+//
+//            val position = RadarCoordinate(radarParameters.minRadarDistanceKm - 1, azDeg)
+//
+//            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+//
+//            it("should result in no detection") {
+//                hits.nextSetBit(0) shouldEqual -1
+//            }
+//        }
+//
+//        on("calculating the far target hit") {
+//
+//            val position = RadarCoordinate(radarParameters.maxRadarDistanceKm + 1, azDeg)
+//
+//            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+//
+//            it("should result in no detection") {
+//                hits.nextSetBit(0) shouldEqual -1
+//            }
+//        }
+//
+//    }
+//
+//    given("Targets in all quadrants") {
+//
+//        on("calculating the 1st quadrant") {
+//
+//            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+//            val position = RadarCoordinate(100.0, 45.0)
+//
+//            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
+//                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
+//                .forEach { sweepHeadingRad ->
+//                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+//                }
+//
+//            it("should result in detection") {
+//                hits.nextSetBit(0) shouldNotEqual -1
+//            }
+//        }
+//
+//        on("calculating the 2nd quadrant") {
+//
+//            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+//            val position = RadarCoordinate(100.0, 135.0)
+//
+//            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
+//                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
+//                .forEach { sweepHeadingRad ->
+//                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+//                }
+//
+//            it("should result in detection") {
+//                hits.nextSetBit(0) shouldNotEqual -1
+//            }
+//        }
+//
+//        on("calculating the 3rd quadrant") {
+//
+//            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+//            val position = RadarCoordinate(100.0, 225.0)
+//
+//            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
+//                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
+//                .forEach { sweepHeadingRad ->
+//                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+//                }
+//
+//            it("should result in detection") {
+//                hits.nextSetBit(0) shouldNotEqual -1
+//            }
+//        }
+//
+//        on("calculating the 4th quadrant") {
+//
+//            val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+//            val position = RadarCoordinate(100.0, 315.0)
+//
+//            (0..(radarParameters.seekTimeSec * S_TO_US).toInt())
+//                .map { tUs -> TWO_PI / cParams.rotationTimeUs * tUs }
+//                .forEach { sweepHeadingRad ->
+//                    calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
+//                }
+//
+//            it("should result in detection") {
+//                hits.nextSetBit(0) shouldNotEqual -1
+//            }
+//        }
+//    }
 
     given("A clutter map in detection range with hdg in [270, 90]") {
 

@@ -4,7 +4,6 @@ import hr.franp.*
 import hr.franp.rsim.models.*
 import javafx.scene.image.*
 import tornadofx.*
-import java.lang.Math.*
 import java.util.*
 import java.util.Spliterators.*
 import java.util.stream.*
@@ -30,7 +29,8 @@ class DesignerController : Controller() {
     var selectedMovingTarget by property<MovingTarget>(null)
     val selectedMovingTargetProperty = getProperty(DesignerController::selectedMovingTarget)
 
-    fun calculateTargetHits(): Stream<Bits> {
+    fun calculateTargetHits(fromTimeSec: Double = 0.0,
+                            toTimeSec: Double = scenario.simulationDurationMin * MIN_TO_S): Stream<Bits> {
 
         val radarParameters = simulationController.radarParameters
         val cParams = CalculationParameters(radarParameters)
@@ -39,10 +39,9 @@ class DesignerController : Controller() {
         val scenarioClone = scenario.copy<Scenario>()
 
         val targetPathSegments = scenarioClone.getAllPathSegments()
-        val simulationDurationSec = scenarioClone.simulationDurationMin * MIN_TO_S
 
-        val arpTimeIterator = generateSequence(0.0) { it + radarParameters.seekTimeSec }
-            .takeWhile { it < simulationDurationSec }
+        val arpTimeIterator = generateSequence(fromTimeSec) { it + radarParameters.seekTimeSec }
+            .takeWhile { it < toTimeSec }
             .iterator()
 
         // iterate over full ARP rotations
@@ -54,64 +53,51 @@ class DesignerController : Controller() {
                 val minTimeUs = minTimeSec * S_TO_US
                 val maxTimeUs = (minTimeSec + radarParameters.seekTimeSec) * S_TO_US
 
-                val simTimeIterator = generateSequence(minTimeUs) { it + scenarioClone.simulationStepUs }
-                    .takeWhile { it < maxTimeUs }
-                    .iterator()
+                targetPathSegments.forEach tps@ { pathSegment ->
 
-                // iterate in one ARP rotation every simulation step time period
-                stream(spliteratorUnknownSize(simTimeIterator, Spliterator.ORDERED), false)
-                    .forEach { tUs ->
-                        targetPathSegments.forEach tps@ { pathSegment ->
-
-                            // for Test1 the time is discrete and rounded down to seekTimeSec
-                            val rotationTime: Double
-                            if (pathSegment.type == MovingTargetType.Test1) {
-                                rotationTime = floor(tUs / cParams.rotationTimeUs) * cParams.rotationTimeUs
-                            } else {
-                                rotationTime = tUs
-                            }
-
-                            val plotPos = pathSegment.getPositionForTime(rotationTime) ?: return@tps
-                            val sweepHeadingRad = TWO_PI / cParams.rotationTimeUs * tUs
-
-                            when (pathSegment.type) {
-                                MovingTargetType.Point -> calculatePointTargetHits(
-                                    hits,
-                                    plotPos,
-                                    sweepHeadingRad,
-                                    cParams
-                                )
-                                MovingTargetType.Cloud1 -> calculateCloudTargetHits(
-                                    hits,
-                                    plotPos,
-                                    cloudOneImage.getRasterHitMap(),
-                                    cParams
-                                )
-                                MovingTargetType.Cloud2 -> calculateCloudTargetHits(
-                                    hits,
-                                    plotPos,
-                                    cloudTwoImage.getRasterHitMap(),
-                                    cParams
-                                )
-                                MovingTargetType.Test1 -> calculateTest1TargetHits(
-                                    hits,
-                                    plotPos,
-                                    sweepHeadingRad,
-                                    cParams
-                                )
-                                MovingTargetType.Test2 -> calculateTest2TargetHits(
-                                    hits,
-                                    plotPos,
-                                    sweepHeadingRad,
-                                    cParams
-                                )
-                            }
-                        }
+                    when (pathSegment.type) {
+                        MovingTargetType.Point -> calculatePointTargetHits(
+                            hits,
+                            pathSegment,
+                            minTimeUs,
+                            maxTimeUs,
+                            cParams
+                        )
+                        MovingTargetType.Cloud1 -> calculateCloudTargetHits(
+                            hits,
+                            pathSegment,
+                            minTimeUs,
+                            maxTimeUs,
+                            cloudOneImage.getRasterHitMap(),
+                            cParams
+                        )
+                        MovingTargetType.Cloud2 -> calculateCloudTargetHits(
+                            hits,
+                            pathSegment,
+                            minTimeUs,
+                            maxTimeUs,
+                            cloudTwoImage.getRasterHitMap(),
+                            cParams
+                        )
+                        MovingTargetType.Test1 -> calculateTest1TargetHits(
+                            hits,
+                            pathSegment,
+                            minTimeUs,
+                            maxTimeUs,
+                            cParams
+                        )
+                        MovingTargetType.Test2 -> calculateTest2TargetHits(
+                            hits,
+                            pathSegment,
+                            minTimeUs,
+                            maxTimeUs,
+                            cParams
+                        )
                     }
+                }
 
                 hits
             }
-
     }
 
 

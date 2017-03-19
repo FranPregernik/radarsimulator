@@ -2,7 +2,6 @@ package hr.franp.rsim
 
 import hr.franp.rsim.models.*
 import javafx.beans.property.*
-import javafx.beans.value.*
 import javafx.event.*
 import javafx.geometry.*
 import javafx.scene.canvas.*
@@ -12,7 +11,9 @@ import javafx.scene.paint.*
 import javafx.scene.shape.*
 import javafx.scene.text.*
 import javafx.scene.transform.*
+import org.apache.commons.collections4.map.*
 import tornadofx.*
+import java.io.*
 import java.lang.Math.*
 import java.time.*
 import java.time.format.*
@@ -43,12 +44,6 @@ class RadarScreenView : View() {
 
     override val root = Pane().apply {
         addClass(Styles.radarScreen)
-    }
-
-    private var clutterRaster: Image? = null;
-    val boundsChangeListener = ChangeListener<Number> { _, _, _ ->
-        root.clip = Rectangle(0.0, 0.0, root.width, root.height)
-
     }
 
     private val designerController: DesignerController by inject()
@@ -263,8 +258,8 @@ class RadarScreenView : View() {
         drawStationaryTargets(gc)
         drawStaticMarkers(gc)
         drawDynamicMarkers(gc)
-        drawTargetHits(gc)
         drawMovingTargets(gc)
+        drawTargetHits(gc)
     }
 
     private val dateFormatPattern = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -510,7 +505,7 @@ class RadarScreenView : View() {
         val currentTimeUs = S_TO_US * currentTimeSec
 
         // draw moving targets
-        val movingTargetCount = designerController.scenario.movingTargets.size
+        val movingTargetCount = designerController.scenario?.movingTargets?.size ?: return
         val selectedTarget = designerController.selectedMovingTarget
         designerController.scenario.movingTargets
             .sortedBy { it.name }
@@ -716,103 +711,55 @@ az=${angleStringConverter.toString(az)}"""
 
     }
 
+    val lruHitImages = LRUMap<String, Image>(10)
+
     fun drawTargetHits(gc: GraphicsContext) {
-        return
-        // set translucent fill color
-        gc.fill = Styles.hitColor.deriveColor(
-            0.0,
-            1.0,
-            1.0,
-            displayParameters.targetHitLayerOpacity
-        )
-        gc.stroke = gc.fill
 
+        val radarParameters = simulatorController.radarParameters
+
+        val n = 6
         val currentTimeSec = simulatedCurrentTimeSecProperty.get()
-        val currentTimeUs = S_TO_US * currentTimeSec
+        val currentArpIdx = floor(currentTimeSec / radarParameters.seekTimeSec).toInt()
 
-        // TEMP: draw last N plots relative to current time
-        // HACK: not real plot points ....
-        val cp = combinedTransform.transform(0.0, 0.0)
-        val bp = combinedTransform.transform(simulatorController.radarParameters.maxRadarDistanceKm, 0.0)
-        val horizontalAngleBeamWidthRad = toRadians(simulatorController.radarParameters.horizontalAngleBeamWidthDeg)
-        val seekTimeUs = S_TO_US * simulatorController.radarParameters.seekTimeSec
-        designerController.scenario.movingTargets
-            .sortedBy { it.name }
-            // show only if the target is selected or marked as display
-            .filter { it == designerController.selectedMovingTarget || displayParameters.targetDisplayFilter.none() || it.name in displayParameters.targetDisplayFilter }
-            .forEach { target ->
-                val type = target.type ?: return@forEach
+        // draw stationary targets
+        val width = (2.0 * radarParameters.maxRadarDistanceKm)
+        val height = (2.0 * radarParameters.maxRadarDistanceKm)
+        val transformedBounds = combinedTransform.transform(BoundingBox(
+            -width / 2.0,
+            -height / 2.0,
+            width,
+            height
+        ))
 
+        val alpha = gc.globalAlpha
+        gc.globalAlpha = displayParameters.clutterLayerOpacity
 
-                val n = 6
-                val fromTimeUs = max(
-                    0.0,
-                    seekTimeUs * (round(currentTimeSec / simulatorController.radarParameters.seekTimeSec) - n)
+        // draw images
+        ((currentArpIdx - 1 - n)..(currentArpIdx - 1))
+            .dropWhile { it < 0 }
+            .forEach { arpIdx ->
+
+                val seekTime = (arpIdx * radarParameters.seekTimeSec).toInt()
+
+                val file = File("tmp/target_$seekTime.png")
+                if (!file.exists()) {
+                    return@forEach
+                }
+
+                val key = file.toURI().toString()
+                val image = lruHitImages.computeIfAbsent(key, ::Image)
+
+                gc.drawImage(
+                    image,
+                    transformedBounds.minX,
+                    transformedBounds.minY,
+                    transformedBounds.width,
+                    transformedBounds.height
                 )
-
-                generateSequence(fromTimeUs) { t -> t + designerController.scenario.simulationStepUs }
-                    .takeWhile { t -> t <= currentTimeUs }
-                    .forEach inner@ { tUs ->
-
-                        val plotPathSegment = getCurrentPathSegment(target, tUs) ?: return@inner
-                        val plotPos = plotPathSegment.getPositionForTime(tUs) ?: return@inner
-                        val plotPosCart = plotPos.toCartesian()
-
-                        val sweepHeadingRad = TWO_PI / seekTimeUs * tUs
-                        val targetHeadingRad = toRadians(plotPos.azDeg)
-                        val diff = abs(((abs(targetHeadingRad - sweepHeadingRad) + PI) % TWO_PI) - PI)
-                        if (diff > horizontalAngleBeamWidthRad / 2.0) {
-                            return@inner
-                        }
-
-                        // range check
-                        val distance = sqrt(pow(plotPosCart.x, 2.0) + pow(plotPosCart.y, 2.0))
-                        if (distance < simulatorController.radarParameters.minRadarDistanceKm || distance > simulatorController.radarParameters.maxRadarDistanceKm) {
-                            return@inner
-                        }
-
-                        val transformedPlot = combinedTransform.transform(plotPosCart)
-
-                        when (type) {
-                            MovingTargetType.Cloud1 -> {
-                                // noop
-                            }
-                            MovingTargetType.Cloud2 -> {
-                                // noop
-                            }
-                            MovingTargetType.Point -> {
-                                gc.fillOval(
-                                    transformedPlot.x - 2,
-                                    transformedPlot.y - 2,
-                                    4.0,
-                                    4.0
-                                )
-                            }
-                            MovingTargetType.Test1 -> {
-                                val d = transformedPlot.distance(cp)
-                                gc.strokeOval(
-                                    cp.x - d / 2,
-                                    cp.y - d / 2,
-                                    d,
-                                    d
-                                )
-                            }
-                            MovingTargetType.Test2 -> {
-                                val maxDistance = bp.distance(cp)
-                                gc.fillArc(
-                                    cp.x,
-                                    cp.y,
-                                    maxDistance,
-                                    maxDistance,
-                                    plotPos.azDeg - simulatorController.radarParameters.horizontalAngleBeamWidthDeg / 2,
-                                    plotPos.azDeg + simulatorController.radarParameters.horizontalAngleBeamWidthDeg / 2,
-                                    ArcType.CHORD
-                                )
-                            }
-                        }
-
-                    }
             }
+
+        gc.globalAlpha = alpha
+
     }
 
 }
