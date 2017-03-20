@@ -131,69 +131,76 @@ class SimulatorController : Controller(), AutoCloseable {
 
     fun startSimulation(progressConsumer: (Double, String) -> Unit) {
 
-        connect()
-        stopSimulation()
-        calibrate()
+        try {
+            connect()
+            stopSimulation()
+            calibrate()
 
-        timeShiftFunc.clear()
-        acpIdxFunc.clear()
+            timeShiftFunc.clear()
+            acpIdxFunc.clear()
 
-        sshClient.apply {
+            sshClient.apply {
 
-            // start sim
-            val reg = "\\w+=(\\d+)(/(\\d+))?".toRegex()
+                // start sim
+                val reg = "\\w+=(\\d+)(/(\\d+))?".toRegex()
 
-            startSession().use { session ->
+                startSession().use { session ->
 
-                val cmd = session.exec("radar-sim-test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bin")
+                    val cmd = session.exec("radar-sim-test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bin")
 
-                runLater {
-                    simulationRunningProperty.set(true)
-                }
+                    runLater {
+                        simulationRunningProperty.set(true)
+                    }
 
-                cmd.inputStream.use { stdout ->
-                    progressConsumer(0.0, "Running simulation")
-                    InputStreamReader(stdout).use { stdOutReader ->
-                        stdOutReader.forEachLine { line ->
-                            val t = System.currentTimeMillis().toDouble()
-                            log.finest { line }
-                            if (line.startsWith("SIM_ACP_IDX")) {
-                                val matchResult = reg.matchEntire(line) ?: return@forEachLine
-                                val values = matchResult.groupValues
-                                if (values.size < 3) {
-                                    return@forEachLine
-                                }
+                    cmd.inputStream.use { stdout ->
+                        progressConsumer(0.0, "Running simulation")
+                        InputStreamReader(stdout).use { stdOutReader ->
+                            stdOutReader.forEachLine { line ->
+                                val t = System.currentTimeMillis().toDouble()
+                                log.finest { line }
+                                if (line.startsWith("SIM_ACP_IDX")) {
+                                    val matchResult = reg.matchEntire(line) ?: return@forEachLine
+                                    val values = matchResult.groupValues
+                                    if (values.size < 3) {
+                                        return@forEachLine
+                                    }
 
-                                val acpIdx = values[1].toLong()
-                                val simTime = values[3].toLong()
-                                timeShiftFunc.addData(t, simTime.toDouble())
-                                if (acpIdx > 0) {
-                                    acpIdxFunc.addData(simTime.toDouble(), acpIdx.toDouble())
-                                }
-                            } else if (line.startsWith("DISABLE_SIM")) {
-                                runLater {
-                                    simulationRunningProperty.set(false)
+                                    val acpIdx = values[1].toLong()
+                                    val simTime = values[3].toLong()
+                                    timeShiftFunc.addData(t, simTime.toDouble())
+                                    if (acpIdx > 0) {
+                                        acpIdxFunc.addData(simTime.toDouble(), acpIdx.toDouble())
+                                    }
+                                } else if (line.startsWith("DISABLE_SIM")) {
+                                    runLater {
+                                        simulationRunningProperty.set(false)
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                cmd.errorStream.use { stdout ->
-                    InputStreamReader(stdout).use { stdOutReader ->
-                        stdOutReader.forEachLine { line ->
-                            log.severe { line }
+                    cmd.errorStream.use { stdout ->
+                        InputStreamReader(stdout).use { stdOutReader ->
+                            stdOutReader.forEachLine { line ->
+                                log.severe { line }
+                            }
                         }
                     }
-                }
 
-                // wait for termination
-                cmd.join()
+                    // wait for termination
+                    cmd.join()
 
-                val exitStatus = cmd.exitStatus ?: 0
-                if (exitStatus > 0) {
-                    log.info { "Command exited with $exitStatus and message: \"${cmd.exitErrorMessage}\"" }
+                    val exitStatus = cmd.exitStatus ?: 0
+                    if (exitStatus > 0) {
+                        log.info { "Command exited with $exitStatus and message: \"${cmd.exitErrorMessage}\"" }
+                    }
                 }
+            }
+
+        } finally {
+            runLater {
+                simulationRunningProperty.set(false)
             }
         }
     }
