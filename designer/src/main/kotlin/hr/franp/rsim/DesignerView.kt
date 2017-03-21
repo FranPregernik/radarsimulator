@@ -6,16 +6,18 @@ import hr.franp.rsim.models.DistanceUnit.*
 import javafx.beans.property.*
 import javafx.geometry.*
 import javafx.scene.control.*
-import javafx.scene.image.*
 import javafx.scene.layout.*
 import javafx.scene.text.*
 import javafx.stage.*
 import net.schmizz.sshj.xfer.*
+import org.apache.commons.io.*
 import org.controlsfx.glyphfont.*
 import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 import java.io.*
-import java.nio.*
+import java.nio.file.*
+import java.nio.file.Files.*
+import java.util.*
 import java.util.zip.*
 import javax.json.Json.*
 
@@ -120,117 +122,83 @@ class DesignerView : View() {
                                     val radarParameters = simulationController.radarParameters
                                     val cParams = CalculationParameters(simulationController.radarParameters)
 
+                                    val openOptions = EnumSet.of(
+                                        StandardOpenOption.WRITE,
+                                        StandardOpenOption.READ,
+                                        StandardOpenOption.CREATE
+                                    )
+
+                                    // ensure dir where we can store the files
                                     File("tmp").mkdir()
 
+                                    // prepare simulation
+                                    updateMessage("Writing clutter sim")
+                                    updateProgress(0.0, 1.0)
+                                    newByteChannel(Paths.get("tmp", "clutter.bin"), openOptions).use { raf ->
+                                        val hitStream = designerController.calculateClutterHits()
+                                            .flatMap { spreadHits(it, cParams) }
+                                        writeHitStream(
+                                            raf,
+                                            hitStream,
+                                            radarParameters,
+                                            (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt()
+                                        )
+                                    }
+                                    updateMessage("Wrote clutter sim")
+                                    updateProgress(1.0, 1.0)
+
+                                    // compress
+                                    updateMessage("Zipping clutter sim")
+                                    updateProgress(0.0, 1.0)
                                     FileOutputStream("tmp/clutter.bin.gz").use { fileOutputStream ->
-                                        GZIPOutputStream(fileOutputStream).use { stream ->
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt((radarParameters.seekTimeSec * S_TO_US).toInt())
-                                                    .array()
-                                            )
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(radarParameters.azimuthChangePulse)
-                                                    .array()
-                                            )
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(radarParameters.impulsePeriodUs.toInt())
-                                                    .array()
-                                            )
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(radarParameters.maxImpulsePeriodUs.toInt())
-                                                    .array()
-                                            )
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(1)
-                                                    .array()
-                                            )
-
-                                            updateMessage("Writing clutter sim")
-                                            updateProgress(0.0, 1.0)
-
-                                            var seekTime = 0.0
-                                            designerController.calculateClutterHits()
-                                                .forEach {
-
-                                                    spreadHits(it, cParams)
-                                                        .writeTo(stream)
-
-                                                    seekTime += radarParameters.seekTimeSec
-                                                    updateProgress(
-                                                        seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
-                                                        1.0
-                                                    )
-                                                }
-
-                                            updateMessage("Wrote clutter sim")
-                                            updateProgress(1.0, 1.0)
+                                        GZIPOutputStream(fileOutputStream).use { gzipOutputStream ->
+                                            FileInputStream("tmp/clutter.bin").use { fileInputStream ->
+                                                IOUtils.copy(fileInputStream, gzipOutputStream)
+                                            }
                                         }
                                     }
+                                    updateMessage("Zipped clutter sim")
+                                    updateProgress(1.0, 1.0)
 
+
+                                    // prepare targets sim
+                                    updateMessage("Writing target sim")
+                                    updateProgress(0.0, 1.0)
+                                    newByteChannel(Paths.get("tmp", "targets.bin"), openOptions).use { raf ->
+                                        val hitStream = designerController.calculateTargetHits()
+                                            .map {
+                                                log.info { "Raw " + it.toString() }
+                                                it
+                                            }
+//                                            .flatMap { spreadHits(it, cParams) }
+//                                            .map {
+//                                                log.info { "Spread " + it.toString() }
+//                                                it
+//                                            }
+                                        writeHitStream(
+                                            raf,
+                                            hitStream,
+                                            radarParameters,
+                                            (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt()
+                                        )
+                                    }
+                                    updateMessage("Wrote target sim")
+                                    updateProgress(1.0, 1.0)
+
+
+                                    // compress
+                                    updateMessage("Zipping target sim")
+                                    updateProgress(0.0, 1.0)
                                     FileOutputStream("tmp/targets.bin.gz").use { fileOutputStream ->
-                                        GZIPOutputStream(fileOutputStream).use { stream ->
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt((radarParameters.seekTimeSec * S_TO_US).toInt())
-                                                    .array()
-                                            )
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(radarParameters.azimuthChangePulse)
-                                                    .array()
-                                            )
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(radarParameters.impulsePeriodUs.toInt())
-                                                    .array()
-                                            )
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt(radarParameters.maxImpulsePeriodUs.toInt())
-                                                    .array()
-                                            )
-                                            stream.write(
-                                                ByteBuffer.allocate(4)
-                                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                                    .putInt((designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt())
-                                                    .array()
-                                            )
-
-                                            updateMessage("Writing target sim")
-                                            updateProgress(0.0, 1.0)
-
-                                            var seekTime = 0.0
-                                            designerController.calculateTargetHits()
-                                                .forEach {
-
-                                                    spreadHits(it, cParams)
-                                                        .writeTo(stream)
-
-                                                    seekTime += radarParameters.seekTimeSec
-                                                    updateProgress(
-                                                        seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
-                                                        1.0
-                                                    )
-                                                }
-
-                                            updateMessage("Wrote target sim")
-                                            updateProgress(1.0, 1.0)
+                                        GZIPOutputStream(fileOutputStream).use { gzipOutputStream ->
+                                            FileInputStream("tmp/targets.bin").use { fileInputStream ->
+                                                IOUtils.copy(fileInputStream, gzipOutputStream)
+                                            }
                                         }
                                     }
+                                    updateMessage("Zipped target sim")
+                                    updateProgress(1.0, 1.0)
+
 
                                     simulationController.uploadClutterFile(
                                         FileSystemFile("tmp/clutter.bin.gz"),
@@ -464,14 +432,12 @@ class DesignerView : View() {
                             field("Clutter map") {
                                 button("", fontAwesome.create(FILE_PHOTO_ALT)) {
                                     setOnAction {
-                                        val file = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg")), FileChooserMode.Single)
+                                        val file = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg", "*.png")), FileChooserMode.Single)
                                             .firstOrNull()
 
                                         if (file != null) {
                                             designerController.scenario.clutter = Clutter(file)
-                                            this.tooltip = Tooltip("Select clutter map").apply {
-                                                graphic = ImageView(designerController.scenario.clutter.getImage(100, 100))
-                                            }
+                                            this.tooltip = Tooltip("Select clutter map")
                                         }
                                     }
                                 }

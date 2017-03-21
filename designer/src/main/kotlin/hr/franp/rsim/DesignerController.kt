@@ -1,14 +1,10 @@
 package hr.franp.rsim
 
-import hr.franp.*
 import hr.franp.rsim.models.*
 import javafx.scene.image.*
 import tornadofx.*
 import java.lang.Math.*
-import java.util.*
-import java.util.Spliterators.*
 import java.util.stream.*
-import java.util.stream.StreamSupport.*
 
 class DesignerController : Controller() {
 
@@ -30,8 +26,11 @@ class DesignerController : Controller() {
     var selectedMovingTarget by property<MovingTarget>(null)
     val selectedMovingTargetProperty = getProperty(DesignerController::selectedMovingTarget)
 
+    /**
+     * @return A stream of pairs(acp, us)
+     */
     fun calculateTargetHits(fromTimeSec: Double = 0.0,
-                            toTimeSec: Double = scenario.simulationDurationMin * MIN_TO_S): Stream<Bits> {
+                            toTimeSec: Double = scenario.simulationDurationMin * MIN_TO_S): Stream<Pair<Int, Int>> {
 
         val radarParameters = simulationController.radarParameters
         val cParams = CalculationParameters(radarParameters)
@@ -41,71 +40,63 @@ class DesignerController : Controller() {
 
         val targetPathSegments = scenarioClone.getAllPathSegments()
 
-        val arpTimeIterator = generateSequence(fromTimeSec) { it + radarParameters.seekTimeSec }
-            .takeWhile { it < toTimeSec }
-            .iterator()
-
         // iterate over full ARP rotations
-        return stream(spliteratorUnknownSize(arpTimeIterator, Spliterator.ORDERED), false)
-            .map { minTimeSec ->
-
-                val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+        return DoubleStream.iterate(fromTimeSec) { it + radarParameters.seekTimeSec }
+            .limit(ceil(scenarioClone.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toLong())
+            .filter { it < scenarioClone.simulationDurationMin * MIN_TO_S }
+            .boxed()
+            .flatMap { minTimeSec ->
 
                 val minTimeUs = S_TO_US * minTimeSec
                 val maxTimeUs = S_TO_US * min(
-                    toTimeSec,
+                    max(minTimeSec, toTimeSec),
                     minTimeSec + radarParameters.seekTimeSec
                 )
 
-                targetPathSegments.forEach tps@ { pathSegment ->
+                // and all target paths
+                targetPathSegments.stream()
+                    .flatMap { pathSegment ->
 
-                    when (pathSegment.type) {
-                        MovingTargetType.Point -> calculatePointTargetHits(
-                            hits,
-                            pathSegment,
-                            minTimeUs,
-                            maxTimeUs,
-                            cParams
-                        )
-                        MovingTargetType.Cloud1 -> calculateCloudTargetHits(
-                            hits,
-                            pathSegment,
-                            minTimeUs,
-                            maxTimeUs,
-                            cloudOneImage.getRasterHitMap(),
-                            cParams
-                        )
-                        MovingTargetType.Cloud2 -> calculateCloudTargetHits(
-                            hits,
-                            pathSegment,
-                            minTimeUs,
-                            maxTimeUs,
-                            cloudTwoImage.getRasterHitMap(),
-                            cParams
-                        )
-                        MovingTargetType.Test1 -> calculateTest1TargetHits(
-                            hits,
-                            pathSegment,
-                            minTimeUs,
-                            maxTimeUs,
-                            cParams
-                        )
-                        MovingTargetType.Test2 -> calculateTest2TargetHits(
-                            hits,
-                            pathSegment,
-                            minTimeUs,
-                            maxTimeUs,
-                            cParams
-                        )
+                        when (pathSegment.type) {
+                            MovingTargetType.Point -> calculatePointTargetHits(
+                                pathSegment,
+                                minTimeUs,
+                                maxTimeUs,
+                                cParams
+                            )
+                            MovingTargetType.Cloud1 -> calculateCloudTargetHits(
+                                pathSegment,
+                                minTimeUs,
+                                maxTimeUs,
+                                cloudOneImage.getRasterHitMap(),
+                                cParams
+                            )
+                            MovingTargetType.Cloud2 -> calculateCloudTargetHits(
+                                pathSegment,
+                                minTimeUs,
+                                maxTimeUs,
+                                cloudTwoImage.getRasterHitMap(),
+                                cParams
+                            )
+                            MovingTargetType.Test1 -> calculateTest1TargetHits(
+                                pathSegment,
+                                minTimeUs,
+                                maxTimeUs,
+                                cParams
+                            )
+                            MovingTargetType.Test2 -> calculateTest2TargetHits(
+                                pathSegment,
+                                minTimeUs,
+                                maxTimeUs,
+                                cParams
+                            )
+                        }
                     }
-                }
-
-                hits
             }
     }
 
 
-    fun calculateClutterHits(): Stream<Bits> {
+    fun calculateClutterHits(): Stream<Pair<Int, Int>> {
 
         val radarParameters = simulationController.radarParameters
         val cParams = CalculationParameters(radarParameters)
@@ -113,19 +104,15 @@ class DesignerController : Controller() {
         // (deep)clone for background processing
         val scenario = this.scenario.copy<Scenario>()
 
-        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
-
         val maxRadarDistanceKm = radarParameters.maxRadarDistanceKm
         val distanceResolutionKm = radarParameters.distanceResolutionKm
 
         val width = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
         val height = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
 
-        val raster = scenario.clutter?.getImage(width, height)?.getRasterHitMap() ?: return Stream.of(hits)
+        val raster = scenario.clutter?.getImage(width, height)?.getRasterHitMap() ?: return Stream.empty()
 
-        calculateClutterHits(hits, raster, cParams)
-
-        return Stream.of(hits)
+        return calculateClutterHits(raster, cParams)
     }
 
 

@@ -2,15 +2,16 @@
 
 package hr.franp.rsim
 
-import hr.franp.*
 import hr.franp.rsim.models.*
 import javafx.geometry.*
-import javafx.scene.image.*
-import javafx.scene.paint.*
 import org.amshove.kluent.*
 import org.jetbrains.spek.api.*
 import org.jetbrains.spek.api.dsl.*
-import java.lang.Math.*
+import java.nio.*
+import java.nio.file.*
+import java.util.*
+import java.util.stream.*
+
 
 class HelpersTest : Spek({
 
@@ -27,49 +28,153 @@ class HelpersTest : Spek({
     )
     val cParams = CalculationParameters(radarParameters)
 
-//    given("A point target in distance detection range") {
-//
-//        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
-//        val position = RadarCoordinate(100.0, 10.0)
-//
-//        beforeEachTest { hits.clear() }
-//
-//
-//        on("calculating the hit for sweep angle just prior heading range") {
-//
-//            val sweepHeadingRad = toRadians(position.azDeg - radarParameters.horizontalAngleBeamWidthDeg)
-//
-//            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-//
-//            it("should result in no detection") {
-//                hits.nextSetBit(0) shouldEqual -1
-//            }
-//        }
-//
-//        on("calculating the hit for sweep angle just after heading range") {
-//
-//            val sweepHeadingRad = toRadians(position.azDeg + radarParameters.horizontalAngleBeamWidthDeg)
-//
-//            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-//
-//            it("should result in no detection") {
-//                hits.nextSetBit(0) shouldEqual -1
-//            }
-//        }
-//
-//        on("calculating the hit for sweep angle inside heading range") {
-//
-//            val sweepHeadingRad = toRadians(position.azDeg)
-//
-//            calculatePointTargetHits(hits, position, sweepHeadingRad, cParams)
-//
-//            it("should result in detection") {
-//                hits.nextSetBit(0) shouldNotEqual -1
-//            }
-//        }
-//    }
-//
-//    given("A point target outside distance detection range") {
+    val acpByteCnt = Math.ceil(radarParameters.maxImpulsePeriodUs / 8).toInt()
+    val testFile = Paths.get("tmp", "rsim_test.bin")
+    val openOptions = EnumSet.of(
+        StandardOpenOption.WRITE,
+        StandardOpenOption.READ,
+        StandardOpenOption.CREATE
+    )
+
+    given("an empty stream") {
+
+        val hitStream = Stream.empty<Pair<Int, Int>>()
+
+        beforeEachTest {
+            testFile.toFile().delete()
+        }
+
+        on("writing the simulation file") {
+
+            Files.newByteChannel(testFile, openOptions).use { raf ->
+                writeHitStream(raf, hitStream, radarParameters, 100)
+            }
+
+            it("should have a correct header") {
+                val buffer = ByteBuffer.allocate(FILE_HEADER_BYTE_CNT)
+                    .order(ByteOrder.LITTLE_ENDIAN)
+
+                Files.newByteChannel(testFile, openOptions).use { raf ->
+                    raf.read(buffer)
+                }
+
+                buffer.getInt(0) shouldEqual (radarParameters.seekTimeSec * S_TO_US).toInt()
+                buffer.getInt(4) shouldEqual radarParameters.azimuthChangePulse
+                buffer.getInt(8) shouldEqual radarParameters.impulsePeriodUs.toInt()
+                buffer.getInt(12) shouldEqual radarParameters.maxImpulsePeriodUs.toInt()
+                buffer.getInt(16) shouldEqual 100
+            }
+
+            it("should only contain a header") {
+                testFile.toFile().length() shouldEqual FILE_HEADER_BYTE_CNT.toLong()
+            }
+        }
+
+    }
+
+    given("a non empty hit stream") {
+
+        val hitStream = Stream.of<Pair<Int, Int>>(
+            Pair(0, 0),
+            Pair(0, radarParameters.impulsePeriodUs.toInt()),
+            Pair(radarParameters.azimuthChangePulse, 0),
+            Pair(radarParameters.azimuthChangePulse, radarParameters.impulsePeriodUs.toInt())
+        )
+
+        beforeEachTest {
+            testFile.toFile().delete()
+        }
+
+        on("writing the simulation file") {
+
+            Files.newByteChannel(testFile, openOptions).use { raf ->
+                writeHitStream(raf, hitStream, radarParameters, 100)
+            }
+
+            it("should have initial ACP 0 hits") {
+
+                val buffer = ByteBuffer.allocate(acpByteCnt)
+                    .order(ByteOrder.LITTLE_ENDIAN)
+
+                Files.newByteChannel(testFile, openOptions).use { raf ->
+                    // skip headers
+                    raf.position(FILE_HEADER_BYTE_CNT.toLong())
+                    raf.read(buffer)
+                }
+
+                buffer[0] shouldNotBe 0b0
+                buffer[radarParameters.impulsePeriodUs.toInt() / 8] shouldNotBe 0b0
+            }
+
+            it("should have the last ACP hits") {
+
+                val buffer = ByteBuffer.allocate(acpByteCnt)
+                    .order(ByteOrder.LITTLE_ENDIAN)
+
+                Files.newByteChannel(testFile, openOptions).use { raf ->
+                    // skip headers
+                    raf.position(FILE_HEADER_BYTE_CNT.toLong() + acpByteCnt * radarParameters.azimuthChangePulse)
+                    raf.read(buffer)
+                }
+
+                buffer[0] shouldNotBe 0b0
+                buffer[radarParameters.impulsePeriodUs.toInt() / 8] shouldNotBe 0b0
+            }
+
+        }
+    }
+
+    given("a point target in distance detection range") {
+
+        val position = RadarCoordinate(100.0, 10.0)
+        val pathSegment = PathSegment(
+            p1 = position,
+            p2 = position,
+            t1Us = 0.0,
+            t2Us = radarParameters.seekTimeSec * S_TO_US,
+            vxKmUs = 0.0,
+            vyKmUs = 0.0,
+            type = MovingTargetType.Point
+        )
+
+        on("calculating the hit for sweep angle just prior heading range") {
+
+            val sweepHeadingDeg = position.azDeg - radarParameters.horizontalAngleBeamWidthDeg
+            val tUs = sweepHeadingDeg / 360.0 * cParams.rotationTimeUs
+            val hits = calculatePointTargetHits(pathSegment, tUs, tUs, cParams).count()
+
+            it("should result in no detection") {
+                hits shouldEqualTo 0
+            }
+        }
+
+        on("calculating the hit for sweep angle just after heading range") {
+
+            val sweepHeadingDeg = position.azDeg + radarParameters.horizontalAngleBeamWidthDeg
+            val tUs = sweepHeadingDeg / 360.0 * cParams.rotationTimeUs
+            val hits = calculatePointTargetHits(pathSegment, tUs, tUs, cParams).count()
+
+            it("should result in no detection") {
+                hits shouldEqualTo 0
+            }
+        }
+
+        on("calculating the hit for sweep angle inside heading range") {
+
+            val sweepHeadingDeg = position.azDeg
+            val tUs = sweepHeadingDeg / 360.0 * cParams.rotationTimeUs
+            val hits = calculatePointTargetHits(pathSegment, tUs - cParams.rotationTimeUs, tUs + cParams.rotationTimeUs, cParams)
+                .collect(Collectors.toList())
+
+            it("should result in detection") {
+                hits.size shouldEqualTo 1
+                hits[0].first shouldEqualTo (position.azDeg / 360.0 * cParams.azimuthChangePulseCount).toInt()
+                hits[0].second shouldEqualTo (position.rKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
+            }
+        }
+    }
+
+//    given("a point target outside distance detection range") {
 //
 //        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
 //        val azDeg = 10.0
@@ -167,24 +272,24 @@ class HelpersTest : Spek({
 //            }
 //        }
 //    }
-
-    given("A clutter map in detection range with hdg in [270, 90]") {
-
-        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
-        val width = round(2.0 * radarParameters.maxRadarDistanceKm / radarParameters.distanceResolutionKm).toInt()
-        val height = round(2.0 * radarParameters.maxRadarDistanceKm / radarParameters.distanceResolutionKm).toInt()
-        val clutterMap = WritableImage(width, height)
-        clutterMap.pixelWriter.setColor(width / 4, height / 4, Color.WHITE)
-
-        on("calculating the hit") {
-
-            calculateClutterHits(hits, RasterIterator(clutterMap), cParams)
-
-            it("should result in  detection") {
-                hits.nextSetBit(0) shouldNotEqual -1
-            }
-        }
-    }
+//
+//    given("A clutter map in detection range with hdg in [270, 90]") {
+//
+//        val hits = Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt())
+//        val width = round(2.0 * radarParameters.maxRadarDistanceKm / radarParameters.distanceResolutionKm).toInt()
+//        val height = round(2.0 * radarParameters.maxRadarDistanceKm / radarParameters.distanceResolutionKm).toInt()
+//        val clutterMap = WritableImage(width, height)
+//        clutterMap.pixelWriter.setColor(width / 4, height / 4, Color.WHITE)
+//
+//        on("calculating the hit") {
+//
+//            calculateClutterHits(RasterIterator(clutterMap), cParams)
+//
+//            it("should result in  detection") {
+//                hits.nextSetBit(0) shouldNotEqual -1
+//            }
+//        }
+//    }
 
 
     given("A zoomed in cartesian region in quadrant 1") {

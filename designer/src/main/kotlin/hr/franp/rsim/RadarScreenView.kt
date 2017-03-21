@@ -1,6 +1,5 @@
 package hr.franp.rsim
 
-import hr.franp.*
 import hr.franp.rsim.models.*
 import javafx.beans.property.*
 import javafx.event.*
@@ -256,12 +255,12 @@ class RadarScreenView : View() {
 
     fun drawScene(gc: GraphicsContext) {
         setupViewPort()
-        drawUI(gc)
-        drawStationaryTargets(gc)
+        drawClutterMap(gc)
         drawStaticMarkers(gc)
         drawDynamicMarkers(gc)
         drawMovingTargets(gc)
         drawTargetHits(gc)
+        drawUI(gc)
     }
 
     private val dateFormatPattern = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -467,7 +466,7 @@ class RadarScreenView : View() {
     }
 
     val map: HashMap<Triple<Int, Int, Clutter>, Image> = HashMap()
-    fun drawStationaryTargets(gc: GraphicsContext) {
+    fun drawClutterMap(gc: GraphicsContext) {
 
         val clutter = designerController.scenario.clutter ?: return
 
@@ -477,10 +476,13 @@ class RadarScreenView : View() {
 
         val key = Triple(width.toInt(), height.toInt(), clutter)
         if (!map.containsKey(key)) {
-            log.info { "Computing" }
-            map.put(key, clutter.getImage(width.toInt(), height.toInt()))
+            map.put(
+                key,
+                clutter.getImage(width.toInt(), height.toInt()) ?: return
+            )
+            log.info { "Computed new clutter map for size ($width,$height)" }
         }
-        val rasterMapImage = map.get(key)
+        val rasterMapImage = map[key] ?: return
 
         val transformedBounds = combinedTransform.transform(BoundingBox(
             -width / 2.0,
@@ -713,7 +715,7 @@ az=${angleStringConverter.toString(az)}"""
 
     }
 
-    var lruHits = LRUMap<Int, Bits>(10)
+    var lruHits = LRUMap<Int, List<Pair<Int, Int>>>(10)
 
     fun drawTargetHits(gc: GraphicsContext) {
 
@@ -737,42 +739,24 @@ az=${angleStringConverter.toString(az)}"""
         val fromCurrArpSec = floor(currentTimeSec / radarParameters.seekTimeSec) * radarParameters.seekTimeSec
         if (currentTimeSec > fromCurrArpSec) {
             log.finer { "Calculate current hits for range $fromCurrArpSec to $currentTimeSec" }
-            val hits = designerController.calculateTargetHits(
-                fromCurrArpSec,
-                currentTimeSec
-            ).reduce(
-                Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt()),
-                { acc, curr ->
-                    acc.or(curr)
-                    acc
-                }
-            )
-
-            drawRadarHitImage(gc, hits, cParams, combinedTransform)
+            designerController.calculateTargetHits(fromCurrArpSec, currentTimeSec)
+                .forEach { drawRadarHitImage(gc, it, cParams, combinedTransform) }
         }
 
         // merge history
-        IntStream.range(fromArpIdx, currentArpIdx)
-            .forEach { arpIdx ->
+        IntStream.range(fromArpIdx, currentArpIdx).forEach { arpIdx ->
 
-                val hits = lruHits.computeIfAbsent(arpIdx, { arpIdx ->
+            lruHits.computeIfAbsent(arpIdx, { arpIdx ->
 
-                    val fromTimeSec = arpIdx * radarParameters.seekTimeSec
-                    val toTimeSec = (arpIdx + 1) * radarParameters.seekTimeSec
+                val fromTimeSec = arpIdx * radarParameters.seekTimeSec
+                val toTimeSec = (arpIdx + 1) * radarParameters.seekTimeSec
 
-                    log.finer { "Calculate hits for range $fromTimeSec to $toTimeSec" }
-                    designerController.calculateTargetHits(fromTimeSec, toTimeSec)
-                        .reduce(
-                            Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt()),
-                            { acc, curr ->
-                                acc.or(curr)
-                                acc
-                            }
-                        )
-                })
-
-                drawRadarHitImage(gc, hits, cParams, combinedTransform)
-            }
+                log.finer { "Calculate hits for range $fromTimeSec to $toTimeSec" }
+                designerController.calculateTargetHits(fromTimeSec, toTimeSec)
+                    .distinct()
+                    .collect(Collectors.toList())
+            }).forEach { drawRadarHitImage(gc, it, cParams, combinedTransform) }
+        }
 
         gc.globalAlpha = alpha
 

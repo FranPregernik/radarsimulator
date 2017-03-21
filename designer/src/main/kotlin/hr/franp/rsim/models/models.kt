@@ -168,7 +168,7 @@ class Clutter() : JsonModel {
         bytes = imageFile.readBytes()
     }
 
-    private fun scaleStoredImage(minHeight: Int, minWidth: Int): Image {
+    private fun scaleStoredImage(minHeight: Int, minWidth: Int): Image? {
 
         val img: BufferedImage?
         val originalWidth: Double
@@ -177,15 +177,14 @@ class Clutter() : JsonModel {
         if (bytes != null) {
             img = ImageIO.read(bytes.inputStream())
         } else {
-            img = null
+            return null
         }
 
         if (img != null) {
             originalWidth = img.width.toDouble()
             originalHeight = img.height.toDouble()
         } else {
-            originalWidth = minWidth.toDouble()
-            originalHeight = minHeight.toDouble()
+            return null
         }
 
         // find the right scale factor to preserve ration as well as stretch
@@ -195,21 +194,19 @@ class Clutter() : JsonModel {
         val height = (originalHeight * scale).toInt()
 
         // create a BW version with the specified size
-        val bwImage = BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
+        val bwImage = BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
 
         // draw image if it exists
-        if (img != null) {
-            val g = bwImage.createGraphics()
-            g.drawImage(img, 0, 0, width, height, null)
-            g.dispose()
-        }
+        val g = bwImage.createGraphics()
+        g.drawImage(img, 0, 0, width, height, null)
+        g.dispose()
 
         val fxImage = SwingFXUtils.toFXImage(bwImage, null)
         return fxImage
     }
 
-    fun getImage(minWidth: Int, minHeight: Int): Image {
-        val fxImage = scaleStoredImage(minHeight, minWidth)
+    fun getImage(minWidth: Int, minHeight: Int): Image? {
+        val fxImage = scaleStoredImage(minHeight, minWidth) ?: return null
         return processHitMaskImage(fxImage)
     }
 
