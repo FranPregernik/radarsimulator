@@ -15,9 +15,10 @@ import org.controlsfx.glyphfont.*
 import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 import java.io.*
+import java.lang.Math.*
+import java.nio.*
+import java.nio.channels.FileChannel.MapMode.*
 import java.nio.file.*
-import java.nio.file.Files.*
-import java.util.*
 import java.util.zip.*
 import javax.json.Json.*
 
@@ -32,7 +33,6 @@ class DesignerView : View() {
 
     private val radarScreen: RadarScreenView by inject()
     private val movingTargetEditor: MovingTargetEditorView by inject()
-    private val movingTargetSelector: MovingTargetSelectorView by inject()
 
     val calculatingHitsProperty = SimpleBooleanProperty(false)
 
@@ -120,13 +120,7 @@ class DesignerView : View() {
                                     updateMessage("Calibrated")
 
                                     val radarParameters = simulationController.radarParameters
-                                    val cParams = CalculationParameters(simulationController.radarParameters)
-
-                                    val openOptions = EnumSet.of(
-                                        StandardOpenOption.WRITE,
-                                        StandardOpenOption.READ,
-                                        StandardOpenOption.CREATE
-                                    )
+                                    val cParams = CalculationParameters(radarParameters)
 
                                     // ensure dir where we can store the files
                                     File("tmp").mkdir()
@@ -134,15 +128,20 @@ class DesignerView : View() {
                                     // prepare simulation
                                     updateMessage("Writing clutter sim")
                                     updateProgress(0.0, 1.0)
-                                    newByteChannel(Paths.get("tmp", "clutter.bin"), openOptions).use { raf ->
-                                        val hitStream = designerController.calculateClutterHits()
-                                            .flatMap { spreadHits(it, cParams) }
-                                        writeHitStream(
-                                            raf,
-                                            hitStream,
-                                            radarParameters,
-                                            (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt()
-                                        )
+                                    RandomAccessFile(Paths.get("tmp", "clutter.bin").toFile(), "rw").use { raf ->
+                                        val fileSizeBytes = FILE_HEADER_BYTE_CNT + 1 * cParams.arpByteCnt
+                                        raf.setLength(fileSizeBytes)
+                                        raf.channel.use { channel ->
+                                            val mappedBuffer = channel.map(READ_WRITE, 0, channel.size())
+                                                .order(ByteOrder.LITTLE_ENDIAN)
+
+                                            mappedBuffer.writeHitsHeader(
+                                                radarParameters,
+                                                (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt()
+                                            )
+
+                                            designerController.calculateClutterHits(mappedBuffer, true)
+                                        }
                                     }
                                     updateMessage("Wrote clutter sim")
                                     updateProgress(1.0, 1.0)
@@ -164,23 +163,27 @@ class DesignerView : View() {
                                     // prepare targets sim
                                     updateMessage("Writing target sim")
                                     updateProgress(0.0, 1.0)
-                                    newByteChannel(Paths.get("tmp", "targets.bin"), openOptions).use { raf ->
-                                        val hitStream = designerController.calculateTargetHits()
-                                            .map {
-                                                log.info { "Raw " + it.toString() }
-                                                it
-                                            }
-//                                            .flatMap { spreadHits(it, cParams) }
-//                                            .map {
-//                                                log.info { "Spread " + it.toString() }
-//                                                it
-//                                            }
-                                        writeHitStream(
-                                            raf,
-                                            hitStream,
-                                            radarParameters,
-                                            (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt()
+                                    RandomAccessFile(Paths.get("tmp", "targets.bin").toFile(), "rw").use { raf ->
+
+                                        // ensure number of rotations is decreased so the total file size bytes is not greater than Integer.MAX_VALUE
+                                        // because the mmap function does not allow more than that
+                                        val rotations = min(
+                                            (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toLong(),
+                                            (Integer.MAX_VALUE - FILE_HEADER_BYTE_CNT) / cParams.arpByteCnt
                                         )
+                                        val fileSizeBytes = (FILE_HEADER_BYTE_CNT + rotations * cParams.arpByteCnt)
+                                        raf.setLength(fileSizeBytes)
+                                        raf.channel.use { channel ->
+                                            val mappedBuffer = channel.map(READ_WRITE, 0, channel.size())
+                                                .order(ByteOrder.LITTLE_ENDIAN)
+
+                                            mappedBuffer.writeHitsHeader(
+                                                radarParameters,
+                                                (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt()
+                                            )
+
+                                            designerController.calculateTargetHits(mappedBuffer, true)
+                                        }
                                     }
                                     updateMessage("Wrote target sim")
                                     updateProgress(1.0, 1.0)
@@ -385,6 +388,8 @@ class DesignerView : View() {
                                 slider {
                                     tooltip("Controls transparency of the target layer")
 
+                                    prefWidth = 200.0
+
                                     min = 0.0
                                     max = 1.0
                                     blockIncrement = 0.1
@@ -398,33 +403,89 @@ class DesignerView : View() {
                             }
 
                             field("Target hit layer") {
+                                hbox(4.0) {
+                                    val mtiSlider = slider {
+                                        tooltip("Controls transparency of the target hit layer")
 
-                                slider {
-                                    tooltip("Controls transparency of the target hit layer")
+                                        prefWidth = 200.0
+
+                                        min = 0.0
+                                        max = 1.0
+                                        blockIncrement = 0.1
+
+                                        value = radarScreen.displayParameters.targetHitLayerOpacity
+                                        valueProperty().addListener { _, _, newValue ->
+                                            radarScreen.configTargetHitLayerOpacity(newValue.toDouble())
+                                        }
+                                    }
+                                    this += mtiSlider
+                                    checkbox {
+                                        disableProperty().bind(
+                                            simulationController.simulationRunningProperty
+                                        )
+
+                                        tooltip("MTI")
+                                        selectedProperty().set(true)
+                                        setOnAction {
+                                            // TODO: set MTI on HW
+                                            mtiSlider.value = if (selectedProperty().get())
+                                                1.0
+                                            else
+                                                0.0
+                                        }
+                                    }
+                                }
+                            }
+                            field("Target plot history") {
+                                val slider = slider {
+                                    tooltip("Number of previous hits to display")
+                                    prefWidth = 200.0
 
                                     min = 0.0
-                                    max = 1.0
-                                    blockIncrement = 0.1
+                                    max = 6.0
+                                    blockIncrement = 1.0
 
-                                    value = radarScreen.displayParameters.targetHitLayerOpacity
+                                    value = radarScreen.displayParameters.plotHistoryCount.toDouble()
                                     valueProperty().addListener { _, _, newValue ->
-                                        radarScreen.configTargetHitLayerOpacity(newValue.toDouble())
+                                        radarScreen.configPlotHistory(newValue.toInt())
                                     }
+                                }
+                                this += slider
+                                label {
+                                    textProperty().bind(slider.valueProperty().asString("%.0f"))
                                 }
                             }
 
                             field("Clutter layer") {
+                                hbox(4.0) {
+                                    val normSlider = slider {
+                                        tooltip("Controls transparency of the clutter layer")
+                                        prefWidth = 200.0
 
-                                slider {
-                                    tooltip("Controls transparency of the clutter layer")
+                                        min = 0.0
+                                        max = 1.0
+                                        blockIncrement = 0.1
 
-                                    min = 0.0
-                                    max = 1.0
-                                    blockIncrement = 0.1
+                                        value = radarScreen.displayParameters.clutterLayerOpacity
+                                        valueProperty().addListener { _, _, newValue ->
+                                            radarScreen.configClutterLayerOpacity(newValue.toDouble())
+                                        }
+                                    }
+                                    this += normSlider
+                                    checkbox {
+                                        disableProperty().bind(
+                                            simulationController.simulationRunningProperty
+                                        )
 
-                                    value = radarScreen.displayParameters.clutterLayerOpacity
-                                    valueProperty().addListener { _, _, newValue ->
-                                        radarScreen.configClutterLayerOpacity(newValue.toDouble())
+                                        tooltip("NORM")
+                                        selectedProperty().set(true)
+                                        setOnAction {
+                                            // TODO: set NORM on HW
+                                            normSlider.value = if (selectedProperty().get())
+                                                1.0
+                                            else
+                                                0.0
+                                        }
                                     }
                                 }
                             }
@@ -465,7 +526,7 @@ class DesignerView : View() {
                                     setOnAction {
                                         val simulatedCurrentTimeSec = radarScreen.simulatedCurrentTimeSecProperty.get()
                                         val newTime = simulatedCurrentTimeSec - 10 * simulationController.radarParameters.seekTimeSec
-                                        radarScreen.simulatedCurrentTimeSecProperty.set(Math.max(newTime, 0.0))
+                                        radarScreen.simulatedCurrentTimeSecProperty.set(max(newTime, 0.0))
                                     }
                                 }
                                 button("", fontAwesome.create(BACKWARD)) {
@@ -476,7 +537,7 @@ class DesignerView : View() {
                                     setOnAction {
                                         val simulatedCurrentTimeSec = radarScreen.simulatedCurrentTimeSecProperty.get()
                                         val newTime = simulatedCurrentTimeSec - simulationController.radarParameters.seekTimeSec
-                                        radarScreen.simulatedCurrentTimeSecProperty.set(Math.max(newTime, 0.0))
+                                        radarScreen.simulatedCurrentTimeSecProperty.set(max(newTime, 0.0))
                                     }
                                 }
 
@@ -488,7 +549,7 @@ class DesignerView : View() {
                                     setOnAction {
                                         val simulatedCurrentTimeSec = radarScreen.simulatedCurrentTimeSecProperty.get()
                                         val newTime = simulatedCurrentTimeSec + simulationController.radarParameters.seekTimeSec
-                                        radarScreen.simulatedCurrentTimeSecProperty.set(Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S))
+                                        radarScreen.simulatedCurrentTimeSecProperty.set(min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S))
                                     }
                                 }
                                 button("", fontAwesome.create(FAST_FORWARD)) {
@@ -500,7 +561,7 @@ class DesignerView : View() {
                                     setOnAction {
                                         val simulatedCurrentTimeSec = radarScreen.simulatedCurrentTimeSecProperty.get()
                                         val newTime = simulatedCurrentTimeSec + 10 * simulationController.radarParameters.seekTimeSec
-                                        radarScreen.simulatedCurrentTimeSecProperty.set(Math.min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S))
+                                        radarScreen.simulatedCurrentTimeSecProperty.set(min(newTime, designerController.scenario.simulationDurationMin * MIN_TO_S))
                                     }
                                 }
                                 button("", fontAwesome.create(STEP_FORWARD)) {
@@ -518,7 +579,7 @@ class DesignerView : View() {
 
                 })
 
-                titledpane("Moving targets", vbox {
+                titledpane("Radar targets", vbox {
 
                     disableProperty().bind(
                         calculatingHitsProperty.or(
@@ -527,7 +588,6 @@ class DesignerView : View() {
                     )
 
                     padding = Insets.EMPTY
-                    this += movingTargetSelector.root
                     this += movingTargetEditor.root
                     autosize()
                 })

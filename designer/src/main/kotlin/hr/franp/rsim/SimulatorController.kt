@@ -258,7 +258,7 @@ class SimulatorController : Controller(), AutoCloseable {
                             if (it.startsWith("SIM_ARP_US")) {
                                 arpUs = matchedValue?.toDouble() ?: 0.0
                             } else if (it.startsWith("SIM_ACP_CNT")) {
-                                acpCnt = matchedValue?.toInt() ?: 0
+                                acpCnt = 2 * (matchedValue?.toInt() ?: 0)
                             } else if (it.startsWith("SIM_TRIG_US")) {
                                 trigUs = matchedValue?.toDouble() ?: 0.0
                             } else if (it.startsWith("SIM_CAL")) {

@@ -4,6 +4,7 @@ import hr.franp.rsim.models.*
 import javafx.scene.image.*
 import tornadofx.*
 import java.lang.Math.*
+import java.nio.*
 import java.util.stream.*
 
 class DesignerController : Controller() {
@@ -29,23 +30,27 @@ class DesignerController : Controller() {
     /**
      * @return A stream of pairs(acp, us)
      */
-    fun calculateTargetHits(fromTimeSec: Double = 0.0,
-                            toTimeSec: Double = scenario.simulationDurationMin * MIN_TO_S): Stream<Pair<Int, Int>> {
+    fun calculateTargetHits(buff: ByteBuffer,
+                            spread: Boolean = false,
+                            compress: Boolean = false,
+                            fromTimeSec: Double = 0.0,
+                            toTimeSec: Double = scenario.simulationDurationMin * MIN_TO_S) {
 
         val radarParameters = simulationController.radarParameters
         val cParams = CalculationParameters(radarParameters)
 
-        // (deep)clone for background processing
-        val scenarioClone = scenario.copy<Scenario>()
+        if (scenario.movingTargets.isEmpty()) {
+            return
+        }
+        val simulationDurationMin = scenario.simulationDurationMin
+        val targetPathSegments = scenario.getAllPathSegments()
 
-        val targetPathSegments = scenarioClone.getAllPathSegments()
-
-        // iterate over full ARP rotations
-        return DoubleStream.iterate(fromTimeSec) { it + radarParameters.seekTimeSec }
-            .limit(ceil(scenarioClone.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toLong())
-            .filter { it < scenarioClone.simulationDurationMin * MIN_TO_S }
+        // iterate over time
+        DoubleStream.iterate(fromTimeSec) { it + radarParameters.seekTimeSec }
+            .limit(ceil(simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toLong())
+            .filter { it < simulationDurationMin * MIN_TO_S }
             .boxed()
-            .flatMap { minTimeSec ->
+            .forEach { minTimeSec ->
 
                 val minTimeUs = S_TO_US * minTimeSec
                 val maxTimeUs = S_TO_US * min(
@@ -54,49 +59,43 @@ class DesignerController : Controller() {
                 )
 
                 // and all target paths
-                targetPathSegments.stream()
-                    .flatMap { pathSegment ->
-
-                        when (pathSegment.type) {
-                            MovingTargetType.Point -> calculatePointTargetHits(
-                                pathSegment,
-                                minTimeUs,
-                                maxTimeUs,
-                                cParams
-                            )
-                            MovingTargetType.Cloud1 -> calculateCloudTargetHits(
-                                pathSegment,
-                                minTimeUs,
-                                maxTimeUs,
-                                cloudOneImage.getRasterHitMap(),
-                                cParams
-                            )
-                            MovingTargetType.Cloud2 -> calculateCloudTargetHits(
-                                pathSegment,
-                                minTimeUs,
-                                maxTimeUs,
-                                cloudTwoImage.getRasterHitMap(),
-                                cParams
-                            )
-                            MovingTargetType.Test1 -> calculateTest1TargetHits(
-                                pathSegment,
-                                minTimeUs,
-                                maxTimeUs,
-                                cParams
-                            )
-                            MovingTargetType.Test2 -> calculateTest2TargetHits(
-                                pathSegment,
-                                minTimeUs,
-                                maxTimeUs,
-                                cParams
-                            )
+                targetPathSegments.forEach { pathSegment ->
+                    when (pathSegment.type) {
+                        MovingTargetType.Point -> buff.calculatePointTargetHits(
+                            pathSegment,
+                            minTimeUs,
+                            maxTimeUs,
+                            cParams,
+                            spread,
+                            compress
+                        )
+                        MovingTargetType.Test1 -> buff.calculateTest1TargetHits(
+                            pathSegment,
+                            minTimeUs,
+                            maxTimeUs,
+                            cParams,
+                            spread,
+                            compress
+                        )
+                        MovingTargetType.Test2 -> buff.calculateTest2TargetHits(
+                            pathSegment,
+                            minTimeUs,
+                            maxTimeUs,
+                            cParams,
+                            spread,
+                            compress
+                        )
+                        else -> {
+                            // no op
+                            // clouds are not calculated as moving targets
                         }
                     }
+                }
             }
     }
 
 
-    fun calculateClutterHits(): Stream<Pair<Int, Int>> {
+    fun calculateClutterHits(buff: ByteBuffer, spread: Boolean) {
 
         val radarParameters = simulationController.radarParameters
         val cParams = CalculationParameters(radarParameters)
@@ -110,9 +109,36 @@ class DesignerController : Controller() {
         val width = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
         val height = Math.round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
 
-        val raster = scenario.clutter?.getImage(width, height)?.getRasterHitMap() ?: return Stream.empty()
+        val raster = scenario.clutter?.getImage(width, height)?.getRasterHitMap() ?: return
 
-        return calculateClutterHits(raster, cParams)
+        buff.calculateClutterMapHits(raster, cParams, spread)
+
+        // HACK: we are using moving targets as fixed point clutter maps
+        // TODO: refactor into own scenario.clutterMaps
+        scenario.movingTargets
+            .filter { it.type == MovingTargetType.Cloud1 || it.type == MovingTargetType.Cloud2 }
+            .forEach {
+                when (it.type) {
+                    MovingTargetType.Cloud1 -> buff.calculateClutterMapHits(
+                        cloudOneImage.getRasterHitMap(),
+                        cParams,
+                        spread,
+                        it.initialPosition,
+                        1.0
+                    )
+                    MovingTargetType.Cloud2 -> buff.calculateClutterMapHits(
+                        cloudTwoImage.getRasterHitMap(),
+                        cParams,
+                        spread,
+                        it.initialPosition,
+                        1.0
+                    )
+                    else -> {
+                        // no op
+                        // no other moving target is clutter
+                    }
+                }
+            }
     }
 
 

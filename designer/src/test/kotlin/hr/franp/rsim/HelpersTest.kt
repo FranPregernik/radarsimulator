@@ -8,8 +8,6 @@ import org.amshove.kluent.*
 import org.jetbrains.spek.api.*
 import org.jetbrains.spek.api.dsl.*
 import java.nio.*
-import java.nio.file.*
-import java.util.*
 import java.util.stream.*
 
 
@@ -28,35 +26,16 @@ class HelpersTest : Spek({
     )
     val cParams = CalculationParameters(radarParameters)
 
-    val acpByteCnt = Math.ceil(radarParameters.maxImpulsePeriodUs / 8).toInt()
-    val testFile = Paths.get("tmp", "rsim_test.bin")
-    val openOptions = EnumSet.of(
-        StandardOpenOption.WRITE,
-        StandardOpenOption.READ,
-        StandardOpenOption.CREATE
-    )
-
     given("an empty stream") {
-
-        val hitStream = Stream.empty<Pair<Int, Int>>()
-
-        beforeEachTest {
-            testFile.toFile().delete()
-        }
 
         on("writing the simulation file") {
 
-            Files.newByteChannel(testFile, openOptions).use { raf ->
-                writeHitStream(raf, hitStream, radarParameters, 100)
-            }
+            val buffer = ByteBuffer.allocate(FILE_HEADER_BYTE_CNT)
+                .order(ByteOrder.LITTLE_ENDIAN)
+
+            buffer.writeHitsHeader(radarParameters, 100)
 
             it("should have a correct header") {
-                val buffer = ByteBuffer.allocate(FILE_HEADER_BYTE_CNT)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-
-                Files.newByteChannel(testFile, openOptions).use { raf ->
-                    raf.read(buffer)
-                }
 
                 buffer.getInt(0) shouldEqual (radarParameters.seekTimeSec * S_TO_US).toInt()
                 buffer.getInt(4) shouldEqual radarParameters.azimuthChangePulse
@@ -65,11 +44,7 @@ class HelpersTest : Spek({
                 buffer.getInt(16) shouldEqual 100
             }
 
-            it("should only contain a header") {
-                testFile.toFile().length() shouldEqual FILE_HEADER_BYTE_CNT.toLong()
-            }
         }
-
     }
 
     given("a non empty hit stream") {
@@ -81,44 +56,25 @@ class HelpersTest : Spek({
             Pair(radarParameters.azimuthChangePulse, radarParameters.impulsePeriodUs.toInt())
         )
 
-        beforeEachTest {
-            testFile.toFile().delete()
-        }
+        val buffer = ByteBuffer.allocate(cParams.arpByteCnt.toInt())
+            .order(ByteOrder.LITTLE_ENDIAN)
 
         on("writing the simulation file") {
 
-            Files.newByteChannel(testFile, openOptions).use { raf ->
-                writeHitStream(raf, hitStream, radarParameters, 100)
+            hitStream.forEach { pair ->
+                buffer.writeHit(pair.first, pair.second, cParams)
             }
 
             it("should have initial ACP 0 hits") {
-
-                val buffer = ByteBuffer.allocate(acpByteCnt)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-
-                Files.newByteChannel(testFile, openOptions).use { raf ->
-                    // skip headers
-                    raf.position(FILE_HEADER_BYTE_CNT.toLong())
-                    raf.read(buffer)
-                }
-
                 buffer[0] shouldNotBe 0b0
                 buffer[radarParameters.impulsePeriodUs.toInt() / 8] shouldNotBe 0b0
             }
 
             it("should have the last ACP hits") {
+                val pos = (cParams.acpByteCnt * cParams.azimuthChangePulseCount).toInt()
 
-                val buffer = ByteBuffer.allocate(acpByteCnt)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-
-                Files.newByteChannel(testFile, openOptions).use { raf ->
-                    // skip headers
-                    raf.position(FILE_HEADER_BYTE_CNT.toLong() + acpByteCnt * radarParameters.azimuthChangePulse)
-                    raf.read(buffer)
-                }
-
-                buffer[0] shouldNotBe 0b0
-                buffer[radarParameters.impulsePeriodUs.toInt() / 8] shouldNotBe 0b0
+                buffer[pos] shouldNotBe 0b0
+                buffer[pos + radarParameters.impulsePeriodUs.toInt() / 8] shouldNotBe 0b0
             }
 
         }
@@ -141,7 +97,7 @@ class HelpersTest : Spek({
 
             val sweepHeadingDeg = position.azDeg - radarParameters.horizontalAngleBeamWidthDeg
             val tUs = sweepHeadingDeg / 360.0 * cParams.rotationTimeUs
-            val hits = calculatePointTargetHits(pathSegment, tUs, tUs, cParams).count()
+            val hits = buff.calculatePointTargetHits(pathSegment, tUs, tUs, cParams, false).count()
 
             it("should result in no detection") {
                 hits shouldEqualTo 0
@@ -152,7 +108,7 @@ class HelpersTest : Spek({
 
             val sweepHeadingDeg = position.azDeg + radarParameters.horizontalAngleBeamWidthDeg
             val tUs = sweepHeadingDeg / 360.0 * cParams.rotationTimeUs
-            val hits = calculatePointTargetHits(pathSegment, tUs, tUs, cParams).count()
+            val hits = buff.calculatePointTargetHits(pathSegment, tUs, tUs, cParams, false).count()
 
             it("should result in no detection") {
                 hits shouldEqualTo 0
@@ -163,7 +119,7 @@ class HelpersTest : Spek({
 
             val sweepHeadingDeg = position.azDeg
             val tUs = sweepHeadingDeg / 360.0 * cParams.rotationTimeUs
-            val hits = calculatePointTargetHits(pathSegment, tUs - cParams.rotationTimeUs, tUs + cParams.rotationTimeUs, cParams)
+            val hits = buff.calculatePointTargetHits(pathSegment, tUs - cParams.rotationTimeUs, tUs + cParams.rotationTimeUs, cParams, false)
                 .collect(Collectors.toList())
 
             it("should result in detection") {

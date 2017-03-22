@@ -22,6 +22,9 @@ class MovingTargetSelectorView : View() {
         }
 
         targetSelector = combobox<MovingTarget> {
+            controller.scenarioProperty.addListener { _, _, _ ->
+                itemsProperty().bind(controller.scenario.movingTargetsProperty())
+            }
             itemsProperty().bind(controller.scenario.movingTargetsProperty())
 
             // Update the target inside the view model on selection change

@@ -19,7 +19,6 @@ import jfxtras.labs.util.event.*
 import tornadofx.*
 import java.lang.Math.*
 import java.nio.*
-import java.nio.channels.*
 import java.text.*
 import java.util.*
 import java.util.Spliterators.*
@@ -248,32 +247,46 @@ fun processHitMaskImage(img: Image): Image {
 /**
  * Helper debug function to convert radar hits format to an image for easier viewing.
  */
-fun drawRadarHitImage(gc: GraphicsContext, hits: Pair<Int, Int>, cParams: CalculationParameters, combinedTransform: Transform) {
+fun drawRadarHitImage(gc: GraphicsContext,
+                      buff: ByteBuffer,
+                      cParams: CalculationParameters,
+                      combinedTransform: Transform,
+                      currentAcpIdx: Int? = null) {
 
-    val sweepIdx = hits.first
-    val signalTimeUs = hits.second
-    val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM
+    buff.rewind()
+    while (buff.hasRemaining()) {
+        val buffPos = buff.position()
+        val sweepIdx = buffPos / cParams.acpByteCnt
+        if (currentAcpIdx != null && sweepIdx > currentAcpIdx) {
+            // don't draw into the future
+            break
+        }
+        val bytePos = buffPos % cParams.acpByteCnt
+        val byte = buff.get().toInt()
+        if (byte == 0) {
+            continue
+        }
 
-    if (signalTimeUs < cParams.minSignalTimeUs || signalTimeUs > cParams.maxSignalTimeUs) {
-        return
+        (0..8)
+            .filter { byte and (1 shl it) > 0 }
+            .forEach { shift ->
+                val signalTimeUs = 8 * bytePos + shift
+                val distanceKm = signalTimeUs / LIGHTSPEED_US_TO_ROUNDTRIP_KM
+                val sweepHeadingRad = sweepIdx * cParams.c1
+                val angle = azimuthToAngle(sweepHeadingRad)
+                val x = distanceKm * cos(angle)
+                val y = distanceKm * sin(angle)
+                val tp = combinedTransform.transform(x, y)
+                gc.fill = Styles.hitColor
+                gc.fillOval(
+                    tp.x - 1.0,
+                    tp.y - 1.0,
+                    2.0,
+                    2.0
+                )
+            }
+
     }
-
-    if (distanceKm < cParams.minRadarDistanceKm || distanceKm > cParams.maxRadarDistanceKm) {
-        return
-    }
-
-    val sweepHeadingRad = sweepIdx * cParams.c1
-    val angle = azimuthToAngle(sweepHeadingRad)
-    val x = distanceKm * cos(angle)
-    val y = distanceKm * sin(angle)
-    val hitPoint = combinedTransform.transform(x, y)
-    gc.fill = Styles.hitColor
-    gc.fillOval(
-        hitPoint.x - 1.5,
-        hitPoint.y - 1.5,
-        3.0,
-        3.0
-    )
 }
 
 val DECIMAL_SYMBOLS = DecimalFormatSymbols().apply {
@@ -404,38 +417,53 @@ data class CalculationParameters(var radarParameters: RadarParameters) {
     val rotationTimeUs = radarParameters.seekTimeSec * S_TO_US
     val width = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
     val height = round(2.0 * maxRadarDistanceKm / distanceResolutionKm).toInt()
+    val acpByteCnt = (maxImpulsePeriodUs / 8).toLong()
+    val arpByteCnt = acpByteCnt * azimuthChangePulseCount
 }
 
-fun calculateClutterHits(hitRaster: RasterIterator, cParam: CalculationParameters): Stream<Pair<Int, Int>> {
+fun ByteBuffer.calculateClutterMapHits(hitRaster: RasterIterator,
+                                       cParam: CalculationParameters,
+                                       spread: Boolean,
+                                       origin: RadarCoordinate = RadarCoordinate(_rKm = 0.0, _azDeg = 0.0),
+                                       scale: Double? = null): ByteBuffer {
 
-    return stream(spliteratorUnknownSize(hitRaster, Spliterator.ORDERED), false)
-        .flatMap flatMapHitRaster@ { hit ->
+    val scl = scale ?: cParam.distanceResolutionKm
+    val originCart = origin.toCartesian()
+    stream(spliteratorUnknownSize(hitRaster, Spliterator.ORDERED), false)
+        .forEach { hit ->
 
-            val x = (hit.x - cParam.width / 2.0) * cParam.distanceResolutionKm
-            val y = (hit.y - cParam.height / 2.0) * cParam.distanceResolutionKm
+            val x = (originCart.x + hit.x - cParam.width / 2.0) * scl
+            val y = (originCart.y + hit.y - cParam.height / 2.0) * scl
 
             val radarDistanceKm = sqrt(pow(x, 2.0) + pow(y, 2.0))
             if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
-                return@flatMapHitRaster Stream.empty<Pair<Int, Int>>()
+                return@forEach
             }
 
             val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
             if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
-                return@flatMapHitRaster Stream.empty<Pair<Int, Int>>()
+                return@forEach
             }
 
             val cartesianAngleRad = atan2(y, x)
             val sweepHeadingRad = angleToAzimuth(cartesianAngleRad)
-            val sweepIdx = (sweepHeadingRad / cParam.c1).toInt()
+            val acpIdx = (sweepHeadingRad / cParam.c1).toInt()
+            if (acpIdx < 0) {
+                return@forEach
+            }
 
-            return@flatMapHitRaster Stream.of(Pair(sweepIdx, signalTimeUs))
+            writeHit(acpIdx, signalTimeUs, cParam, spread = spread)
         }
+
+    return this
 }
 
-fun calculatePointTargetHits(pathSegment: PathSegment,
-                             minTimeUs: Double,
-                             maxTimeUs: Double,
-                             cParam: CalculationParameters): Stream<Pair<Int, Int>> {
+fun ByteBuffer.calculatePointTargetHits(pathSegment: PathSegment,
+                                        minTimeUs: Double,
+                                        maxTimeUs: Double,
+                                        cParam: CalculationParameters,
+                                        spread: Boolean,
+                                        compress: Boolean): ByteBuffer {
 
     val rotTimeUs = cParam.rotationTimeUs.toInt()
     val stepTimeUs = if (pathSegment.vKmh > 0)
@@ -446,26 +474,28 @@ fun calculatePointTargetHits(pathSegment: PathSegment,
     val startTimeUs = max(0.0, minTimeUs)
     val startAcpIdx = cParam.azimuthChangePulseCount * floor(startTimeUs / cParam.rotationTimeUs).toInt()
 
-    return DoubleStream.iterate(startTimeUs) { it + stepTimeUs }
+    DoubleStream.iterate(startTimeUs) { it + stepTimeUs }
         .limit(max(ceil((maxTimeUs - startTimeUs) / stepTimeUs).toLong(), 1))
         .filter { it < maxTimeUs }
-        .boxed()
-        .flatMap flatMap@ { tUs ->
+        .forEach { tUs ->
 
-            val plotPos = pathSegment.getPositionForTime(tUs) ?: return@flatMap Stream.empty<Pair<Int, Int>>()
+            val plotPos = pathSegment.getPositionForTime(tUs) ?: return@forEach
 
             // get the angle of the target (center point)
             val radarDistanceKm = plotPos.rKm
             if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
-                return@flatMap Stream.empty<Pair<Int, Int>>()
+                return@forEach
             }
             val signalTimeUs = floor(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
             if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
-                return@flatMap Stream.empty<Pair<Int, Int>>()
+                return@forEach
             }
 
-            val targetAzRad = toRadians(plotPos.azDeg)
-            val sweepIdx = startAcpIdx + floor(targetAzRad / cParam.c1).toInt()
+            val targetAzRad = toRadians(normalizeAngleDeg(plotPos.azDeg))
+            val acpIdx = startAcpIdx + floor(targetAzRad / cParam.c1).toInt()
+            if (acpIdx < 0) {
+                return@forEach
+            }
 
             // check for hits
             val tTarget0 = tUs.toInt()
@@ -475,22 +505,27 @@ fun calculatePointTargetHits(pathSegment: PathSegment,
             val rotations = (maxTimeUs - tAntenna0).toInt() / rotTimeUs
 
             IntStream.range(0, rotations + 1)
-                .boxed()
-                .flatMap { rot ->
+                .forEach { rot ->
 
                     val tRotAnt0 = tAntenna0 + rot * rotTimeUs
                     val tRotAnt1 = tAntenna1 + rot * rotTimeUs
                     val match = max(tTarget0, tRotAnt0) <= min(tTarget1, tRotAnt1)
 
-                    if (!match) {
-                        Stream.empty<Pair<Int, Int>>()
-                    } else {
+                    if (match) {
                         // we got a hit
-                        Stream.of(Pair(sweepIdx, signalTimeUs))
+                        writeHit(
+                            acpIdx,
+                            signalTimeUs,
+                            cParam,
+                            compress,
+                            spread
+                        )
                     }
                 }
 
         }
+
+    return this
 }
 
 fun spreadHits(hits: Pair<Int, Int>, cParam: CalculationParameters): Stream<Pair<Int, Int>> {
@@ -527,10 +562,12 @@ fun spreadHits(hits: Pair<Int, Int>, cParam: CalculationParameters): Stream<Pair
 /**
  * Test 1 type of target is azimuth indifferent unlike the distance which is taken into account.
  */
-fun calculateTest1TargetHits(pathSegment: PathSegment,
-                             minTimeUs: Double,
-                             maxTimeUs: Double,
-                             cParam: CalculationParameters): Stream<Pair<Int, Int>> {
+fun ByteBuffer.calculateTest1TargetHits(pathSegment: PathSegment,
+                                        minTimeUs: Double,
+                                        maxTimeUs: Double,
+                                        cParam: CalculationParameters,
+                                        spread: Boolean,
+                                        compress: Boolean): ByteBuffer {
 
     val stepTimeUs = if (pathSegment.vKmh > 0)
         HOUR_TO_US * 0.3 * cParam.distanceResolutionKm / pathSegment.vKmh
@@ -539,41 +576,48 @@ fun calculateTest1TargetHits(pathSegment: PathSegment,
 
     val startAcpIdx = cParam.azimuthChangePulseCount * floor(minTimeUs / cParam.rotationTimeUs).toInt()
 
-    return DoubleStream.iterate(minTimeUs) { it + stepTimeUs }
+    DoubleStream.iterate(minTimeUs) { it + stepTimeUs }
         .limit(ceil((maxTimeUs - minTimeUs) / stepTimeUs).toLong())
         .filter { it < maxTimeUs }
-        .boxed()
         .map { floor(it / cParam.rotationTimeUs) * cParam.rotationTimeUs }
-        .distinct()
-        .flatMap flatMap@ { tUs ->
+        .forEach { tUs ->
 
-            val plotPos = pathSegment.getPositionForTime(tUs) ?: return@flatMap Stream.empty<Pair<Int, Int>>()
+            val plotPos = pathSegment.getPositionForTime(tUs) ?: return@forEach
 
             // get the angle of the target
             val radarDistanceKm = plotPos.rKm
             if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
-                return@flatMap Stream.empty<Pair<Int, Int>>()
+                return@forEach
             }
             val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
             if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
-                return@flatMap Stream.empty<Pair<Int, Int>>()
+                return@forEach
             }
 
-            return@flatMap IntStream.range(startAcpIdx, startAcpIdx + cParam.azimuthChangePulseCount)
-                .boxed()
-                .map { Pair(it, signalTimeUs) }
+            IntStream.range(startAcpIdx, startAcpIdx + cParam.azimuthChangePulseCount)
+                .forEach {
+                    writeHit(
+                        it,
+                        signalTimeUs,
+                        cParam, compress, spread
+                    )
+                }
 
         }
+
+    return this
 }
 
 /**
  * Test 2 type of target is distance indifferent unlike the azimuth which is taken into account.
  * Radar range is taken into account.
  */
-fun calculateTest2TargetHits(pathSegment: PathSegment,
-                             minTimeUs: Double,
-                             maxTimeUs: Double,
-                             cParam: CalculationParameters): Stream<Pair<Int, Int>> {
+fun ByteBuffer.calculateTest2TargetHits(pathSegment: PathSegment,
+                                        minTimeUs: Double,
+                                        maxTimeUs: Double,
+                                        cParam: CalculationParameters,
+                                        spread: Boolean,
+                                        compress: Boolean): ByteBuffer {
 
     val rotTimeUs = cParam.rotationTimeUs.toInt()
     val stepTimeUs = if (pathSegment.vKmh > 0)
@@ -583,26 +627,28 @@ fun calculateTest2TargetHits(pathSegment: PathSegment,
 
     val startAcpIdx = cParam.azimuthChangePulseCount * floor(minTimeUs / cParam.rotationTimeUs).toInt()
 
-    return DoubleStream.iterate(minTimeUs) { it + stepTimeUs }
+    DoubleStream.iterate(minTimeUs) { it + stepTimeUs }
         .limit(ceil((maxTimeUs - minTimeUs) / stepTimeUs).toLong())
         .filter { it < maxTimeUs }
-        .boxed()
-        .flatMap flatMap@ { tUs ->
+        .forEach { tUs ->
 
-            val plotPos = pathSegment.getPositionForTime(tUs) ?: return@flatMap Stream.empty<Pair<Int, Int>>()
+            val plotPos = pathSegment.getPositionForTime(tUs) ?: return@forEach
 
             // get the angle of the target
             val radarDistanceKm = plotPos.rKm
             if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
-                return@flatMap Stream.empty<Pair<Int, Int>>()
+                return@forEach
             }
             val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
             if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
-                return@flatMap Stream.empty<Pair<Int, Int>>()
+                return@forEach
             }
 
             val targetAzRad = toRadians(plotPos.azDeg)
-            val sweepIdx = startAcpIdx + round(targetAzRad / cParam.c1).toInt()
+            val acpIdx = startAcpIdx + round(targetAzRad / cParam.c1).toInt()
+            if (acpIdx < 0) {
+                return@forEach
+            }
 
             // check for hits
             val tTarget0 = tUs.toInt()
@@ -612,75 +658,29 @@ fun calculateTest2TargetHits(pathSegment: PathSegment,
             val rotations = (maxTimeUs - tAntenna0).toInt() / rotTimeUs
 
             IntStream.range(0, rotations + 1)
-                .boxed()
-                .flatMap { rot ->
+                .forEach { rot ->
 
                     val tRotAnt0 = tAntenna0 + rot * rotTimeUs
                     val tRotAnt1 = tAntenna1 + rot * rotTimeUs
                     val match = max(tTarget0, tRotAnt0) <= min(tTarget1, tRotAnt1)
 
-                    if (!match) {
-                        Stream.empty<Pair<Int, Int>>()
-                    } else {
+                    if (match) {
                         // we got a hit
                         IntStream.range(cParam.minSignalTimeUs.toInt(), cParam.maxSignalTimeUs.toInt() + 1)
-                            .boxed()
-                            .map { Pair(sweepIdx, it) }
+                            .forEach {
+                                writeHit(
+                                    acpIdx,
+                                    it,
+                                    cParam, compress, spread
+                                )
+                            }
                     }
                 }
         }
+
+    return this
 }
 
-
-fun calculateCloudTargetHits(pathSegment: PathSegment,
-                             minTimeUs: Double,
-                             maxTimeUs: Double,
-                             hitRaster: RasterIterator,
-                             cParam: CalculationParameters): Stream<Pair<Int, Int>> {
-
-    val stepTimeUs = if (pathSegment.vKmh > 0)
-        HOUR_TO_US * 0.3 * cParam.distanceResolutionKm / pathSegment.vKmh
-    else
-        maxTimeUs
-
-    val startAcpIdx = cParam.azimuthChangePulseCount * floor(minTimeUs / cParam.rotationTimeUs).toInt()
-
-    return DoubleStream.iterate(minTimeUs) { it + stepTimeUs }
-        .limit(ceil((maxTimeUs - minTimeUs) / stepTimeUs).toLong())
-        .filter { it < maxTimeUs }
-        .boxed()
-        .flatMap { tUs ->
-
-            val plotPos = pathSegment.getPositionForTime(tUs) ?: return@flatMap Stream.empty<Pair<Int, Int>>()
-            val cp = plotPos.toCartesian()
-
-            stream(spliteratorUnknownSize(hitRaster, Spliterator.ORDERED), false)
-                .flatMap flatMapHitRaster@ { hit ->
-
-                    val x = cp.x + (hit.x - hitRaster.width / 2.0)
-                    val y = cp.y + (hit.y - hitRaster.height / 2.0)
-
-                    val radarDistanceKm = sqrt(pow(x, 2.0) + pow(y, 2.0))
-                    if (radarDistanceKm < cParam.minRadarDistanceKm || radarDistanceKm > cParam.maxRadarDistanceKm) {
-                        return@flatMapHitRaster Stream.empty<Pair<Int, Int>>()
-                    }
-                    val signalTimeUs = round(radarDistanceKm * LIGHTSPEED_US_TO_ROUNDTRIP_KM).toInt()
-                    if (!(signalTimeUs > cParam.minSignalTimeUs && signalTimeUs < cParam.maxSignalTimeUs)) {
-                        return@flatMapHitRaster Stream.empty<Pair<Int, Int>>()
-                    }
-
-                    val cartesianAngleRad = atan2(y, x)
-                    val sweepHeadingRad = angleToAzimuth(cartesianAngleRad)
-
-                    val minSweepIndex = startAcpIdx + floor((sweepHeadingRad - cParam.horizontalAngleBeamWidthRad) / cParam.c1).toInt()
-                    val maxSweepIndex = startAcpIdx + ceil((sweepHeadingRad + cParam.horizontalAngleBeamWidthRad) / cParam.c1).toInt()
-
-                    return@flatMapHitRaster IntStream.range(minSweepIndex, maxSweepIndex + 1)
-                        .boxed()
-                        .map { Pair(it, signalTimeUs) }
-                }
-        }
-}
 
 fun Image.getRasterHitMap(): RasterIterator {
     return RasterIterator(this)
@@ -888,61 +888,48 @@ class Canvas2D(val sketch: Sketch) : Canvas() {
 }
 
 
-fun writeHitStream(raf: SeekableByteChannel,
-                   hitStream: Stream<Pair<Int, Int>>,
-                   radarParameters: RadarParameters,
-                   rotations: Int) {
+fun ByteBuffer.writeHitsHeader(radarParameters: RadarParameters,
+                               rotations: Int) {
+    // write header
+    putInt(0, (radarParameters.seekTimeSec * S_TO_US).toInt())
+    putInt(4, radarParameters.azimuthChangePulse)
+    putInt(8, radarParameters.impulsePeriodUs.toInt())
+    putInt(12, radarParameters.maxImpulsePeriodUs.toInt())
+    putInt(16, max(rotations, rotations))
+}
 
+fun ByteBuffer.writeHit(acpIdx: Int,
+                        signalTimeUs: Int,
+                        cParam: CalculationParameters,
+                        compress: Boolean = false,
+                        spread: Boolean = false) {
 
-    val acpByteCnt = ceil(radarParameters.maxImpulsePeriodUs / 8).toInt()
-    var actualRotations = 0
+    val initialOffset = position()
 
     // write hits
-    val buffer = ByteBuffer.allocate(1).order(ByteOrder.LITTLE_ENDIAN)
-    hitStream.forEach { pair ->
+    val bytePos = signalTimeUs / 8
+    val bitPos = signalTimeUs % 8
 
-        actualRotations = max(actualRotations, pair.first / radarParameters.azimuthChangePulse)
+    val normAcpIdx = if (!compress) {
+        acpIdx
+    } else {
+        // normalize (wrap around north) because clutter maps are repeating
+        (((acpIdx % cParam.azimuthChangePulseCount) + cParam.azimuthChangePulseCount) % cParam.azimuthChangePulseCount)
+    }
 
-        val bytePos = pair.second / 8
-        val bitPos = pair.second % 8
-        val filePos = (FILE_HEADER_BYTE_CNT + pair.first * acpByteCnt + bytePos).toLong()
+    val filePos = (initialOffset + normAcpIdx * cParam.acpByteCnt + bytePos).toInt()
 
-        // read full ACP
-        buffer.clear()
-        raf.position(filePos)
-        raf.read(buffer)
-        buffer.put(
-            0,
-            buffer[0] or (1 shl bitPos).toByte()
+    try {
+        put(
+            filePos,
+            get(filePos) or (1 shl bitPos).toByte()
         )
-        buffer.flip()
-        raf.position(filePos)
-        raf.write(buffer)
-
-//        val seekTime = (pair.first / radarParameters.azimuthChangePulse) * radarParameters.seekTimeSec
-//            updateProgress(
-//                seekTime / (designerController.scenario.simulationDurationMin * MIN_TO_S),
-//                1.0
-//            )
+    } catch (e: IndexOutOfBoundsException) {
+        println(bytePos)
+        println(bitPos)
+        println(filePos)
+        throw e
     }
 
-    // write header
-    val headerBuffer = ByteBuffer.allocate(FILE_HEADER_BYTE_CNT)
-        .order(ByteOrder.LITTLE_ENDIAN)
-        .putInt((radarParameters.seekTimeSec * S_TO_US).toInt())
-        .putInt(radarParameters.azimuthChangePulse)
-        .putInt(radarParameters.impulsePeriodUs.toInt())
-        .putInt(radarParameters.maxImpulsePeriodUs.toInt())
-        .putInt(max(actualRotations, rotations))
-    headerBuffer.flip()
-
-    raf.position(0)
-    raf.write(headerBuffer)
-
-    // ensure file size is = header size + multiple of ARP block size
-    if (actualRotations > 0) {
-        val arpBlockSize = acpByteCnt * actualRotations
-        raf.position(FILE_HEADER_BYTE_CNT.toLong() + arpBlockSize)
-        raf.write(ByteBuffer.wrap(kotlin.ByteArray(1)))
-    }
+    position(initialOffset)
 }

@@ -42,7 +42,7 @@ class RadarCoordinate() : JsonModel {
 
     constructor(_rKm: Double, _azDeg: Double) : this() {
         rKm = _rKm
-        azDeg = _azDeg
+        azDeg = normalizeAngleDeg(_azDeg)
     }
 
     fun toCartesian(): Point2D {
@@ -61,8 +61,8 @@ class RadarCoordinate() : JsonModel {
 
     override fun updateModel(json: JsonObject) {
         with(json) {
-            rKm = double("rKm")
-            azDeg = double("azDeg")
+            rKm = double("rKm") ?: 0.0
+            azDeg = normalizeAngleDeg(double("azDeg") ?: 0.0)
         }
     }
 }
@@ -135,8 +135,14 @@ class MovingTarget : JsonModel {
     var synchroPulseRadarJamming by property(false)
     fun synchroPulseRadarJammingProperty() = getProperty(MovingTarget::synchroPulseRadarJamming)
 
+    var synchroPulseDelay by property(0.0)
+    fun synchroPulseDelayProperty() = getProperty(MovingTarget::synchroPulseDelay)
+
     var initialPosition by property(RadarCoordinate(0.0, 0.0))
     fun initialPositionProperty() = getProperty(MovingTarget::initialPosition)
+
+    var startingTimeSec by property(0.0)
+    fun startingTimeProperty() = getProperty(MovingTarget::startingTimeSec)
 
     var directions by property(observableArrayList<Direction>(mutableListOf()))
 
@@ -150,7 +156,11 @@ class MovingTarget : JsonModel {
         with(json) {
             add("name", name)
             add("type", type.toString())
+            add("jammingSource", jammingSource)
+            add("synchroPulseRadarJamming", synchroPulseRadarJamming)
+            add("synchroPulseDelay", synchroPulseDelay)
             add("initialPosition", initialPosition.toJSON())
+            add("startingTimeSec", startingTimeSec)
             add("directions", directions.toJSON())
         }
     }
@@ -160,6 +170,10 @@ class MovingTarget : JsonModel {
             name = string("name")
             type = MovingTargetType.valueOf(string("type")!!)
             initialPosition = getJsonObject("initialPosition").toModel()
+            startingTimeSec = double("startingTimeSec") ?: 0.0
+            jammingSource = boolean("jammingSource") ?: false
+            synchroPulseRadarJamming = boolean("synchroPulseRadarJamming") ?: false
+            synchroPulseDelay = double("synchroPulseDelay") ?: 0.0
             directions = getJsonArray("directions")?.toModel() ?: observableArrayList<Direction>(mutableListOf())
         }
     }
