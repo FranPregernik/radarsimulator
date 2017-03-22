@@ -444,7 +444,7 @@ class RadarScreenView : View() {
             gc.textAlign = TextAlignment.CENTER
             gc.textBaseline = VPos.CENTER
             gc.fillText(
-                toDegrees(azimuth).toInt().toString(),
+                round(toDegrees(azimuth)).toInt().toString(),
                 p.x,
                 p.y
             )
