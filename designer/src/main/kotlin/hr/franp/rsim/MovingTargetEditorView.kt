@@ -24,12 +24,14 @@ class MovingTargetEditorView : View() {
     private val scsc = SpeedStringConverter()
     private var coordinateClick by property<ChangeListener<RadarCoordinate>>()
 
-    var directionsTableView: TableView<Direction> by singleAssign()
-    var removeDirectionItemButton: Button by singleAssign()
-    var setDirectionEndpointButton: Button by singleAssign()
-    var targetTypeSelector: ComboBox<MovingTargetType> by singleAssign()
-    var initialDistanceField: TextField by singleAssign()
-    var initialAzimuthField: TextField by singleAssign()
+    private var directionsTableView: TableView<Direction> by singleAssign()
+    private var removeDirectionItemButton: Button by singleAssign()
+    private var setDirectionEndpointButton: Button by singleAssign()
+    private var targetTypeSelector: ComboBox<MovingTargetType> by singleAssign()
+    private var initialDistanceField: TextField by singleAssign()
+    private var initialAzimuthField: TextField by singleAssign()
+    private var jammingSourceSelector: CheckBox by singleAssign()
+    private var synchroPulseRadarJammingSelector: CheckBox by singleAssign()
 
     init {
 
@@ -40,7 +42,6 @@ class MovingTargetEditorView : View() {
             form {
 
                 fieldset {
-                    labelPosition = Orientation.VERTICAL
 
                     field("Type") {
                         tooltip("Change the moving target type")
@@ -53,6 +54,28 @@ class MovingTargetEditorView : View() {
                                 MovingTargetType.Test2
                             ).observable()
 
+                        }
+                    }
+
+                    field("JS") {
+                        tooltip("Jamming source")
+
+                        jammingSourceSelector = checkbox {
+                            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+                            setOnAction {
+                                controller.selectedMovingTarget.jammingSource = selectedProperty().get()
+                            }
+                        }
+                    }
+
+                    field("SPRJ") {
+                        tooltip("Synchronous pulse radar jamming")
+
+                        synchroPulseRadarJammingSelector = checkbox {
+                            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+                            setOnAction {
+                                controller.selectedMovingTarget.synchroPulseRadarJamming = selectedProperty().get()
+                            }
                         }
                     }
 
@@ -121,6 +144,10 @@ class MovingTargetEditorView : View() {
 
 
                     }
+                }
+
+                fieldset {
+                    labelPosition = Orientation.VERTICAL
 
                     field("Courses") {
 
@@ -174,6 +201,8 @@ class MovingTargetEditorView : View() {
 
                             directionsTableView = tableview<Direction> {
                                 disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+
+                                maxHeight = 200.0
 
                                 removeDirectionItemButton.disableProperty().bind(
                                     controller.selectedMovingTargetProperty.isNull.or(
@@ -244,6 +273,8 @@ class MovingTargetEditorView : View() {
             // unbind/rebind
             oldMovingTarget?.apply {
                 typeProperty().unbindBidirectional(targetTypeSelector.valueProperty())
+                jammingSourceProperty().unbindBidirectional(jammingSourceSelector.selectedProperty())
+                synchroPulseRadarJammingProperty().unbindBidirectional(synchroPulseRadarJammingSelector.selectedProperty())
                 initialDistanceField.textProperty().unbindBidirectional(initialPosition.rProperty())
                 initialAzimuthField.textProperty().unbindBidirectional(initialPosition.azDegProperty())
                 directionsProperty().unbindBidirectional(directionsTableView.itemsProperty())
@@ -252,6 +283,8 @@ class MovingTargetEditorView : View() {
             if (newMovingTarget == null) return@addListener
 
             targetTypeSelector.valueProperty().bindBidirectional(newMovingTarget.typeProperty())
+            jammingSourceSelector.selectedProperty().bindBidirectional(newMovingTarget.jammingSourceProperty())
+            synchroPulseRadarJammingSelector.selectedProperty().bindBidirectional(newMovingTarget.synchroPulseRadarJammingProperty())
             initialDistanceField.textProperty().bindBidirectional(newMovingTarget.initialPosition.rProperty(), dcsc)
             initialAzimuthField.textProperty().bindBidirectional(newMovingTarget.initialPosition.azDegProperty(), acsc)
             directionsTableView.itemsProperty().bindBidirectional(newMovingTarget.directionsProperty())

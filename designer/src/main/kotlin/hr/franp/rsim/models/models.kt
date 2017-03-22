@@ -129,6 +129,12 @@ class MovingTarget : JsonModel {
     var type by property(MovingTargetType.Point)
     fun typeProperty() = getProperty(MovingTarget::type)
 
+    var jammingSource by property(false)
+    fun jammingSourceProperty() = getProperty(MovingTarget::jammingSource)
+
+    var synchroPulseRadarJamming by property(false)
+    fun synchroPulseRadarJammingProperty() = getProperty(MovingTarget::synchroPulseRadarJamming)
+
     var initialPosition by property(RadarCoordinate(0.0, 0.0))
     fun initialPositionProperty() = getProperty(MovingTarget::initialPosition)
 
@@ -463,6 +469,11 @@ data class DisplayParameters(
 
     val targetHitLayerOpacity: Double,
 
-    val clutterLayerOpacity: Double
+    val clutterLayerOpacity: Double,
+
+    /**
+     * Specifies how many history plots to display
+     */
+    val plotHistoryCount: Int
 
 )
