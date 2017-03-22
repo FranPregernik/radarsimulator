@@ -69,7 +69,8 @@ class RasterIterator(img: Image) : Iterator<Point2D> {
             idx += 1
 
             val color = reader.getColor(x.toInt(), y.toInt())
-            if (!(color.red == 0.0 && color.green == 0.0 && color.blue == 0.0)) {
+            val intensity = (color.red + color.green + color.blue) / 3.0 * color.opacity
+            if (intensity > 0.2) {
                 return Point2D(x, height - 1 - y)
             }
 
