@@ -351,9 +351,9 @@ class RadarScreenView : View() {
             simulatorController.radarParameters.minRadarDistanceKm,
             simulatorController.radarParameters.maxRadarDistanceKm
         )
-        val distanceSequence = mandatoryDistanceMarkers + generateSequence(simulatorController.radarParameters.minRadarDistanceKm) {
-            it + stepKm
-        }.takeWhile { it <= simulatorController.radarParameters.maxRadarDistanceKm - stepKm / 3 }
+        val distanceSequence = mandatoryDistanceMarkers + generateSequence(0.0) { it + stepKm }
+            .dropWhile { it <= simulatorController.radarParameters.minRadarDistanceKm }
+            .takeWhile { it <= simulatorController.radarParameters.maxRadarDistanceKm - stepKm / 3 }
 
         val cp = combinedTransform.transform(0.0, 0.0)
         for (r in distanceSequence) {
@@ -364,7 +364,7 @@ class RadarScreenView : View() {
             gc.textAlign = TextAlignment.CENTER
             gc.textBaseline = VPos.TOP
             gc.fillText(
-                (r / distanceToKmScale).toInt().toString(),
+                round(r / distanceToKmScale).toInt().toString(),
                 dp.x,
                 dp.y
             )
