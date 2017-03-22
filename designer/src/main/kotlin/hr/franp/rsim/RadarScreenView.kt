@@ -115,6 +115,7 @@ class RadarScreenView : View() {
         config["targetLayerOpacity"] = displayParameters.targetLayerOpacity.toString()
         config["targetHitLayerOpacity"] = displayParameters.targetHitLayerOpacity.toString()
         config["clutterLayerOpacity"] = displayParameters.clutterLayerOpacity.toString()
+        config["plotHistoryCount"] = displayParameters.plotHistoryCount.toString()
         config.save()
     }
 
@@ -137,7 +138,8 @@ class RadarScreenView : View() {
         targetDisplayFilter = emptySequence(),
         targetLayerOpacity = config.double("targetLayerOpacity") ?: 1.0,
         targetHitLayerOpacity = config.double("targetHitLayerOpacity") ?: 1.0,
-        clutterLayerOpacity = config.double("clutterLayerOpacity") ?: 1.0
+        clutterLayerOpacity = config.double("clutterLayerOpacity") ?: 1.0,
+        plotHistoryCount = config.string("plotHistoryCount", "6")?.toInt() ?: 6
     )
 
 
