@@ -488,6 +488,11 @@ data class DisplayParameters(
     /**
      * Specifies how many history plots to display
      */
-    val plotHistoryCount: Int
+    val plotHistoryCount: Int,
+
+    /**
+     *
+     */
+    val maxDisplayDistanceKm: Double
 
 )

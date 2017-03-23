@@ -21,7 +21,7 @@ class SimulatorController : Controller(), AutoCloseable {
         azimuthChangePulse = 4096,
         horizontalAngleBeamWidthDeg = 1.4,
         distanceResolutionKm = 0.150,
-        maxRadarDistanceKm = 400.0,
+        maxRadarDistanceKm = 370.0,
         minRadarDistanceKm = 5.0
     ))
 
@@ -258,7 +258,7 @@ class SimulatorController : Controller(), AutoCloseable {
                             if (it.startsWith("SIM_ARP_US")) {
                                 arpUs = matchedValue?.toDouble() ?: 0.0
                             } else if (it.startsWith("SIM_ACP_CNT")) {
-                                acpCnt = 2 * (matchedValue?.toInt() ?: 0)
+                                acpCnt = matchedValue?.toInt() ?: 0
                             } else if (it.startsWith("SIM_TRIG_US")) {
                                 trigUs = matchedValue?.toDouble() ?: 0.0
                             } else if (it.startsWith("SIM_CAL")) {
@@ -286,8 +286,8 @@ class SimulatorController : Controller(), AutoCloseable {
             }
         }
 
-        if (!calibrated) {
-            throw RuntimeException("Unable to calibrate")
+        if (!calibrated || radarParameters.maxImpulsePeriodUs < trigUs) {
+            throw RuntimeException("Unable to calibrate (ARP_US=$arpUs, ACP_CNT=$acpCnt, TRIG_US=$trigUs")
         }
 
         radarParameters = radarParameters.copy(

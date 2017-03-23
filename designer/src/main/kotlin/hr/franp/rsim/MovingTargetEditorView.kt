@@ -71,7 +71,9 @@ class MovingTargetEditorView : View() {
                         items = listOf(
                             MovingTargetType.Point,
                             MovingTargetType.Test1,
-                            MovingTargetType.Test2
+                            MovingTargetType.Test2,
+                            MovingTargetType.Cloud1,
+                            MovingTargetType.Cloud2
                         ).observable()
 
                     }

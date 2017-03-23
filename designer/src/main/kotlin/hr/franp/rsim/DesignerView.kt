@@ -3,24 +3,15 @@ package hr.franp.rsim
 import hr.franp.rsim.models.*
 import hr.franp.rsim.models.AzimuthMarkerType.*
 import hr.franp.rsim.models.DistanceUnit.*
-import javafx.beans.property.*
 import javafx.geometry.*
-import javafx.scene.control.*
+import javafx.scene.input.*
 import javafx.scene.layout.*
 import javafx.scene.text.*
 import javafx.stage.*
-import net.schmizz.sshj.xfer.*
-import org.apache.commons.io.*
 import org.controlsfx.glyphfont.*
 import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
-import java.io.*
 import java.lang.Math.*
-import java.nio.*
-import java.nio.channels.FileChannel.MapMode.*
-import java.nio.file.*
-import java.util.zip.*
-import javax.json.Json.*
 
 class DesignerView : View() {
     override val root = BorderPane()
@@ -33,8 +24,6 @@ class DesignerView : View() {
 
     private val radarScreen: RadarScreenView by inject()
     private val movingTargetEditor: MovingTargetEditorView by inject()
-
-    val calculatingHitsProperty = SimpleBooleanProperty(false)
 
     init {
 
@@ -57,178 +46,71 @@ class DesignerView : View() {
 
                     paddingAll = 4
 
+                    button("", fontAwesome.create(ERASER)) {
+                        disableProperty().bind(
+                            designerController.calculatingHitsProperty
+                                .or(simulationController.simulationRunningProperty)
+                        )
+
+                        tooltip("Reset scenario")
+
+                        setOnAction {
+                            designerController.resetScenario()
+                        }
+                    }
+
                     button("", fontAwesome.create(FOLDER_OPEN)) {
                         disableProperty().bind(
-                            calculatingHitsProperty
+                            designerController.calculatingHitsProperty
                                 .or(simulationController.simulationRunningProperty)
                         )
 
                         tooltip("Open scenario")
 
                         setOnAction {
-                            val file = chooseFile("Select simulation scenario file", arrayOf(FileChooser.ExtensionFilter("Simulation scenario file", "*.rsim")), FileChooserMode.Single)
-                                .firstOrNull()
-
-                            file?.bufferedReader()?.use { fileBufferReader ->
-                                createReader(fileBufferReader)?.use { jsonReader ->
-                                    val newScenario = Scenario()
-                                    newScenario.updateModel(jsonReader.readObject())
-                                    designerController.scenario = newScenario
-                                }
-                            }
+                            designerController.loadScenario()
                         }
                     }
 
                     button("", fontAwesome.create(FLOPPY_ALT)) {
                         disableProperty().bind(
-                            calculatingHitsProperty
+                            designerController.calculatingHitsProperty
                                 .or(simulationController.simulationRunningProperty)
                         )
 
                         tooltip("Save scenario")
 
                         setOnAction {
-                            val file = chooseFile("Select simulation scenario file", arrayOf(FileChooser.ExtensionFilter("Simulation scenario file", "*.rsim")), FileChooserMode.Save)
-                                .firstOrNull()
+                            designerController.saveScenario()
+                        }
+                    }
 
-                            file?.bufferedWriter()?.use { fileBufferWriter ->
-                                createWriter(fileBufferWriter)?.use { jsonWriter ->
-                                    jsonWriter.writeObject(designerController.scenario.toJSON())
-                                }
-                            }
+                    button("", fontAwesome.create(CAMERA)) {
+                        tooltip("Take snapshot")
+                        setOnAction {
+                            radarScreen.snapshot()
                         }
                     }
 
                     button("", fontAwesome.create(COGS)) {
                         disableProperty().bind(
-                            calculatingHitsProperty
+                            designerController.calculatingHitsProperty
                                 .or(simulationController.simulationRunningProperty)
                         )
-
                         tooltip("Compute scenario")
 
-                        setOnAction {
-                            calculatingHitsProperty.set(true)
-
-                            runAsync {
-                                try {
-
-                                    updateMessage("Calibrating")
-                                    updateProgress(0.0, 1.0)
-                                    simulationController.calibrate()
-                                    updateProgress(1.0, 1.0)
-                                    updateMessage("Calibrated")
-
-                                    val radarParameters = simulationController.radarParameters
-                                    val cParams = CalculationParameters(radarParameters)
-
-                                    // ensure dir where we can store the files
-                                    File("tmp").mkdir()
-
-                                    // prepare simulation
-                                    updateMessage("Writing clutter sim")
-                                    updateProgress(0.0, 1.0)
-                                    RandomAccessFile(Paths.get("tmp", "clutter.bin").toFile(), "rw").use { raf ->
-                                        val fileSizeBytes = FILE_HEADER_BYTE_CNT + 1 * cParams.arpByteCnt
-                                        raf.setLength(fileSizeBytes)
-                                        raf.channel.use { channel ->
-                                            val mappedBuffer = channel.map(READ_WRITE, 0, channel.size())
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-
-                                            mappedBuffer.writeHitsHeader(
-                                                radarParameters,
-                                                (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt()
-                                            )
-
-                                            designerController.calculateClutterHits(mappedBuffer, true)
-                                        }
-                                    }
-                                    updateMessage("Wrote clutter sim")
-                                    updateProgress(1.0, 1.0)
-
-                                    // compress
-                                    updateMessage("Zipping clutter sim")
-                                    updateProgress(0.0, 1.0)
-                                    FileOutputStream("tmp/clutter.bin.gz").use { fileOutputStream ->
-                                        GZIPOutputStream(fileOutputStream).use { gzipOutputStream ->
-                                            FileInputStream("tmp/clutter.bin").use { fileInputStream ->
-                                                IOUtils.copy(fileInputStream, gzipOutputStream)
-                                            }
-                                        }
-                                    }
-                                    updateMessage("Zipped clutter sim")
-                                    updateProgress(1.0, 1.0)
-
-
-                                    // prepare targets sim
-                                    updateMessage("Writing target sim")
-                                    updateProgress(0.0, 1.0)
-                                    RandomAccessFile(Paths.get("tmp", "targets.bin").toFile(), "rw").use { raf ->
-
-                                        // ensure number of rotations is decreased so the total file size bytes is not greater than Integer.MAX_VALUE
-                                        // because the mmap function does not allow more than that
-                                        val rotations = min(
-                                            (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toLong(),
-                                            (Integer.MAX_VALUE - FILE_HEADER_BYTE_CNT) / cParams.arpByteCnt
-                                        )
-                                        val fileSizeBytes = (FILE_HEADER_BYTE_CNT + rotations * cParams.arpByteCnt)
-                                        raf.setLength(fileSizeBytes)
-                                        raf.channel.use { channel ->
-                                            val mappedBuffer = channel.map(READ_WRITE, 0, channel.size())
-                                                .order(ByteOrder.LITTLE_ENDIAN)
-
-                                            mappedBuffer.writeHitsHeader(
-                                                radarParameters,
-                                                (designerController.scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt()
-                                            )
-
-                                            designerController.calculateTargetHits(mappedBuffer, true)
-                                        }
-                                    }
-                                    updateMessage("Wrote target sim")
-                                    updateProgress(1.0, 1.0)
-
-
-                                    // compress
-                                    updateMessage("Zipping target sim")
-                                    updateProgress(0.0, 1.0)
-                                    FileOutputStream("tmp/targets.bin.gz").use { fileOutputStream ->
-                                        GZIPOutputStream(fileOutputStream).use { gzipOutputStream ->
-                                            FileInputStream("tmp/targets.bin").use { fileInputStream ->
-                                                IOUtils.copy(fileInputStream, gzipOutputStream)
-                                            }
-                                        }
-                                    }
-                                    updateMessage("Zipped target sim")
-                                    updateProgress(1.0, 1.0)
-
-
-                                    simulationController.uploadClutterFile(
-                                        FileSystemFile("tmp/clutter.bin.gz"),
-                                        { progress, _ ->
-                                            updateMessage("Sending clutter sim")
-                                            updateProgress(progress, 1.0)
-                                        }
-                                    )
-                                    simulationController.uploadTargetsFile(
-                                        FileSystemFile("tmp/targets.bin.gz"),
-                                        { progress, _ ->
-                                            updateMessage("Sending targets sim")
-                                            updateProgress(progress, 1.0)
-                                        }
-                                    )
-
-                                } finally {
-                                    calculatingHitsProperty.set(false)
-                                }
+                        setOnMouseClicked {
+                            if (it.button != MouseButton.PRIMARY) {
+                                return@setOnMouseClicked
                             }
+                            designerController.computeScenario(debug = it.isShiftDown)
                         }
                     }
 
                     button("", fontAwesome.create(PLAY)) {
                         disableProperty().bind(
                             simulationController.simulationRunningProperty
-                                .or(calculatingHitsProperty)
+                                .or(designerController.calculatingHitsProperty)
                         )
 
                         tooltip("Begin simulation")
@@ -404,6 +286,7 @@ class DesignerView : View() {
 
                             field("Target hit layer") {
                                 hbox(4.0) {
+
                                     val mtiSlider = slider {
                                         tooltip("Controls transparency of the target hit layer")
 
@@ -418,7 +301,9 @@ class DesignerView : View() {
                                             radarScreen.configTargetHitLayerOpacity(newValue.toDouble())
                                         }
                                     }
+
                                     this += mtiSlider
+
                                     checkbox {
                                         disableProperty().bind(
                                             simulationController.simulationRunningProperty
@@ -434,25 +319,16 @@ class DesignerView : View() {
                                                 0.0
                                         }
                                     }
-                                }
-                            }
-                            field("Target plot history") {
-                                val slider = slider {
-                                    tooltip("Number of previous hits to display")
-                                    prefWidth = 200.0
 
-                                    min = 0.0
-                                    max = 6.0
-                                    blockIncrement = 1.0
+                                    combobox<Int> {
+                                        tooltip("Number of previous hits to display")
+                                        items = listOf(0, 1, 2, 3, 4, 5, 6).observable()
 
-                                    value = radarScreen.displayParameters.plotHistoryCount.toDouble()
-                                    valueProperty().addListener { _, _, newValue ->
-                                        radarScreen.configPlotHistory(newValue.toInt())
+                                        value = radarScreen.displayParameters.plotHistoryCount
+                                        valueProperty().addListener { _, _, newValue ->
+                                            radarScreen.configPlotHistory(newValue)
+                                        }
                                     }
-                                }
-                                this += slider
-                                label {
-                                    textProperty().bind(slider.valueProperty().asString("%.0f"))
                                 }
                             }
 
@@ -491,18 +367,24 @@ class DesignerView : View() {
                             }
 
                             field("Clutter map") {
+
                                 button("", fontAwesome.create(FILE_PHOTO_ALT)) {
+                                    tooltip("Select clutter map")
                                     setOnAction {
                                         val file = chooseFile("Select clutter map", arrayOf(FileChooser.ExtensionFilter("Image  files", "*.jpg", "*.png")), FileChooserMode.Single)
-                                            .firstOrNull()
+                                            .firstOrNull() ?: return@setOnAction
 
-                                        if (file != null) {
-                                            designerController.scenario.clutter = Clutter(file)
-                                            this.tooltip = Tooltip("Select clutter map")
-                                        }
+                                        designerController.scenario.clutter = Clutter(file)
                                     }
                                 }
 
+                                button("", fontAwesome.create(ERASER)) {
+                                    tooltip("Reset clutter")
+
+                                    setOnAction {
+                                        designerController.scenario.clutter = Clutter()
+                                    }
+                                }
                             }
                         }
                         fieldset {
@@ -582,7 +464,7 @@ class DesignerView : View() {
                 titledpane("Radar targets", vbox {
 
                     disableProperty().bind(
-                        calculatingHitsProperty.or(
+                        designerController.calculatingHitsProperty.or(
                             simulationController.simulationRunningProperty
                         )
                     )
