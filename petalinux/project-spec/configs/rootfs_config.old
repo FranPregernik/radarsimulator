@@ -2981,6 +2981,13 @@ CONFIG_ntp=y
 #
 
 #
+# eth01-config 
+#
+CONFIG_eth01-config=y
+# CONFIG_eth01-config-dev is not set
+# CONFIG_eth01-config-dbg is not set
+
+#
 # gpio-demo 
 #
 # CONFIG_gpio-demo is not set
@@ -3005,4 +3012,3 @@ CONFIG_radar-sim-test=y
 # PetaLinux RootFS Settings
 #
 CONFIG_ROOTFS_ROOT_PASSWD="root"
-CONFIG_eth01-config=y

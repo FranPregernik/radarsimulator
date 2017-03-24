@@ -294,15 +294,6 @@ RadarSimulator::RadarSimulator() {
     ctrl = (Simulator *) mmap(NULL, DESCRIPTOR_REGISTERS_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, devMemHandle, RSIM_CTRL_REGISTER_LOCATION);
 
     scratchMem = (u32*) mmap(NULL, MEM_HIGH_ADDR - MEM_BASE_ADDR + 1, PROT_READ | PROT_WRITE, MAP_SHARED, devMemHandle, MEM_BASE_ADDR);
-    memset((u8*) scratchMem, 0x0, MEM_HIGH_ADDR - MEM_BASE_ADDR + 1);
-
-    /* Initialize CLUTTER DMA engine */
-    initDmaEngine(CL_DMA_DEV_ID, devMemHandle, &clutterDma);
-    initScatterGatherBufferDescriptors(&clutterDma, ctrl, addrToVirtual(CL_BD_SPACE_BASE), CL_BD_SPACE_BASE, CL_BD_SPACE_HIGH - CL_BD_SPACE_BASE + 1);
-
-    /* Initialize TARGET DMA engine */
-    initDmaEngine(MT_DMA_DEV_ID, devMemHandle, &targetDma);
-    initScatterGatherBufferDescriptors(&targetDma, ctrl, addrToVirtual(MT_BD_SPACE_BASE), MT_BD_SPACE_BASE, MT_BD_SPACE_HIGH - MT_BD_SPACE_BASE + 1);
 
     /* Initialize MAP memory for clutter and moving targets */
     initMapMemory();
@@ -350,16 +341,24 @@ void RadarSimulator::initClutterMap(istream& input) {
     u32 trigSize = 0;
     u32 blockCount = 0;
 
+    /* Initialize CLUTTER DMA engine */
+    initDmaEngine(CL_DMA_DEV_ID, devMemHandle, &clutterDma);
+    initScatterGatherBufferDescriptors(&clutterDma, ctrl, addrToVirtual(CL_BD_SPACE_BASE), CL_BD_SPACE_BASE, CL_BD_SPACE_HIGH - CL_BD_SPACE_BASE + 1);
+
+    /* Initialize scratch mem */
+    clearClutterMap();
+
+    /* Read */
     input.read((char*) &arpUs, sizeof(u32));
     input.read((char*) &acpCnt, sizeof(u32));
     input.read((char*) &trigUs, sizeof(u32));
     input.read((char*) &trigSize, sizeof(u32));
     input.read((char*) &blockCount, sizeof(u32));
 
-    if (ctrl->arpUs != arpUs || ctrl->acpCnt != acpCnt || ctrl->trigUs != trigUs) {
-        cerr << "Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs;
-        RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
-    }
+//    if (ctrl->arpUs != arpUs || ctrl->acpCnt != acpCnt || ctrl->trigUs != trigUs) {
+//        cerr << "Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs;
+//        RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
+//    }
 
     for (int i = 0; i < CL_BLK_CNT; i++) {
         input.read(((char*) clutterMemPtr) + i * blockByteSize, blockByteSize);
@@ -372,15 +371,22 @@ void RadarSimulator::initTargetMap(istream& input) {
     u32 trigUs = 0;
     u32 trigSize = 0;
 
+    /* Initialize TARGET DMA engine */
+    initDmaEngine(MT_DMA_DEV_ID, devMemHandle, &targetDma);
+    initScatterGatherBufferDescriptors(&targetDma, ctrl, addrToVirtual(MT_BD_SPACE_BASE), MT_BD_SPACE_BASE, MT_BD_SPACE_HIGH - MT_BD_SPACE_BASE + 1);
+
+    /* Initialize scratch mem */
+    clearTargetMap();
+
     input.read((char*) &arpUs, sizeof(u32));
     input.read((char*) &acpCnt, sizeof(u32));
     input.read((char*) &trigUs, sizeof(u32));
     input.read((char*) &trigSize, sizeof(u32));
     input.read((char*) &targetBlockCount, sizeof(u32));
 
-    if (ctrl->arpUs != arpUs || ctrl->acpCnt != acpCnt || ctrl->trigUs != trigUs) {
-        RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
-    }
+//    if (ctrl->arpUs != arpUs || ctrl->acpCnt != acpCnt || ctrl->trigUs != trigUs) {
+//        RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
+//    }
 
     for (int i = 0; i < MT_BLK_CNT; i++) {
         input.read(((char*) targetMemPtr) + i * blockByteSize, blockByteSize);

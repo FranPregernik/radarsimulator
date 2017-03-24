@@ -32,6 +32,7 @@ int main(int argc, char* argv[]) {
 
     // register signal SIGINT and signal handler
     signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
 
     // ensure simulator is not running
     rsim.disable();
@@ -106,6 +107,8 @@ int main(int argc, char* argv[]) {
         chrono::milliseconds timeSinceEpoch = chrono::duration_cast < chrono::milliseconds > (startTime.time_since_epoch());
 
         cout << "SIM_EN=" << status.enabled << endl;
+        cout << "SIM_MTI_EN=" << status.mtiEnabled << endl;
+        cout << "SIM_NORM_EN=" << status.normEnabled << endl;
         cout << "SIM_CAL=" << status.calibrated << endl;
         cout << "SIM_ARP_US=" << dec << status.arpUs << endl;
         cout << "SIM_ACP_CNT=" << dec << status.acpCnt << endl;

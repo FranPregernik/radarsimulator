@@ -60,6 +60,8 @@ using namespace std;
 
 struct Simulator {
     u32 enabled;
+    u32 mtiEnabled;
+    u32 normEnabled;
     u32 calibrated;
     u32 arpUs;
     u32 acpCnt;
