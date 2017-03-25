@@ -180,7 +180,6 @@ void RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 
 //        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
 //    }
 //    PrintDmaStatus(dmaPtr);
-
     /* Give the BD to DMA to kick off the transmission. */
     Status = XAxiDma_BdRingToHw(TxRingPtr, bdCount, FirstBdPtr);
     if (Status != XST_SUCCESS) {
@@ -219,7 +218,7 @@ void RadarSimulator::initDmaEngine(int devId, int devMemHandle, XAxiDma *dma) {
 
 }
 
-void RadarSimulator::initScatterGatherBufferDescriptors(XAxiDma *dma, Simulator *ctrl, UINTPTR virtDataAddr, UINTPTR physDataAddr, long size) {
+void RadarSimulator::initScatterGatherBufferDescriptors(XAxiDma *dma, UINTPTR virtDataAddr, UINTPTR physDataAddr, long size) {
 
     int Status;
 
@@ -259,30 +258,33 @@ void RadarSimulator::initScatterGatherBufferDescriptors(XAxiDma *dma, Simulator 
 
 }
 
-void RadarSimulator::initMapMemory() {
+void RadarSimulator::initClutterDma() {
 
-    // calculate individual map block size
-    u32 acpCnt = ctrl->acpCnt;
-    u32 trigUs = ctrl->trigUs;
-
-    // calc how many words can store the microseconds as bits
-    u32 trig_word_cnt = (trigUs / WORD_BITS);
-
-    // calc how many words are needed for a radar whole revolution
-    u32 mem_blk_word_cnt = acpCnt * trig_word_cnt;
-
-    // store the block size in
-    blockByteSize = mem_blk_word_cnt * WORD_SIZE;
-
-    // calculate the needed sizes for the individual block sizes
-    clutterMapWordSize = CL_BLK_CNT * mem_blk_word_cnt;
-    targetMapWordSize = MT_BLK_CNT * mem_blk_word_cnt;
+    if (!calibrated) {
+        RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
+    }
 
     // store pointer to the beginnings of the individual memory blocks
     u32 dataOffset = (DATA_BASE - MEM_BASE_ADDR) / WORD_SIZE;
     clutterMemPtr = scratchMem + dataOffset;
+
+    initDmaEngine(CL_DMA_DEV_ID, devMemHandle, &clutterDma);
+    initScatterGatherBufferDescriptors(&clutterDma, addrToVirtual(CL_BD_SPACE_BASE), CL_BD_SPACE_BASE, CL_BD_SPACE_HIGH - CL_BD_SPACE_BASE + 1);
+
+}
+
+void RadarSimulator::initTargetDma() {
+
+    if (!calibrated) {
+        RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
+    }
+
+    // store pointer to the beginnings of the individual memory blocks
+    u32 dataOffset = (DATA_BASE - MEM_BASE_ADDR) / WORD_SIZE;
     targetMemPtr = scratchMem + dataOffset + clutterMapWordSize;
 
+    initDmaEngine(MT_DMA_DEV_ID, devMemHandle, &targetDma);
+    initScatterGatherBufferDescriptors(&targetDma, addrToVirtual(MT_BD_SPACE_BASE), MT_BD_SPACE_BASE, MT_BD_SPACE_HIGH - MT_BD_SPACE_BASE + 1);
 }
 
 RadarSimulator::RadarSimulator() {
@@ -295,8 +297,6 @@ RadarSimulator::RadarSimulator() {
 
     scratchMem = (u32*) mmap(NULL, MEM_HIGH_ADDR - MEM_BASE_ADDR + 1, PROT_READ | PROT_WRITE, MAP_SHARED, devMemHandle, MEM_BASE_ADDR);
 
-    /* Initialize MAP memory for clutter and moving targets */
-    initMapMemory();
 }
 
 RadarSimulator::~RadarSimulator() {
@@ -305,7 +305,7 @@ RadarSimulator::~RadarSimulator() {
 
 void RadarSimulator::enable() {
 
-    if (!ctrl->calibrated) {
+    if (!calibrated) {
         RAISE(RadarSignalNotCalibratedException, "Radar signal not calibrated");
     }
 
@@ -342,8 +342,7 @@ void RadarSimulator::initClutterMap(istream& input) {
     u32 blockCount = 0;
 
     /* Initialize CLUTTER DMA engine */
-    initDmaEngine(CL_DMA_DEV_ID, devMemHandle, &clutterDma);
-    initScatterGatherBufferDescriptors(&clutterDma, ctrl, addrToVirtual(CL_BD_SPACE_BASE), CL_BD_SPACE_BASE, CL_BD_SPACE_HIGH - CL_BD_SPACE_BASE + 1);
+    initClutterDma();
 
     /* Initialize scratch mem */
     clearClutterMap();
@@ -355,10 +354,10 @@ void RadarSimulator::initClutterMap(istream& input) {
     input.read((char*) &trigSize, sizeof(u32));
     input.read((char*) &blockCount, sizeof(u32));
 
-//    if (ctrl->arpUs != arpUs || ctrl->acpCnt != acpCnt || ctrl->trigUs != trigUs) {
-//        cerr << "Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs;
-//        RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
-//    }
+    //    if (calArpUs != arpUs || calAcpCnt != acpCnt || calTrigUs != trigUs) {
+    //        cerr << "Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs;
+    //        RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
+    //    }
 
     for (int i = 0; i < CL_BLK_CNT; i++) {
         input.read(((char*) clutterMemPtr) + i * blockByteSize, blockByteSize);
@@ -372,8 +371,7 @@ void RadarSimulator::initTargetMap(istream& input) {
     u32 trigSize = 0;
 
     /* Initialize TARGET DMA engine */
-    initDmaEngine(MT_DMA_DEV_ID, devMemHandle, &targetDma);
-    initScatterGatherBufferDescriptors(&targetDma, ctrl, addrToVirtual(MT_BD_SPACE_BASE), MT_BD_SPACE_BASE, MT_BD_SPACE_HIGH - MT_BD_SPACE_BASE + 1);
+    initTargetDma();
 
     /* Initialize scratch mem */
     clearTargetMap();
@@ -384,9 +382,10 @@ void RadarSimulator::initTargetMap(istream& input) {
     input.read((char*) &trigSize, sizeof(u32));
     input.read((char*) &targetBlockCount, sizeof(u32));
 
-//    if (ctrl->arpUs != arpUs || ctrl->acpCnt != acpCnt || ctrl->trigUs != trigUs) {
-//        RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
-//    }
+    //    if (calArpUs != arpUs || calAcpCnt != acpCnt || calTrigUs != trigUs) {
+    //        cerr << "Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs;
+    //        RAISE(IncompatibleFileException, "Incompatible simulation data file. Expecting " << ctrl->arpUs << "/" << ctrl->acpCnt << "/" << ctrl->trigUs << " but got " << arpUs << "/" << acpCnt << "/" << trigUs)
+    //    }
 
     for (int i = 0; i < MT_BLK_CNT; i++) {
         input.read(((char*) targetMemPtr) + i * blockByteSize, blockByteSize);
@@ -398,7 +397,7 @@ void RadarSimulator::initTargetMap(istream& input) {
 void RadarSimulator::loadNextTargetMaps(istream& input) {
 
     u32 currAcpIdx = ctrl->simAcpIdx;
-    u32 currArp = currAcpIdx / ctrl->acpCnt;
+    u32 currArp = currAcpIdx / calAcpCnt;
 
     // allow only up to current
     if (targetMemLoadIdx - currArp >= MT_BLK_CNT - 1) {
@@ -420,7 +419,7 @@ void RadarSimulator::loadNextTargetMaps(istream& input) {
 
     // block index to write - should be the one before where the currArp is located in (circular buffer)
     int i = targetMemLoadIdx % MT_BLK_CNT;
-    UINTPTR memPtr = ((UINTPTR)targetMemPtr) + i * blockByteSize;
+    UINTPTR memPtr = ((UINTPTR) targetMemPtr) + i * blockByteSize;
 
     // read from file or clear
     if (!input.eof() && targetMemLoadIdx < blockCount) {
@@ -431,4 +430,82 @@ void RadarSimulator::loadNextTargetMaps(istream& input) {
         memset((u8*) memPtr, 0x0, blockByteSize);
     }
 
+}
+
+void RadarSimulator::initTestClutterMap() {
+
+    /* Initialize CLUTTER DMA engine */
+    initClutterDma();
+
+    /* Initialize scratch mem */
+    clearClutterMap();
+
+    u32 blockWordSize = blockByteSize / WORD_SIZE;
+
+    // calculate individual map block size
+    for (u32 i = 0; i < CL_BLK_CNT; i++) {
+        for (u32 acp = 0; acp < calAcpCnt / 4; acp++) {
+            for (u32 t = 3 * MAX_TRIG_BITS / 4; t < MAX_TRIG_BITS; t++) {
+                u32 memOffset = i * blockWordSize + acp * TRIG_WORD_CNT + t / WORD_SIZE;
+                clutterMemPtr[memOffset] = 0xFFFF;
+            }
+        }
+    }
+}
+
+void RadarSimulator::initTestTargetMap() {
+
+    /* Initialize TARGET DMA engine */
+    initTargetDma();
+
+    /* Initialize scratch mem */
+    clearTargetMap();
+
+    u32 blockWordSize = blockByteSize / WORD_SIZE;
+
+    // calculate individual map block size
+    for (u32 i = 0; i < CL_BLK_CNT; i++) {
+        for (u32 acp = calAcpCnt / 2; acp < calAcpCnt * 3 / 4; acp++) {
+            for (u32 t = 3 * MAX_TRIG_BITS / 4; t < MAX_TRIG_BITS; t++) {
+                u32 memOffset = i * blockWordSize + acp * TRIG_WORD_CNT + t / WORD_SIZE;
+                targetMemPtr[memOffset] = 0xFFFF;
+            }
+        }
+    }
+}
+
+bool RadarSimulator::calibrate() {
+
+    calibrated = ctrl->calibrated == 1;
+
+    if (calibrated) {
+
+        calArpUs = ctrl->arpUs;
+        calAcpCnt = ctrl->acpCnt;
+        calTrigUs = ctrl->trigUs;
+
+        // calc how many words are needed for a radar whole revolution
+        u32 mem_blk_word_cnt = calAcpCnt * TRIG_WORD_CNT;
+
+        // store the block size in
+        blockByteSize = mem_blk_word_cnt * WORD_SIZE;
+
+        // calculate the needed sizes for the individual block sizes
+        targetMapWordSize = MT_BLK_CNT * mem_blk_word_cnt;
+        clutterMapWordSize = CL_BLK_CNT * mem_blk_word_cnt;
+    }
+
+    return calibrated;
+}
+
+u32 RadarSimulator::getCalArpUs() {
+    return calArpUs;
+}
+
+u32 RadarSimulator::getCalAcpCnt() {
+    return calAcpCnt;
+}
+
+u32 RadarSimulator::getCalTrigUs() {
+    return calTrigUs;
 }

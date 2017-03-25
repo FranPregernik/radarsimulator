@@ -21,6 +21,8 @@ using namespace std;
 /**  CONSTANTS **/
 #define WORD_SIZE               (sizeof(u32))
 #define WORD_BITS               (8 * WORD_SIZE)
+#define MAX_TRIG_BITS           (3072)
+#define TRIG_WORD_CNT           (MAX_TRIG_BITS / WORD_BITS)
 
 #define CL_DMA_DEV_ID           XPAR_AXIDMA_0_DEVICE_ID
 #define MT_DMA_DEV_ID           XPAR_AXIDMA_1_DEVICE_ID
@@ -104,6 +106,11 @@ public:
     ~RadarSimulator();
 
     /**
+     * Attempt calibration
+     */
+    bool calibrate();
+
+    /**
      * Enables the radar simulator output.
      */
     void enable();
@@ -139,6 +146,16 @@ public:
     void initTargetMap(istream& input);
 
     /**
+     * Fills the memory with the initial data of a test scenario for signal testing.
+     */
+    void initTestClutterMap();
+
+    /**
+     * Fills the memory with the initial data of a test scenario for signal testing.
+     */
+    void initTestTargetMap();
+
+    /**
      * Loads the next simulation definitions from the file in the freed up portions of the moving target memory.
      */
     void loadNextTargetMaps(istream& input);
@@ -147,6 +164,10 @@ public:
      * Returns the simulator control status data.
      */
     Simulator getStatus();
+
+    u32 getCalArpUs();
+    u32 getCalAcpCnt();
+    u32 getCalTrigUs();
 
     bool isScenarioFinished() {
         return targetMemLoadIdx >= targetBlockCount + MT_BLK_CNT;
@@ -158,6 +179,12 @@ private:
 
     /** Pointer to the radar simulator HW registers **/
     Simulator *ctrl;
+
+    /** Stores the calibrated values **/
+    bool calibrated = false;
+    u32 calAcpCnt;
+    u32 calArpUs;
+    u32 calTrigUs;
 
     /** Pointer to the mmap-ed scratch memory region **/
     u32 *scratchMem;
@@ -201,9 +228,15 @@ private:
     }
 
     /**
-     * Initializes the memory pointers and region to the clutter, target maps.
+     * Initializes the memory pointers and region to the clutter maps and DMA engine.
      */
-    void initMapMemory();
+    void initClutterDma();
+
+    /**
+     * Initializes the memory pointers and region to the target maps and DMA engine.
+     */
+    void initTargetDma();
+
 
     /**
      * Initializes the AXI DMA engine using the Xilinx APIs.
@@ -213,7 +246,7 @@ private:
     /**
      * Initializes the AXI DMA SG buffer descriptors using the Xilinx APIs.
      */
-    static void initScatterGatherBufferDescriptors(XAxiDma *dma, Simulator *ctrl, UINTPTR virtDataAddr, UINTPTR physDataAddr, long size);
+    static void initScatterGatherBufferDescriptors(XAxiDma *dma, UINTPTR virtDataAddr, UINTPTR physDataAddr, long size);
 
     /**
      * Initiates the AXI DMA engine using the Xilinx APIs.
