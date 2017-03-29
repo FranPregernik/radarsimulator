@@ -42,7 +42,7 @@ class RadarCoordinate() : JsonModel {
 
     constructor(_rKm: Double, _azDeg: Double) : this() {
         rKm = _rKm
-        azDeg = _azDeg
+        azDeg = normalizeAngleDeg(_azDeg)
     }
 
     fun toCartesian(): Point2D {
@@ -61,8 +61,8 @@ class RadarCoordinate() : JsonModel {
 
     override fun updateModel(json: JsonObject) {
         with(json) {
-            rKm = double("rKm")
-            azDeg = double("azDeg")
+            rKm = double("rKm") ?: 0.0
+            azDeg = normalizeAngleDeg(double("azDeg") ?: 0.0)
         }
     }
 }
@@ -129,8 +129,20 @@ class MovingTarget : JsonModel {
     var type by property(MovingTargetType.Point)
     fun typeProperty() = getProperty(MovingTarget::type)
 
+    var jammingSource by property(false)
+    fun jammingSourceProperty() = getProperty(MovingTarget::jammingSource)
+
+    var synchroPulseRadarJamming by property(false)
+    fun synchroPulseRadarJammingProperty() = getProperty(MovingTarget::synchroPulseRadarJamming)
+
+    var synchroPulseDelay by property(0.0)
+    fun synchroPulseDelayProperty() = getProperty(MovingTarget::synchroPulseDelay)
+
     var initialPosition by property(RadarCoordinate(0.0, 0.0))
     fun initialPositionProperty() = getProperty(MovingTarget::initialPosition)
+
+    var startingTimeSec by property(0.0)
+    fun startingTimeProperty() = getProperty(MovingTarget::startingTimeSec)
 
     var directions by property(observableArrayList<Direction>(mutableListOf()))
 
@@ -144,7 +156,11 @@ class MovingTarget : JsonModel {
         with(json) {
             add("name", name)
             add("type", type.toString())
+            add("jammingSource", jammingSource)
+            add("synchroPulseRadarJamming", synchroPulseRadarJamming)
+            add("synchroPulseDelay", synchroPulseDelay)
             add("initialPosition", initialPosition.toJSON())
+            add("startingTimeSec", startingTimeSec)
             add("directions", directions.toJSON())
         }
     }
@@ -154,6 +170,10 @@ class MovingTarget : JsonModel {
             name = string("name")
             type = MovingTargetType.valueOf(string("type")!!)
             initialPosition = getJsonObject("initialPosition").toModel()
+            startingTimeSec = double("startingTimeSec") ?: 0.0
+            jammingSource = boolean("jammingSource") ?: false
+            synchroPulseRadarJamming = boolean("synchroPulseRadarJamming") ?: false
+            synchroPulseDelay = double("synchroPulseDelay") ?: 0.0
             directions = getJsonArray("directions")?.toModel() ?: observableArrayList<Direction>(mutableListOf())
         }
     }
@@ -168,7 +188,7 @@ class Clutter() : JsonModel {
         bytes = imageFile.readBytes()
     }
 
-    private fun scaleStoredImage(minHeight: Int, minWidth: Int): Image {
+    private fun scaleStoredImage(minHeight: Int, minWidth: Int): Image? {
 
         val img: BufferedImage?
         val originalWidth: Double
@@ -177,15 +197,14 @@ class Clutter() : JsonModel {
         if (bytes != null) {
             img = ImageIO.read(bytes.inputStream())
         } else {
-            img = null
+            return null
         }
 
         if (img != null) {
             originalWidth = img.width.toDouble()
             originalHeight = img.height.toDouble()
         } else {
-            originalWidth = minWidth.toDouble()
-            originalHeight = minHeight.toDouble()
+            return null
         }
 
         // find the right scale factor to preserve ration as well as stretch
@@ -195,21 +214,19 @@ class Clutter() : JsonModel {
         val height = (originalHeight * scale).toInt()
 
         // create a BW version with the specified size
-        val bwImage = BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
+        val bwImage = BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR)
 
         // draw image if it exists
-        if (img != null) {
-            val g = bwImage.createGraphics()
-            g.drawImage(img, 0, 0, width, height, null)
-            g.dispose()
-        }
+        val g = bwImage.createGraphics()
+        g.drawImage(img, 0, 0, width, height, null)
+        g.dispose()
 
         val fxImage = SwingFXUtils.toFXImage(bwImage, null)
         return fxImage
     }
 
-    fun getImage(minWidth: Int, minHeight: Int): Image {
-        val fxImage = scaleStoredImage(minHeight, minWidth)
+    fun getImage(minWidth: Int, minHeight: Int): Image? {
+        val fxImage = scaleStoredImage(minHeight, minWidth) ?: return null
         return processHitMaskImage(fxImage)
     }
 
@@ -466,6 +483,16 @@ data class DisplayParameters(
 
     val targetHitLayerOpacity: Double,
 
-    val clutterLayerOpacity: Double
+    val clutterLayerOpacity: Double,
+
+    /**
+     * Specifies how many history plots to display
+     */
+    val plotHistoryCount: Int,
+
+    /**
+     *
+     */
+    val maxDisplayDistanceKm: Double
 
 )

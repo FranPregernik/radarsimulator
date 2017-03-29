@@ -1,10 +1,11 @@
 package hr.franp.rsim
 
-import hr.franp.*
 import hr.franp.rsim.models.*
 import javafx.beans.property.*
+import javafx.embed.swing.*
 import javafx.event.*
 import javafx.geometry.*
+import javafx.scene.*
 import javafx.scene.canvas.*
 import javafx.scene.image.*
 import javafx.scene.layout.*
@@ -12,13 +13,21 @@ import javafx.scene.paint.*
 import javafx.scene.shape.*
 import javafx.scene.text.*
 import javafx.scene.transform.*
+import javafx.stage.*
 import org.apache.commons.collections4.map.*
 import tornadofx.*
+import java.awt.image.*
 import java.lang.Math.*
+import java.nio.*
 import java.time.*
 import java.time.format.*
-import java.util.*
+import java.util.Collections.*
 import java.util.stream.*
+import javax.imageio.*
+import kotlin.collections.set
+import kotlin.concurrent.*
+import kotlin.experimental.*
+import kotlin.system.*
 
 class RadarScreenView : View() {
 
@@ -55,7 +64,7 @@ class RadarScreenView : View() {
     private val speedStringConverter = SpeedStringConverter()
     private val distanceStringConverter = DistanceStringConverter()
 
-    val sketch = Sketch {
+    private val sketch = Sketch {
         mouseClicked {
             val displayPoint = invCombinedTransform.transform(it.x, it.y)
             mouseClickProperty.set(RadarCoordinate.fromCartesian(displayPoint.x, displayPoint.y))
@@ -73,7 +82,153 @@ class RadarScreenView : View() {
         }
     }
 
+    private var hitsCache = LRUMap<Int, ByteBuffer>(20)
+    private var hitImage: BufferedImage? = null
+    private val hitCalculator = timer(
+        daemon = true,
+        name = "hitCalculator",
+        period = 100
+    ) {
+
+        // no need to calculate if there are no targets
+        if (designerController.scenario.movingTargets.isEmpty()) {
+            return@timer
+        }
+
+        val imgCnt = displayParameters.plotHistoryCount
+        if (imgCnt == 0) {
+            return@timer
+        }
+
+        if (sketch.width <= 0.0 || sketch.height <= 0.0) {
+            return@timer
+        }
+
+
+        val n = hitsCache.maxSize() - 2
+
+        val currentTimeSec = simulatedCurrentTimeSecProperty.get()
+        val seekTimeSec = simulatorController.radarParameters.seekTimeSec
+        val maxArpIdx = ceil(designerController.scenario.simulationDurationMin * MIN_TO_S / seekTimeSec).toInt()
+        val currentArpIdx = floor(currentTimeSec / seekTimeSec).toInt()
+        val cParams = CalculationParameters(simulatorController.radarParameters.copy())
+
+        val fromArpIdx = max(
+            0,
+            (currentArpIdx - n / 2)
+        )
+
+        val toArpIdx = min(
+            maxArpIdx,
+            fromArpIdx + n
+        )
+
+        try {
+            val sm = synchronizedMap(hitsCache)
+            IntStream.range(fromArpIdx, toArpIdx + 1)
+                .filter { !sm.containsKey(it) }
+                .parallel()
+                .forEach { arpIdx ->
+                    val fromTimeSec = arpIdx * seekTimeSec
+                    val toTimeSec = (arpIdx + 1) * seekTimeSec
+
+                    log.info { "Calculate hits for range $fromTimeSec to $toTimeSec" }
+                    val buff = ByteBuffer.allocate(cParams.arpByteCnt.toInt())
+                        .order(ByteOrder.LITTLE_ENDIAN)
+
+                    val calcTime = measureTimeMillis {
+                        designerController.calculateTargetHits(
+                            buff = buff,
+                            fromTimeSec = fromTimeSec,
+                            toTimeSec = toTimeSec,
+                            compress = true
+                        )
+                    }
+//                    println("Calc time: $calcTime ms")
+                    sm.put(arpIdx, buff)
+                }
+        } catch (e: Exception) {
+            log.info { e.message }
+        }
+
+        val currentAcpIdx = round(cParams.azimuthChangePulseCount * currentTimeSec / seekTimeSec).toInt()
+
+        val drawFromArpIdx = max(
+            0,
+            (currentArpIdx - imgCnt)
+        )
+
+        val drawToArpIdx = min(
+            maxArpIdx,
+            max(0, currentArpIdx)
+        )
+
+        try {
+            val buff = ByteBuffer.allocate(cParams.arpByteCnt.toInt())
+                .order(ByteOrder.LITTLE_ENDIAN)
+            val histDrawTime = measureTimeMillis {
+                IntStream.range(drawFromArpIdx, drawToArpIdx)
+                    .filter { hitsCache.containsKey(it) }
+                    .forEach { i ->
+                        val lruBuff = hitsCache[i] ?: return@forEach
+                        buff.rewind()
+                        val limit = min(lruBuff.limit(), buff.limit()) - 1
+                        (0..limit).forEach { idx ->
+                            buff.put(idx, buff[idx] or lruBuff[idx])
+                        }
+                    }
+
+
+                val img = BufferedImage(
+                    sketch.width.toInt(),
+                    sketch.height.toInt(),
+                    BufferedImage.TYPE_4BYTE_ABGR
+                )
+                val gc = img.graphics
+
+                // draw past hits
+                buff.drawRadarHitImage(
+                    gc,
+                    cParams,
+                    combinedTransform
+                )
+
+                // draw current hits
+                hitsCache[drawToArpIdx]?.drawRadarHitImage(
+                    gc,
+                    cParams,
+                    combinedTransform,
+                    currentAcpIdx - drawToArpIdx * cParams.azimuthChangePulseCount
+                )
+
+                // expose for drawing
+                hitImage = img
+            }
+
+        } catch (e: Exception) {
+            log.info { e.message }
+        }
+//        println("History draw time: $histDrawTime ms")
+
+    }
+
+    private val canvas = Canvas2D(sketch).apply {
+        widthProperty().bind(root.widthProperty())
+        heightProperty().bind(root.heightProperty())
+        start()
+    }
+
     init {
+
+        simulatorController.radarParametersProperty.addListener { _, _, _ ->
+            hitsCache.clear()
+            hitImage = null
+        }
+
+        designerController.scenarioProperty.addListener { _, _, _ ->
+            hitsCache.clear()
+            hitImage = null
+        }
 
         with(root) {
 
@@ -89,17 +244,17 @@ class RadarScreenView : View() {
                 }
             })
 
-            root.children.add(Canvas2D(sketch).apply {
-                widthProperty().bind(root.widthProperty())
-                heightProperty().bind(root.heightProperty())
-                start()
-            })
+            root.children.add(canvas)
         }
 
         // config
         writeConfig()
         displayParametersProperty.addListener { _, _, _ ->
             writeConfig()
+        }
+
+        designerController.scenarioProperty.addListener { _, _, _ ->
+            hitsCache.clear()
         }
 
     }
@@ -116,6 +271,8 @@ class RadarScreenView : View() {
         config["targetLayerOpacity"] = displayParameters.targetLayerOpacity.toString()
         config["targetHitLayerOpacity"] = displayParameters.targetHitLayerOpacity.toString()
         config["clutterLayerOpacity"] = displayParameters.clutterLayerOpacity.toString()
+        config["plotHistoryCount"] = displayParameters.plotHistoryCount.toString()
+        config["maxDisplayDistanceKm"] = displayParameters.maxDisplayDistanceKm.toString()
         config.save()
     }
 
@@ -138,7 +295,9 @@ class RadarScreenView : View() {
         targetDisplayFilter = emptySequence(),
         targetLayerOpacity = config.double("targetLayerOpacity") ?: 1.0,
         targetHitLayerOpacity = config.double("targetHitLayerOpacity") ?: 1.0,
-        clutterLayerOpacity = config.double("clutterLayerOpacity") ?: 1.0
+        clutterLayerOpacity = config.double("clutterLayerOpacity") ?: 1.0,
+        plotHistoryCount = config.string("plotHistoryCount", "0")?.toInt() ?: 0,
+        maxDisplayDistanceKm = config.string("maxDisplayDistanceKm", "400")?.toDouble() ?: 00.04
     )
 
 
@@ -153,11 +312,15 @@ class RadarScreenView : View() {
 
     private fun setupViewPort() {
 
+        val maxDistanceKm = max(
+            simulatorController.radarParameters.maxRadarDistanceKm,
+            displayParameters.maxDisplayDistanceKm
+        )
         val viewPort = displayParameters.viewPort ?: BoundingBox(
-            -simulatorController.radarParameters.maxRadarDistanceKm * 1.1,
-            -simulatorController.radarParameters.maxRadarDistanceKm * 1.1,
-            2 * simulatorController.radarParameters.maxRadarDistanceKm * 1.1,
-            2 * simulatorController.radarParameters.maxRadarDistanceKm * 1.1
+            -maxDistanceKm * 1.1,
+            -maxDistanceKm * 1.1,
+            2 * maxDistanceKm * 1.1,
+            2 * maxDistanceKm * 1.1
         )
 
         val destViewPort = BoundingBox(0.0, 0.0, root.width, root.height)
@@ -170,11 +333,22 @@ class RadarScreenView : View() {
     private fun getCurrentPathSegment(movingTarget: MovingTarget, currentTimeUs: Double): PathSegment? {
 
         var p1 = movingTarget.initialPosition
-        var t1 = 0.0
+        var t1 = movingTarget.startingTimeSec ?: 0.0
 
         var ps: PathSegment? = null
 
         if (movingTarget.directions.size == 0) {
+            ps = PathSegment(
+                p1 = p1,
+                p2 = p1,
+                t1Us = t1,
+                t2Us = designerController.scenario.simulationDurationMin * MIN_TO_US,
+                vxKmUs = 0.0,
+                vyKmUs = 0.0,
+                type = movingTarget.type
+            )
+        } else if (currentTimeUs < t1) {
+            // target hasn't started moving yet
             ps = PathSegment(
                 p1 = p1,
                 p2 = p1,
@@ -254,14 +428,23 @@ class RadarScreenView : View() {
         )
     }
 
+    fun configPlotHistory(count: Int) {
+        displayParameters = displayParameters.copy(
+            plotHistoryCount = count
+        )
+    }
+
     fun drawScene(gc: GraphicsContext) {
-        setupViewPort()
-        drawUI(gc)
-        drawStationaryTargets(gc)
-        drawStaticMarkers(gc)
-        drawDynamicMarkers(gc)
-        drawMovingTargets(gc)
-        drawTargetHits(gc)
+        val drawTimeTotal = measureTimeMillis {
+            setupViewPort()
+            drawClutterMap(gc)
+            drawStaticMarkers(gc)
+            drawDynamicMarkers(gc)
+            drawMovingTargets(gc)
+            drawTargetHits(gc)
+            drawUI(gc)
+        }
+//        println("Total draw time: $drawTimeTotal ms")
     }
 
     private val dateFormatPattern = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -352,9 +535,9 @@ class RadarScreenView : View() {
             simulatorController.radarParameters.minRadarDistanceKm,
             simulatorController.radarParameters.maxRadarDistanceKm
         )
-        val distanceSequence = mandatoryDistanceMarkers + generateSequence(simulatorController.radarParameters.minRadarDistanceKm) {
-            it + stepKm
-        }.takeWhile { it <= simulatorController.radarParameters.maxRadarDistanceKm - stepKm / 3 }
+        val distanceSequence = mandatoryDistanceMarkers + generateSequence(0.0) { it + stepKm }
+            .dropWhile { it <= simulatorController.radarParameters.minRadarDistanceKm }
+            .takeWhile { it <= simulatorController.radarParameters.maxRadarDistanceKm - stepKm / 2 }
 
         val cp = combinedTransform.transform(0.0, 0.0)
         for (r in distanceSequence) {
@@ -365,7 +548,7 @@ class RadarScreenView : View() {
             gc.textAlign = TextAlignment.CENTER
             gc.textBaseline = VPos.TOP
             gc.fillText(
-                (r / distanceToKmScale).toInt().toString(),
+                round(r / distanceToKmScale).toInt().toString(),
                 dp.x,
                 dp.y
             )
@@ -443,7 +626,7 @@ class RadarScreenView : View() {
             gc.textAlign = TextAlignment.CENTER
             gc.textBaseline = VPos.CENTER
             gc.fillText(
-                toDegrees(azimuth).toInt().toString(),
+                round(toDegrees(azimuth)).toInt().toString(),
                 p.x,
                 p.y
             )
@@ -467,7 +650,11 @@ class RadarScreenView : View() {
     }
 
     val map: HashMap<Triple<Int, Int, Clutter>, Image> = HashMap()
-    fun drawStationaryTargets(gc: GraphicsContext) {
+    fun drawClutterMap(gc: GraphicsContext) {
+
+        if (displayParameters.clutterLayerOpacity == 0.0) {
+            return
+        }
 
         val clutter = designerController.scenario.clutter ?: return
 
@@ -477,10 +664,13 @@ class RadarScreenView : View() {
 
         val key = Triple(width.toInt(), height.toInt(), clutter)
         if (!map.containsKey(key)) {
-            log.info { "Computing" }
-            map.put(key, clutter.getImage(width.toInt(), height.toInt()))
+            map.put(
+                key,
+                clutter.getImage(width.toInt(), height.toInt()) ?: return
+            )
+            log.info { "Computed new clutter map for size ($width,$height)" }
         }
-        val rasterMapImage = map.get(key)
+        val rasterMapImage = map[key] ?: return
 
         val transformedBounds = combinedTransform.transform(BoundingBox(
             -width / 2.0,
@@ -503,8 +693,16 @@ class RadarScreenView : View() {
 
     fun drawMovingTargets(gc: GraphicsContext) {
 
+        var origDashes = gc.lineDashes ?: doubleArrayOf(0.0)
+
         val currentTimeSec = simulatedCurrentTimeSecProperty.get()
         val currentTimeUs = S_TO_US * currentTimeSec
+
+        val box = combinedTransform.transform(BoundingBox(0.0, 0.0, 3.0, 3.0))
+        val wh = max(
+            10.0,
+            max(box.height, box.width)
+        )
 
         // draw moving targets
         val movingTargetCount = designerController.scenario?.movingTargets?.size ?: return
@@ -516,6 +714,14 @@ class RadarScreenView : View() {
             .forEachIndexed { i, target ->
 
                 val type = target.type ?: return@forEachIndexed
+
+                // draw future targets as dashed
+                val startingTimeSec = target.startingTimeSec ?: 0.0
+                if (startingTimeSec > currentTimeSec) {
+                    gc.setLineDashes(5.0)
+                } else {
+                    gc.setLineDashes(*origDashes)
+                }
 
                 val initPosCart = target.initialPosition.toCartesian()
                 val p = combinedTransform.transform(
@@ -537,31 +743,35 @@ class RadarScreenView : View() {
                     displayParameters.targetLayerOpacity * selectedTargetOpacityFactor
                 )
 
-                // draw course change point
-                gc.stroke = color
-                gc.fill = color
-                gc.fillOval(p.x - 0.5, p.y - 0.5, 1.0, 1.0)
-
-                // draw segments and point markers
+                // draw segments
                 var pFrom = Point2D(p.x, p.y)
+                gc.stroke = color
+                gc.beginPath()
                 target.directions.forEach { d ->
                     val dpc = combinedTransform.transform(d.destination.toCartesian())
-
-                    gc.stroke = color
                     gc.strokeLine(
                         pFrom.x, pFrom.y,
                         dpc.x, dpc.y
                     )
-                    gc.fill = color
-                    gc.fillOval(p.x - 1.0, p.y - 1.0, 2.0, 2.0)
-
                     pFrom = dpc
                 }
+                gc.closePath()
+                gc.stroke()
 
+                // draw course change (initial) point
+                gc.fill = color
+                gc.fillOval(p.x - 0.5, p.y - 0.5, 1.0, 1.0)
+
+                // draw point markers
+                target.directions.forEach { d ->
+                    val dpc = combinedTransform.transform(d.destination.toCartesian())
+                    gc.fill = color
+                    gc.fillOval(dpc.x - 1.0, dpc.y - 1.0, 2.0, 2.0)
+                }
 
                 // draw current simulated position marker
                 val plotPathSegment = getCurrentPathSegment(target, currentTimeUs) ?: return@forEachIndexed
-                val plotPos = plotPathSegment.getPositionForTime(currentTimeUs) ?: return@forEachIndexed
+                val plotPos = plotPathSegment.getPositionForTime(currentTimeUs) ?: target.initialPosition
                 val plotPosCart = plotPos.toCartesian()
                 val pt = combinedTransform.transform(plotPosCart)
 
@@ -590,12 +800,6 @@ az=${angleStringConverter.toString(az)}"""
                             cloudOneImage.width,
                             cloudOneImage.height
                         ))
-                        gc.strokeRect(
-                            pt.x - bounds.width / 2.0,
-                            pt.y - bounds.height / 2.0,
-                            bounds.width,
-                            bounds.height
-                        )
                         gc.drawImage(
                             cloudOneImage,
                             pt.x - bounds.width / 2.0,
@@ -618,12 +822,6 @@ az=${angleStringConverter.toString(az)}"""
                             cloudTwoImage.width,
                             cloudTwoImage.height
                         ))
-                        gc.strokeRect(
-                            pt.x - bounds.width / 2.0,
-                            pt.y - bounds.height / 2.0,
-                            bounds.width,
-                            bounds.height
-                        )
                         gc.drawImage(
                             cloudTwoImage,
                             pt.x - bounds.width / 2.0,
@@ -647,10 +845,10 @@ az=${angleStringConverter.toString(az)}"""
 
                     MovingTargetType.Point -> {
                         gc.strokeRect(
-                            pt.x - 10.0 / 2.0,
-                            pt.y - 10.0 / 2.0,
-                            10.0,
-                            10.0
+                            pt.x - wh / 2.0,
+                            pt.y - wh / 2.0,
+                            wh,
+                            wh
                         )
                         gc.textBaseline = VPos.TOP
                         gc.fill = Styles.movingTargetPositionLabelColor.deriveColor(
@@ -711,71 +909,70 @@ az=${angleStringConverter.toString(az)}"""
 
             }
 
+        // reset dashes
+        gc.setLineDashes(*origDashes)
+
+
     }
 
-    var lruHits = LRUMap<Int, Bits>(10)
-
+    var bufferImage: WritableImage? = null
     fun drawTargetHits(gc: GraphicsContext) {
 
-        val alpha = gc.globalAlpha
-        gc.globalAlpha = displayParameters.clutterLayerOpacity
-
-        val radarParameters = simulatorController.radarParameters
-        val cParams = CalculationParameters(radarParameters)
-
-        val n = 6
-
-        val currentTimeSec = simulatedCurrentTimeSecProperty.get()
-        val currentArpIdx = floor(currentTimeSec / radarParameters.seekTimeSec).toInt()
-
-        val fromArpIdx = max(
-            0,
-            (currentArpIdx - n)
-        )
-
-        // merge current ARP till the current time
-        val fromCurrArpSec = floor(currentTimeSec / radarParameters.seekTimeSec) * radarParameters.seekTimeSec
-        if (currentTimeSec > fromCurrArpSec) {
-            log.finer { "Calculate current hits for range $fromCurrArpSec to $currentTimeSec" }
-            val hits = designerController.calculateTargetHits(
-                fromCurrArpSec,
-                currentTimeSec
-            ).reduce(
-                Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt()),
-                { acc, curr ->
-                    acc.or(curr)
-                    acc
-                }
-            )
-
-            drawRadarHitImage(gc, hits, cParams, combinedTransform)
+        if (displayParameters.targetHitLayerOpacity == 0.0) {
+            return
         }
 
-        // merge history
-        IntStream.range(fromArpIdx, currentArpIdx)
-            .forEach { arpIdx ->
 
-                val hits = lruHits.computeIfAbsent(arpIdx, { arpIdx ->
+        if (designerController.scenario.movingTargets.isEmpty()) {
+            return
+        }
 
-                    val fromTimeSec = arpIdx * radarParameters.seekTimeSec
-                    val toTimeSec = (arpIdx + 1) * radarParameters.seekTimeSec
+        if (sketch.width <= 0.0 || sketch.height <= 0.0) {
+            return
+        }
 
-                    log.finer { "Calculate hits for range $fromTimeSec to $toTimeSec" }
-                    designerController.calculateTargetHits(fromTimeSec, toTimeSec)
-                        .reduce(
-                            Bits((radarParameters.azimuthChangePulse * radarParameters.maxImpulsePeriodUs).toInt()),
-                            { acc, curr ->
-                                acc.or(curr)
-                                acc
-                            }
-                        )
-                })
+        val img = hitImage ?: return
 
-                drawRadarHitImage(gc, hits, cParams, combinedTransform)
-            }
+        val alpha = gc.globalAlpha
+        gc.globalAlpha = displayParameters.targetHitLayerOpacity
+
+        val currentWidth = (bufferImage?.width ?: 0.0)
+        val currentHeight = (bufferImage?.height ?: 0.0)
+        if (bufferImage == null || currentWidth != sketch.width || currentHeight != sketch.height) {
+            bufferImage = WritableImage(
+                sketch.width.toInt(),
+                sketch.height.toInt()
+            )
+        }
+
+        val bi = bufferImage ?: return
+
+        gc.drawImage(
+            SwingFXUtils.toFXImage(img, bi),
+            0.0,
+            0.0,
+            sketch.width,
+            sketch.height
+        )
 
         gc.globalAlpha = alpha
 
+    }
+
+    fun snapshot() {
+
+        val snapshotParameters = SnapshotParameters()
+        snapshotParameters.fill = Styles.radarBgColor
+        val img = canvas.snapshot(snapshotParameters, null)
+
+        val file = chooseFile("Select snapshot file", arrayOf(FileChooser.ExtensionFilter("Simulation scenario file", "*.png")), FileChooserMode.Save)
+            .firstOrNull() ?: return
+
+        ImageIO.write(
+            SwingFXUtils.fromFXImage(img, null),
+            "png",
+            file
+        )
     }
 
 }

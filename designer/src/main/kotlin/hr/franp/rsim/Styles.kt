@@ -28,6 +28,7 @@ class Styles : Stylesheet() {
         val movingTargetHitFill = Color.BLUE
         val stationaryTargetHitFill = Color.GREEN
         val hitColor = Color.GREEN
+        val hitColorAwt = java.awt.Color(hitColor.red.toFloat(), hitColor.green.toFloat(), hitColor.blue.toFloat(), hitColor.opacity.toFloat())
 
         val movingTargetPositionLabelColor = Color.WHITE
         val movingTargetCourseLineColor = Color.RED
