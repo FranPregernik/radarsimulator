@@ -75,10 +75,9 @@ module radar_statistics #
     assign acp_cnt_avg = (acp_cnt_prev[0] + acp_cnt_prev[1] + acp_cnt_prev[2] + acp_cnt_prev[3]) >> 2;
     assign trig_us_avg = (trig_us_prev[0] + trig_us_prev[1] + trig_us_prev[2] + trig_us_prev[3]) >> 2;
 
-    reg arp_us_cal = 0;
-    reg acp_cnt_cal = 0;
-    reg trig_us_cal = 0; 
-    assign CALIBRATED = arp_us_cal && acp_cnt_cal && trig_us_cal;
+    reg [DATA_WIDTH-1:0] sample_count = 0;
+    
+    assign CALIBRATED = sample_count > 4;
 
     always @(posedge S_AXIS_ACLK) begin
         if (CALIBRATED) begin
@@ -97,12 +96,7 @@ module radar_statistics #
             arp_us_prev[2] <= arp_us_prev[1];
             arp_us_prev[3] <= arp_us_prev[2];
 
-            // determine if signal is stable
-            if ((arp_us_tmp >= arp_us_avg - 2) && (arp_us_tmp <= arp_us_avg + 2)) begin
-                arp_us_cal <= 1;
-            end else begin
-                arp_us_cal <= 0;
-            end
+            sample_count <= sample_count + 1;
             
             // edge case handling when both signals appear at the same time
             // without this the count would be off by -1
@@ -126,14 +120,7 @@ module radar_statistics #
             acp_cnt_prev[1] <= acp_cnt_prev[0];
             acp_cnt_prev[2] <= acp_cnt_prev[1];
             acp_cnt_prev[3] <= acp_cnt_prev[2];
-
-            // determine if signal is stable
-            if ((acp_cnt_tmp >= acp_cnt_avg - 2) && (acp_cnt_tmp <= acp_cnt_avg + 2)) begin
-                acp_cnt_cal <= 1;
-            end else begin
-                acp_cnt_cal <= 0;
-            end
-                        
+                       
             // edge case handling when both signals appear at the same time
             // without this the count would be off by -1
             if (RADAR_ACP_PE) begin
@@ -156,13 +143,6 @@ module radar_statistics #
             trig_us_prev[1] <= trig_us_prev[0];
             trig_us_prev[2] <= trig_us_prev[1];
             trig_us_prev[3] <= trig_us_prev[2];
-
-            // determine if signal is stable
-            if ((trig_us_tmp >= trig_us_avg - 5) && (trig_us_tmp <= trig_us_avg + 5)) begin
-                trig_us_cal <= 1;
-            end else begin
-                trig_us_cal <= 0;
-            end
                         
             // edge case handling when both signals appear at the same time
             // without this the count would be off by -1

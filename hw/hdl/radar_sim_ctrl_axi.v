@@ -36,6 +36,12 @@ module radar_sim_ctrl_axi #
 
         (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
         output SIM_EN,
+        
+        (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
+        output MTI_EN,
+        
+        (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
+        output NORM_EN,
 
         input RADAR_CAL,
 
@@ -144,6 +150,8 @@ module radar_sim_ctrl_axi #
     //-- Number of Slave Registers 10
 
     reg sim_en_req;
+    reg mti_en_req;
+    reg norm_en_req;
     // replaced by RADAR_CAL - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg1;
     // replaced by RADAR_ARP_US - reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg2;
     // replaced by RADAR_ACP_CNT - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg3;
@@ -267,6 +275,8 @@ module radar_sim_ctrl_axi #
       if ( S_AXI_ARESETN == 1'b0 )
         begin
           sim_en_req <= 0;
+          mti_en_req <= 1;
+          norm_en_req <= 1;
         end
       else begin
         if (slv_reg_wren)
@@ -279,8 +289,24 @@ module radar_sim_ctrl_axi #
                     // Slave register 0
                     sim_en_req <= S_AXI_WDATA[0];
                   end
+              4'h1:
+                for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+                  if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+                    // Respective byte enables are asserted as per write strobes
+                    // Slave register 0
+                    mti_en_req <= S_AXI_WDATA[0];
+                  end
+              4'h0:
+                for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+                  if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+                    // Respective byte enables are asserted as per write strobes
+                    // Slave register 0
+                    norm_en_req <= S_AXI_WDATA[0];
+                  end                                    
               default : begin
                   sim_en_req <= sim_en_req;
+                  mti_en_req <= mti_en_req;
+                  norm_en_req <= norm_en_req;
               end
             endcase
           end
@@ -390,14 +416,16 @@ module radar_sim_ctrl_axi #
           // Address decoding for reading registers
           case ( axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] )
             4'h0   : reg_data_out <= sim_en_req;
-            4'h1   : reg_data_out <= RADAR_CAL;
-            4'h2   : reg_data_out <= RADAR_ARP_US;
-            4'h3   : reg_data_out <= RADAR_ACP_CNT;
-            4'h4   : reg_data_out <= RADAR_TRIG_US;
-            4'h5   : reg_data_out <= ACP_IDX;
-            4'h6   : reg_data_out <= ACP_ARP_IDX;
-            4'h7   : reg_data_out <= FT_FIFO_BUFF_CNT;
-            4'h8   : reg_data_out <= MT_FIFO_BUFF_CNT;
+            4'h1   : reg_data_out <= mti_en_req;
+            4'h2   : reg_data_out <= norm_en_req;
+            4'h3   : reg_data_out <= RADAR_CAL;
+            4'h4   : reg_data_out <= RADAR_ARP_US;
+            4'h5   : reg_data_out <= RADAR_ACP_CNT;
+            4'h6   : reg_data_out <= RADAR_TRIG_US;
+            4'h7   : reg_data_out <= ACP_IDX;
+            4'h8   : reg_data_out <= ACP_ARP_IDX;
+            4'h9   : reg_data_out <= FT_FIFO_BUFF_CNT;
+            4'hA   : reg_data_out <= MT_FIFO_BUFF_CNT;
             default : reg_data_out <= 0;
           endcase
     end
@@ -454,6 +482,10 @@ module radar_sim_ctrl_axi #
     end
 
     assign SIM_EN = sim_en_req && first_arp;
+    
+    assign MTI_EN = mti_en_req && first_arp;
+    
+    assign NORM_EN = norm_en_req && first_arp;
 
     // User logic ends
 
