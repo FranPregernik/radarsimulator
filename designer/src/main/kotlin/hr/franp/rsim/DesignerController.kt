@@ -262,9 +262,9 @@ class DesignerController() : Controller() {
 
                         // add acp index
                         (0..(rotations * cParams.azimuthChangePulseCount - 1)).forEach {
-                            mappedBuffer.putInt(
+                            mappedBuffer.putShort(
                                 FILE_HEADER_BYTE_CNT + (it * cParams.acpByteCnt).toInt(),
-                                it % cParams.azimuthChangePulseCount
+                                (it % cParams.azimuthChangePulseCount).toShort()
                             )
                         }
 
@@ -329,9 +329,9 @@ class DesignerController() : Controller() {
 
                         // add acp index
                         (0..(rotations * cParams.azimuthChangePulseCount - 1)).forEach {
-                            mappedBuffer.putInt(
+                            mappedBuffer.putShort(
                                 FILE_HEADER_BYTE_CNT + (it * cParams.acpByteCnt).toInt(),
-                                it % cParams.azimuthChangePulseCount
+                                (it % cParams.azimuthChangePulseCount).toShort()
                             )
                         }
                     }
