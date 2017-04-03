@@ -55,22 +55,18 @@ module azimuth_signal_generator #
 
     localparam BITS = clogb2(SIZE);
 
-    reg [BITS-1:0] clk_idx = 1'bx;
+    reg [BITS-1:0] clk_idx = 1'b0;
 
     always @(posedge SYS_CLK) begin
-        if (EN) begin
-            if (TRIG) begin
-                clk_idx = 0;
-            end else if (CLK_PE && (clk_idx >= 0)) begin
-                if (clk_idx < SIZE) begin
-                    clk_idx = clk_idx + 1;
-                end
-                if (clk_idx >= SIZE) begin
-                    clk_idx = SIZE;
-                end
+        if (TRIG) begin
+            clk_idx = 0;
+        end else if (CLK_PE && (clk_idx >= 0)) begin
+            if (clk_idx < SIZE) begin
+                clk_idx = clk_idx + 1;
             end
-        end else begin
-            clk_idx = 1'bx;
+            if (clk_idx >= SIZE) begin
+                clk_idx = SIZE;
+            end
         end
     end
 

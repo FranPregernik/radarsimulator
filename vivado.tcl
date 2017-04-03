@@ -147,6 +147,21 @@ add_files -norecurse -fileset $obj $files
 set_property top clk_divider_sim [get_filesets clk_divider]
 set_property top_lib xil_defaultlib [get_filesets clk_divider]
 
+# Create 'radar_sim_target_axis' fileset (if not found)
+if {[string equal [get_filesets -quiet radar_sim_target_axis] ""]} {
+  create_fileset -simset radar_sim_target_axis
+}
+
+# Set 'radar_sim_target_axis' fileset object
+set obj [get_filesets radar_sim_target_axis]
+set files [list \
+ "[file normalize "$origin_dir/hw/hdl/radar_sim_target_axis.v"]"\
+ "[file normalize "$origin_dir/hw/sim/radar_sim_target_axis_sim.v"]"\
+]
+add_files -norecurse -fileset $obj $files
+set_property top radar_sim_target_axis_sim [get_filesets radar_sim_target_axis]
+set_property top_lib xil_defaultlib [get_filesets radar_sim_target_axis]
+
 # Create block design
 source $origin_dir/hw/bd/axi_target_test.tcl
 source $origin_dir/hw/bd/design_1.tcl

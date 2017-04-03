@@ -23,6 +23,8 @@ module radar_sim_target_axis #
     (
         // Users to add parameters here
 
+        parameter integer DATA_WIDTH = 32,
+
         // User parameters ends
         // Do not modify the parameters beyond this line
 
@@ -34,23 +36,36 @@ module radar_sim_target_axis #
 
         // is the simulator enabled
         (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
-        input SIM_EN,
+        (* MARK_DEBUG="true" *)
+        input wire EN,
 
         // radar antenna angle change
-        input RADAR_ACP_PE,
-
-        // radar antenna transmission start
-        input RADAR_TRIG_PE,
-
-        // constant microseconds clock
-        input wire USEC_PE,
-
-        // time based signal that specifies a target is present or not
-        output GEN_SIGNAL,
+        (* MARK_DEBUG="true" *)
+        input wire RADAR_ARP_PE,
         
-        output DBG_PKT_CNT,
+        // radar antenna angle change
+        (* MARK_DEBUG="true" *)
+        input wire RADAR_ACP_PE,
         
-        output wire [C_S_AXIS_TDATA_WIDTH-1 : 0] DBG_BANK,
+        input wire [DATA_WIDTH-1:0] ACP_CNT_MAX,
+
+        // is data stable
+        output wire DATA_VALID,
+               
+        output reg [DATA_WIDTH-1:0] ACP_IDX = 0,
+        
+        output reg [DATA_WIDTH-1:0] ACP_POS = 0,
+        
+        output reg [C_S_AXIS_TDATA_WIDTH-1:0] BANK = 0,
+        
+        (* MARK_DEBUG="true" *)
+        output wire DBG_READY,
+        
+        (* MARK_DEBUG="true" *)
+        output wire DBG_VALID,
+        
+        (* MARK_DEBUG="true" *)
+        output wire [DATA_WIDTH-1:0] DBG_ACP_CNT,
 
         // User ports ends
         // Do not modify the ports beyond this line
@@ -60,7 +75,7 @@ module radar_sim_target_axis #
         // AXI4Stream sink: Reset
         input wire  S_AXIS_ARESETN,
         // Ready to accept data in
-        output wire  S_AXIS_TREADY,
+        output reg  S_AXIS_TREADY = 0,
         // Data in
         input wire [C_S_AXIS_TDATA_WIDTH-1 : 0] S_AXIS_TDATA,
         // Indicates boundary of last packet
@@ -69,35 +84,76 @@ module radar_sim_target_axis #
         input wire  S_AXIS_TVALID
     );
 
-    // temporary register to store the current azimuth radar response data
-    reg [C_S_AXIS_TDATA_WIDTH-1:0] bank;
+    localparam POS_BIT_CNT = 16;
     
-    reg [C_S_AXIS_TDATA_WIDTH-1:0] DBG_PKT_CNT;
+    // SET on ARP, cleared on read of ACP data with idx 0 
+    reg fast_fwd = 0;
     
-    assign DBG_BANK = bank;
+    // ACP since ARP
+    reg [DATA_WIDTH-1:0] acp_cnt = 0;
+        
+    assign DATA_VALID = EN && (acp_cnt == ACP_POS);
 
-    // initialize the radar signal response generator
-    azimuth_signal_generator #(C_S_AXIS_TDATA_WIDTH) asg(
-        .EN(SIM_EN),
-        .TRIG(RADAR_TRIG_PE),
-        .DATA(bank),
-        .CLK_PE(USEC_PE),
-        .SYS_CLK(S_AXIS_ACLK),
-        .GEN_SIGNAL(GEN_SIGNAL)
-    );
+    assign DBG_READY = S_AXIS_TREADY;
+    assign DBG_VALID = S_AXIS_TVALID;
+    assign DBG_ACP_CNT = acp_cnt; 
 
-    // ready to receive if the simulation is enabled and the next RADAR_ACP_PE happens
-    assign S_AXIS_TREADY = SIM_EN && RADAR_ACP_PE;
-
+    // keep track of ACP counts between ARPs
     always @(posedge S_AXIS_ACLK) begin
-        if (!S_AXIS_ARESETN) begin
+        if (RADAR_ARP_PE) begin
+            // edge case handling when both signals appear at the same time
+            // without this the count would be off by -1
+            if (RADAR_ACP_PE) begin
+                acp_cnt <= 1;
+            end else begin
+                acp_cnt <= 0;
+            end
+        end else if (RADAR_ACP_PE) begin
+            if (acp_cnt < ACP_CNT_MAX - 1) begin
+                acp_cnt <= acp_cnt + 1;
+            end
+        end
+    end
+
+    // data loading state machine
+    always @(posedge S_AXIS_ACLK) begin        
+    
+        if (!S_AXIS_ARESETN || !EN) begin
+        
             // Synchronous reset (active low)
-            DBG_PKT_CNT <= 0;
-            bank <= 0;
-        end else if (RADAR_ACP_PE && S_AXIS_TVALID) begin
-            // on next RADAR_ACP_PE load fresh data
-            DBG_PKT_CNT <= DBG_PKT_CNT + 1;
-            bank <= S_AXIS_TDATA;
+            ACP_IDX <= 0;
+            BANK <= 0;
+            ACP_POS <= 0;
+            fast_fwd <= 0;
+            S_AXIS_TREADY <= 0;
+            
+        end else if (EN) begin
+        
+            if (RADAR_ARP_PE) begin
+                // set fast forwad flag           
+                fast_fwd <= 1;
+            end
+                           
+            if (S_AXIS_TREADY && S_AXIS_TVALID) begin
+            
+                // load new data from AXIS bus
+                ACP_IDX <= ACP_IDX + 1;
+                BANK <= { S_AXIS_TDATA[C_S_AXIS_TDATA_WIDTH-1:POS_BIT_CNT], 16'b0 };
+                ACP_POS <= S_AXIS_TDATA[POS_BIT_CNT-1:0];
+                S_AXIS_TREADY <= 0;
+    
+                // hold reset flag untill we read data for IDX 0 
+                if (fast_fwd && S_AXIS_TDATA[POS_BIT_CNT-1:0] == 0) begin
+                    fast_fwd <= 0;
+                end
+           
+           end else begin
+           
+               // ready to receive if the simulation is enabled and the next RADAR_ACP_PE happens
+               S_AXIS_TREADY <= (acp_cnt != ACP_POS);
+
+           end
+           
        end
     end
 

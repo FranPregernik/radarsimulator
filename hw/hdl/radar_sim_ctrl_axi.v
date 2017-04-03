@@ -43,6 +43,10 @@ module radar_sim_ctrl_axi #
         (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
         output NORM_EN,
 
+        // NOT USED YET
+        (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
+        output reg RECAL = 0,
+        
         input RADAR_CAL,
 
         input RADAR_ARP_PE,
@@ -55,9 +59,13 @@ module radar_sim_ctrl_axi #
 
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_TRIG_US,
 
-        input [C_S_AXI_DATA_WIDTH-1:0] FT_FIFO_BUFF_CNT,
+        input [C_S_AXI_DATA_WIDTH-1:0] FT_ACP_IDX,
 
-        input [C_S_AXI_DATA_WIDTH-1:0] MT_FIFO_BUFF_CNT,
+        input [C_S_AXI_DATA_WIDTH-1:0] MT_ACP_IDX,
+        
+        input [C_S_AXI_DATA_WIDTH-1:0] FT_ACP_POS,
+
+        input [C_S_AXI_DATA_WIDTH-1:0] MT_ACP_POS,
 
 
         // User ports ends
@@ -125,6 +133,7 @@ module radar_sim_ctrl_axi #
         input wire  S_AXI_RREADY
     );
 
+
     // AXI4LITE signals
     reg [C_S_AXI_ADDR_WIDTH-1 : 0]  axi_awaddr;
     reg     axi_awready;
@@ -161,9 +170,9 @@ module radar_sim_ctrl_axi #
     // replaced by ACP_IDX - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg5;
     reg [C_S_AXI_DATA_WIDTH-1:0]    ACP_IDX;
     
-    // ACP_ARP_IDX - rotational position since ARP
-    // replaced by ACP_ARP_IDX - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg6;
-    reg [C_S_AXI_DATA_WIDTH-1:0]    ACP_ARP_IDX;
+    // ARP_ACP_IDX - rotational position since ARP
+    // replaced by ARP_ACP_IDX - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg6;
+    reg [C_S_AXI_DATA_WIDTH-1:0]    ARP_ACP_IDX;
 
     // replaced by FT_BUFF_CNT - reg [C_S_AXI_DATA_WIDTH-1:0]   slv_reg7;
     // replaced by MT_BUFF_CNT -reg [C_S_AXI_DATA_WIDTH-1:0]    slv_reg8;
@@ -185,6 +194,7 @@ module radar_sim_ctrl_axi #
     assign S_AXI_RDATA  = axi_rdata;
     assign S_AXI_RRESP  = axi_rresp;
     assign S_AXI_RVALID = axi_rvalid;
+    
     // Implement axi_awready generation
     // axi_awready is asserted for one S_AXI_ACLK clock cycle when both
     // S_AXI_AWVALID and S_AXI_WVALID are asserted. axi_awready is
@@ -423,9 +433,11 @@ module radar_sim_ctrl_axi #
             4'h5   : reg_data_out <= RADAR_ACP_CNT;
             4'h6   : reg_data_out <= RADAR_TRIG_US;
             4'h7   : reg_data_out <= ACP_IDX;
-            4'h8   : reg_data_out <= ACP_ARP_IDX;
-            4'h9   : reg_data_out <= FT_FIFO_BUFF_CNT;
-            4'hA   : reg_data_out <= MT_FIFO_BUFF_CNT;
+            4'h8   : reg_data_out <= ARP_ACP_IDX;
+            4'h9   : reg_data_out <= FT_ACP_IDX;
+            4'hA   : reg_data_out <= MT_ACP_IDX;
+            4'hB   : reg_data_out <= FT_ACP_POS;
+            4'hC   : reg_data_out <= MT_ACP_POS;
             default : reg_data_out <= 0;
           endcase
     end
@@ -450,6 +462,8 @@ module radar_sim_ctrl_axi #
     end
 
     // Add user logic here
+    
+    // signal (only the) next ARP
     always @(posedge S_AXI_ACLK) begin
         if (~sim_en_req) begin
             first_arp <= 0;
@@ -460,6 +474,7 @@ module radar_sim_ctrl_axi #
         end;
     end
 
+    // keep track of ACPs from first ARP 
     always @(posedge S_AXI_ACLK) begin
         if (~sim_en_req) begin
             ACP_IDX <= 0;
@@ -469,15 +484,15 @@ module radar_sim_ctrl_axi #
         end
     end
     
+    // keep track of ACPs in one ARP
     always @(posedge S_AXI_ACLK) begin
-        if (~RADAR_ARP_PE) begin
-            ACP_ARP_IDX <= 0;
-            
+        if (RADAR_ARP_PE) begin
+            ARP_ACP_IDX <= 0;            
             if (RADAR_ACP_PE) begin
-                ACP_ARP_IDX <= 1;
+                ARP_ACP_IDX <= 1;
             end
-        end else if (RADAR_ACP_PE) begin
-            ACP_ARP_IDX <= ACP_ARP_IDX + 1;
+        end else if (SIM_EN && RADAR_CAL && RADAR_ACP_PE) begin
+            ARP_ACP_IDX <= ARP_ACP_IDX + 1;
         end
     end
 

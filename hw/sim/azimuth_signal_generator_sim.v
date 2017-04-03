@@ -27,10 +27,24 @@ module azimuth_signal_generator_sim;
     localparam HHIGH = {FSIZE{1'b1}};
     localparam HLOW = {FSIZE{1'b0}};
     
+    reg EN;
+    reg CLK;
+    parameter PERIOD = 10;
+    parameter TRIG_PERIOD = 30000*PERIOD;
+    parameter US_PERIOD = 10*PERIOD;
+    
+     // clock
+     initial begin
+       EN = 1'b0;
+       CLK = 1'b0;
+       repeat(4) #PERIOD CLK = ~CLK;
+       EN = 1'b1;
+       forever #PERIOD CLK = ~CLK; // generate a clock
+     end
+     
     // Inputs
     reg TRIG;
-    reg EN;
-    wire US_CLK;
+    reg US_CLK;
     reg [SIZE-1:0] DATA = {HLOW, HHIGH, HLOW, HHIGH};
         
     // output
@@ -39,31 +53,18 @@ module azimuth_signal_generator_sim;
     wire clk_rise, trig_rise;
   
     initial begin
-        TRIG = 0;      
-                    
-        #1000 TRIG <= 1;
-        #1010 TRIG <= 0;
-    end
-    
-    initial begin
-        EN = 1;        
-                    
-        #800 EN <= 1;
-        #1500_000 EN <= 0;
+        TRIG = 0;
+        @(posedge EN);
+        TRIG = 1;
+        @(posedge CLK);
+        TRIG = 0;
+        forever #TRIG_PERIOD TRIG = ~TRIG;
     end
 
-    reg CLK;
-    parameter PERIOD = 10;
-    always begin
-       CLK = 1'b0;
-       #(PERIOD/2) CLK = 1'b1;
-       #(PERIOD/2);
+    initial begin
+        US_CLK = 0;
+        forever #US_PERIOD US_CLK = ~US_CLK;
     end
-    
-    clk_divider #(100) us_clk(
-        .IN_SIG(CLK),
-        .OUT_SIG(US_CLK)
-    );
     
     edge_detect ed_clk (
        .async_sig(US_CLK),

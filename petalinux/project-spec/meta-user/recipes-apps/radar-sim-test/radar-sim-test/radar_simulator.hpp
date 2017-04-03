@@ -47,7 +47,7 @@ using namespace std;
 #define MT_BD_CNT               (2 + ((MT_BLK_SIZE - 2) < 0 ? 0 : (MT_BLK_SIZE - 2)))
 
 // AXI LITE Register Address Map for the control/statistics IP
-#define    RSIM_CTRL_REGISTER_LOCATION           0x43C00000
+#define    RSIM_CTRL_REGISTER_LOCATION           (XPAR_RADAR_SIM_SUBSYTEM_RADAR_SIMULATOR_RADAR_SIM_CTRL_AXI_BASEADDR)
 //#define    RSIM_CTRL_ENABLED                     0x0
 //#define    RSIM_CTRL_CALIBRATED                  0x1
 //#define    RSIM_CTRL_ARP_US                      0x2
@@ -70,8 +70,10 @@ struct Simulator {
     u32 trigUs;
     u32 simAcpIdx;
     u32 currAcpIdx;
-    u32 clutterFifoCnt;
-    u32 targetFifoCnt;
+    u32 loadedClutterAcpIndex;
+    u32 loadedTargetAcpIndex;
+    u32 loadedClutterAcp;
+    u32 loadedTargetAcp;
 };
 
 /***************** Macros (Inline Functions) Definitions *********************/
