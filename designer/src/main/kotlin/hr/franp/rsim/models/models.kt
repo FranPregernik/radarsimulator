@@ -46,10 +46,8 @@ class RadarCoordinate() : JsonModel {
     }
 
     fun toCartesian(): Point2D {
-        return Point2D(
-            rKm * cos(azimuthToAngle(toRadians(azDeg))),
-            rKm * sin(azimuthToAngle(toRadians(azDeg)))
-        )
+        val angle = azimuthToAngle(toRadians(azDeg))
+        return Point2D(rKm * cos(angle), rKm * sin(angle))
     }
 
     override fun toJSON(json: JsonBuilder) {
