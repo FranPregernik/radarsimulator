@@ -5,13 +5,11 @@ import javafx.beans.property.*
 import javafx.scene.image.*
 import javafx.stage.*
 import net.schmizz.sshj.xfer.*
-import org.apache.commons.io.*
 import tornadofx.*
 import java.io.*
 import java.lang.Math.*
 import java.nio.*
 import java.nio.channels.*
-import java.util.zip.*
 import javax.imageio.*
 import javax.json.*
 
@@ -233,9 +231,7 @@ class DesignerController() : Controller() {
 
                 // prepare simulation
                 updateMessage("Writing clutter sim")
-//                                    updateProgress(0.0, 1.0)
-
-
+                updateProgress(0.0, 1.0)
                 RandomAccessFile(clutterBinFile, "rw").use { raf ->
                     val rotations = 1
                     val FILE_HIT_BYTE_CNT = rotations * cParams.arpByteCnt
@@ -271,7 +267,7 @@ class DesignerController() : Controller() {
                     }
                 }
                 updateMessage("Wrote clutter sim")
-//                                    updateProgress(1.0, 1.0)
+                updateProgress(1.0, 1.0)
 
                 if (debug) {
                     updateMessage("Writing clutter projection")
@@ -294,9 +290,7 @@ class DesignerController() : Controller() {
 
                 // prepare targets sim
                 updateMessage("Writing target sim")
-//                                    updateProgress(0.0, 1.0)
-
-                // remove previous file
+                updateProgress(0.0, 1.0)
                 RandomAccessFile(targetsBinFile, "rw").use { raf ->
 
                     // ensure number of rotations is decreased so the total file size bytes is not greater than Integer.MAX_VALUE
@@ -337,7 +331,7 @@ class DesignerController() : Controller() {
                     }
                 }
                 updateMessage("Wrote target sim")
-//                                    updateProgress(1.0, 1.0)
+                updateProgress(1.0, 1.0)
 
                 if (debug) {
                     updateMessage("Writing target projection")
@@ -357,43 +351,15 @@ class DesignerController() : Controller() {
                     updateMessage("Writing target projection")
                 }
 
-                // compress
-                updateMessage("Zipping clutter sim")
-//                                    updateProgress(0.0, 1.0)
-                val clutterZipFile = clutterBinFile.resolveSibling(clutterBinFile.toString() + ".gz")
-                FileOutputStream(clutterZipFile).use { fileOutputStream ->
-                    GZIPOutputStream(fileOutputStream).use { gzipOutputStream ->
-                        FileInputStream(clutterBinFile).use { fileInputStream ->
-                            IOUtils.copy(fileInputStream, gzipOutputStream)
-                        }
-                    }
-                }
-                updateMessage("Zipped clutter sim")
-//                                    updateProgress(1.0, 1.0)
-
-                // compress
-                updateMessage("Zipping target sim")
-//                                    updateProgress(0.0, 1.0)
-                val targetsZipFile = targetsBinFile.resolveSibling(targetsBinFile.toString() + ".gz")
-                FileOutputStream(targetsZipFile).use { fileOutputStream ->
-                    GZIPOutputStream(fileOutputStream).use { gzipOutputStream ->
-                        FileInputStream(targetsBinFile).use { fileInputStream ->
-                            IOUtils.copy(fileInputStream, gzipOutputStream)
-                        }
-                    }
-                }
-                updateMessage("Zipped target sim")
-//                                    updateProgress(1.0, 1.0)
-
                 simulationController.uploadClutterFile(
-                    FileSystemFile(clutterZipFile),
+                    FileSystemFile(clutterBinFile),
                     { progress, _ ->
                         updateMessage("Sending clutter sim")
                         updateProgress(progress, 1.0)
                     }
                 )
                 simulationController.uploadTargetsFile(
-                    FileSystemFile(targetsZipFile),
+                    FileSystemFile(targetsBinFile),
                     { progress, _ ->
                         updateMessage("Sending targets sim")
                         updateProgress(progress, 1.0)

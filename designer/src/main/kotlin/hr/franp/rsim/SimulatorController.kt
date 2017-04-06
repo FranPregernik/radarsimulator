@@ -73,6 +73,7 @@ class SimulatorController : Controller(), AutoCloseable {
 
         sshClient.apply {
             newSCPFileTransfer().apply {
+                useCompression()
                 transferListener = object : TransferListener {
                     override fun directory(name: String?): TransferListener {
                         return this
@@ -85,15 +86,9 @@ class SimulatorController : Controller(), AutoCloseable {
                     }
                 }
 
-                upload(file, "/var/clutter.bin.gz")
+                upload(file, "/var/clutter.bin")
             }
-
-            // cleanup
-            startSession().use { it.exec("rm -rf /var/clutter.bin").join() }
-            progressConsumer(0.0, "Unpacking clutter ...")
-            startSession().use { it.exec("gunzip -f /var/clutter.bin.gz").join() }
             progressConsumer(1.0, "Done")
-
         }
 
     }
@@ -107,6 +102,7 @@ class SimulatorController : Controller(), AutoCloseable {
 
         sshClient.apply {
             newSCPFileTransfer().apply {
+                useCompression()
                 transferListener = object : TransferListener {
                     override fun directory(name: String?): TransferListener {
                         return this
@@ -118,13 +114,8 @@ class SimulatorController : Controller(), AutoCloseable {
                         }
                     }
                 }
-                upload(file, "/var/targets.bin.gz")
+                upload(file, "/var/targets.bin")
             }
-
-            // cleanup
-            startSession().use { it.exec("rm -rf /var/targets.bin").join() }
-            progressConsumer(0.0, "Unpacking targets ...")
-            startSession().use { it.exec("gunzip -f /var/targets.bin.gz").join() }
             progressConsumer(1.0, "Done")
         }
     }
