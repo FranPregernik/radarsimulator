@@ -359,8 +359,8 @@ data class PathSegment(
     val vxKmUs: Double,
     val vyKmUs: Double,
     val type: MovingTargetType,
-    val jammingSource: Boolean,
-    val synchroPulseDelayM: Double?) {
+    val jammingSource: Boolean = false,
+    val synchroPulseDelayM: Double? = null) {
 
     private val azRad = toRadians(p1.azDeg)
     private val dx = p2.toCartesian().x - p1.toCartesian().x
