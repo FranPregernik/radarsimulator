@@ -11,7 +11,7 @@
 	};
 };
 
-&radar_sim_subsytem_radar_simulator_radar_sim_ctrl_axi_0 {
+&radar_sim_subsytem_radar_simulator_radar_sim_ctrl_axi {
  compatible = "generic-uio";
 };
 
