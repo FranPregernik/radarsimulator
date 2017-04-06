@@ -319,7 +319,7 @@ class DistanceStringConverter : StringConverter<Double>() {
         val safeValue = value?.trim() ?: return null
 
         if (safeValue.isEmpty()) {
-            return null
+            return 0.0
         }
 
         return decimalFormat.parse(safeValue).toDouble()
@@ -345,7 +345,7 @@ class SecondsStringConverter : StringConverter<Number>() {
         val safeValue = value?.trim() ?: return null
 
         if (safeValue.isEmpty()) {
-            return null
+            return 0.0
         }
 
         return decimalFormat.parse(safeValue).toDouble()
@@ -372,7 +372,7 @@ class AngleStringConverter : StringConverter<Double>() {
         val safeValue = value?.trim() ?: return null
 
         if (safeValue.isEmpty()) {
-            return null
+            return 0.0
         }
 
         return decimalFormat.parse(safeValue).toDouble()
