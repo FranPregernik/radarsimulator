@@ -133,8 +133,8 @@ class MovingTarget : JsonModel {
     var synchroPulseRadarJamming by property(false)
     fun synchroPulseRadarJammingProperty() = getProperty(MovingTarget::synchroPulseRadarJamming)
 
-    var synchroPulseDelay by property(0.0)
-    fun synchroPulseDelayProperty() = getProperty(MovingTarget::synchroPulseDelay)
+    var synchroPulseDelayM by property(0.0)
+    fun synchroPulseDelayMProperty() = getProperty(MovingTarget::synchroPulseDelayM)
 
     var initialPosition by property(RadarCoordinate(0.0, 0.0))
     fun initialPositionProperty() = getProperty(MovingTarget::initialPosition)
@@ -156,7 +156,7 @@ class MovingTarget : JsonModel {
             add("type", type.toString())
             add("jammingSource", jammingSource)
             add("synchroPulseRadarJamming", synchroPulseRadarJamming)
-            add("synchroPulseDelay", synchroPulseDelay)
+            add("synchroPulseDelayM", synchroPulseDelayM)
             add("initialPosition", initialPosition.toJSON())
             add("startingTimeSec", startingTimeSec)
             add("directions", directions.toJSON())
@@ -171,7 +171,7 @@ class MovingTarget : JsonModel {
             startingTimeSec = double("startingTimeSec") ?: 0.0
             jammingSource = boolean("jammingSource") ?: false
             synchroPulseRadarJamming = boolean("synchroPulseRadarJamming") ?: false
-            synchroPulseDelay = double("synchroPulseDelay") ?: 0.0
+            synchroPulseDelayM = double("synchroPulseDelayM") ?: 0.0
             directions = getJsonArray("directions")?.toModel() ?: observableArrayList<Direction>(mutableListOf())
         }
     }
@@ -293,6 +293,12 @@ class Scenario : JsonModel {
     fun getAllPathSegments() = (movingTargets ?: emptyObservableList())
         .filter { it.type == MovingTargetType.Point || it.type == MovingTargetType.Test1 || it.type == MovingTargetType.Test2 }
         .flatMap { movingTarget ->
+
+            val synchroPulseDelayM = if (movingTarget.synchroPulseRadarJamming ?: false)
+                (movingTarget.synchroPulseDelayM ?: 0.0)
+            else
+                null
+
             var p1 = movingTarget.initialPosition
             var t1 = 0.0
 
@@ -305,7 +311,9 @@ class Scenario : JsonModel {
                     t2Us = simulationDurationMin * MIN_TO_US,
                     vxKmUs = 0.0,
                     vyKmUs = 0.0,
-                    type = movingTarget.type
+                    type = movingTarget.type,
+                    jammingSource = movingTarget.jammingSource ?: false,
+                    synchroPulseDelayM = synchroPulseDelayM
                 ))
             } else {
                 // moving targets
@@ -329,7 +337,9 @@ class Scenario : JsonModel {
                         t2Us = t1 + dt,
                         vxKmUs = speedKmUs * dx / distance,
                         vyKmUs = speedKmUs * dy / distance,
-                        type = movingTarget.type
+                        type = movingTarget.type,
+                        jammingSource = movingTarget.jammingSource ?: false,
+                        synchroPulseDelayM = synchroPulseDelayM
                     )
 
                     p1 = p2
@@ -348,7 +358,9 @@ data class PathSegment(
     val t2Us: Double,
     val vxKmUs: Double,
     val vyKmUs: Double,
-    val type: MovingTargetType) {
+    val type: MovingTargetType,
+    val jammingSource: Boolean,
+    val synchroPulseDelayM: Double?) {
 
     private val azRad = toRadians(p1.azDeg)
     private val dx = p2.toCartesian().x - p1.toCartesian().x

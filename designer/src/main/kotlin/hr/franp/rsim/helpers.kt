@@ -520,6 +520,14 @@ fun ByteBuffer.calculatePointTargetHits(pathSegment: PathSegment,
             val tAntenna1 = (minTimeUs + (targetAzRad + cParam.angleBeamWidthRad) / TWO_PI * cParam.rotationTimeUs).toInt()
             val rotations = (maxTimeUs - tAntenna0).toInt() / rotTimeUs
 
+            // in case of jamming source the detected signal is from 0 to the target distance
+            val fromUs = if (pathSegment.jammingSource)
+                cParam.minSignalTimeUs.toInt() - 1
+            else
+                signalTimeUs
+
+            val toUs = signalTimeUs
+
             (0..rotations).forEach { rot ->
 
                 val tRotAnt0 = tAntenna0 + rot * rotTimeUs
@@ -527,13 +535,33 @@ fun ByteBuffer.calculatePointTargetHits(pathSegment: PathSegment,
                 val match = max(tTarget0, tRotAnt0) <= min(tTarget1, tRotAnt1)
 
                 if (match) {
-                    // we got a hit
-                    writeHit(
-                        acpIdx,
-                        signalTimeUs,
-                        cParam,
-                        compress
-                    )
+
+                    // we got a couple of hits
+                    (fromUs..toUs).forEach {
+                        writeHit(
+                            acpIdx,
+                            it,
+                            cParam,
+                            compress
+                        )
+                    }
+
+                    // in case of delayed synchro pulse add new hit
+                    if (pathSegment.synchroPulseDelayM != null && abs(pathSegment.synchroPulseDelayM) > 0) {
+                        val synchroSigTimeUs = min(
+                            max(
+                                0.0,
+                                signalTimeUs + floor(pathSegment.synchroPulseDelayM / 1000.0 * LIGHTSPEED_US_TO_ROUNDTRIP_KM)
+                            ),
+                            cParam.maxSignalTimeUs
+                        ).toInt()
+                        writeHit(
+                            acpIdx,
+                            synchroSigTimeUs,
+                            cParam,
+                            compress
+                        )
+                    }
                 }
             }
 

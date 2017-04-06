@@ -349,7 +349,7 @@ class MovingTargetEditorView : View() {
             jammingSourceSelector?.selectedProperty()?.bindBidirectional(jammingSourceProperty())
             synchroPulseRadarJammingSelector?.selectedProperty()?.bindBidirectional(synchroPulseRadarJammingProperty())
             synchroPulseDelaySelector?.valueProperty()?.bindBidirectional(
-                synchroPulseDelayProperty() as Property<Number>
+                synchroPulseDelayMProperty() as Property<Number>
             )
             initialDistanceField?.textProperty()?.bindBidirectional(initialPosition.rProperty(), dcsc)
             initialAzimuthField?.textProperty()?.bindBidirectional(initialPosition.azDegProperty(), acsc)

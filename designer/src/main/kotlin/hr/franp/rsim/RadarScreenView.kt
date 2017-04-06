@@ -337,6 +337,11 @@ class RadarScreenView : View() {
 
         var ps: PathSegment? = null
 
+        val synchroPulseDelayM = if (movingTarget.synchroPulseRadarJamming ?: false)
+            (movingTarget.synchroPulseDelayM ?: 0.0)
+        else
+            null
+
         if (movingTarget.directions.size == 0) {
             ps = PathSegment(
                 p1 = p1,
@@ -345,7 +350,9 @@ class RadarScreenView : View() {
                 t2Us = designerController.scenario.simulationDurationMin * MIN_TO_US,
                 vxKmUs = 0.0,
                 vyKmUs = 0.0,
-                type = movingTarget.type
+                type = movingTarget.type,
+                jammingSource = movingTarget.jammingSource ?: false,
+                synchroPulseDelayM = synchroPulseDelayM
             )
         } else if (currentTimeUs < t1) {
             // target hasn't started moving yet
@@ -356,7 +363,9 @@ class RadarScreenView : View() {
                 t2Us = designerController.scenario.simulationDurationMin * MIN_TO_US,
                 vxKmUs = 0.0,
                 vyKmUs = 0.0,
-                type = movingTarget.type
+                type = movingTarget.type,
+                jammingSource = movingTarget.jammingSource ?: false,
+                synchroPulseDelayM = synchroPulseDelayM
             )
         } else {
             run breaker@ {
@@ -380,7 +389,9 @@ class RadarScreenView : View() {
                                 t2Us = t1 + dt,
                                 vxKmUs = speedKmUs * dx / distance,
                                 vyKmUs = speedKmUs * dy / distance,
-                                type = movingTarget.type
+                                type = movingTarget.type,
+                                jammingSource = movingTarget.jammingSource ?: false,
+                                synchroPulseDelayM = synchroPulseDelayM
                             )
                             return@breaker
                         }
