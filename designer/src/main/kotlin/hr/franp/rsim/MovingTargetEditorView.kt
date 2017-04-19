@@ -17,7 +17,8 @@ class MovingTargetEditorView : View() {
 
     override val root = VBox()
 
-    private val controller: DesignerController by inject()
+    private val designerController: DesignerController by inject()
+    private val simulatorController: SimulatorController by inject()
     private val radarScreen: RadarScreenView by inject()
     private var fontAwesome = GlyphFontRegistry.font("FontAwesome")
     private val dcsc = DistanceStringConverter()
@@ -38,7 +39,7 @@ class MovingTargetEditorView : View() {
             this += movingTargetSelector.root
         }
 
-        controller.selectedMovingTargetProperty.addListener { _, _, _ ->
+        designerController.selectedMovingTargetProperty.addListener { _, _, _ ->
             // reinit form
             if (form != null) {
                 form?.removeFromParent()
@@ -67,7 +68,13 @@ class MovingTargetEditorView : View() {
                     tooltip("Change the moving target type")
 
                     targetTypeSelector = combobox<MovingTargetType> {
-                        disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+
+                        disableProperty().bind(
+                            designerController.calculatingHitsProperty
+                                .or(simulatorController.simulationRunningProperty)
+                                .or(designerController.selectedMovingTargetProperty.isNull)
+                        )
+
                         items = listOf(
                             MovingTargetType.Point,
                             MovingTargetType.Test1,
@@ -94,7 +101,11 @@ class MovingTargetEditorView : View() {
                                 columnRowIndex(1, 0)
                             }
 
-                            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+                            disableProperty().bind(
+                                designerController.calculatingHitsProperty
+                                    .or(simulatorController.simulationRunningProperty)
+                                    .or(designerController.selectedMovingTargetProperty.isNull)
+                            )
 
                         }
 
@@ -110,7 +121,11 @@ class MovingTargetEditorView : View() {
                                 columnRowIndex(1, 1)
                             }
 
-                            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+                            disableProperty().bind(
+                                designerController.calculatingHitsProperty
+                                    .or(simulatorController.simulationRunningProperty)
+                                    .or(designerController.selectedMovingTargetProperty.isNull)
+                            )
 
                         }
 
@@ -123,7 +138,11 @@ class MovingTargetEditorView : View() {
                                 rowSpan = 2
                             }
 
-                            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+                            disableProperty().bind(
+                                designerController.calculatingHitsProperty
+                                    .or(simulatorController.simulationRunningProperty)
+                                    .or(designerController.selectedMovingTargetProperty.isNull)
+                            )
 
                             setOnAction {
                                 if (coordinateClick != null) {
@@ -133,8 +152,8 @@ class MovingTargetEditorView : View() {
                                     radarScreen.mouseClickProperty.removeListener(coordinateClick)
 
                                     // modify model
-                                    controller.selectedMovingTarget.initialPosition.rKm = newValue.rKm
-                                    controller.selectedMovingTarget.initialPosition.azDeg = newValue.azDeg
+                                    designerController.selectedMovingTarget.initialPosition.rKm = newValue.rKm
+                                    designerController.selectedMovingTarget.initialPosition.azDeg = newValue.azDeg
 
                                 }
                                 radarScreen.mouseClickProperty.addListener(coordinateClick)
@@ -153,7 +172,11 @@ class MovingTargetEditorView : View() {
                                 columnRowIndex(1, 2)
                             }
 
-                            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+                            disableProperty().bind(
+                                designerController.calculatingHitsProperty
+                                    .or(simulatorController.simulationRunningProperty)
+                                    .or(designerController.selectedMovingTargetProperty.isNull)
+                            )
 
                         }
                     }
@@ -164,9 +187,15 @@ class MovingTargetEditorView : View() {
                     tooltip("Jamming source")
 
                     jammingSourceSelector = checkbox {
-                        disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+
+                        disableProperty().bind(
+                            designerController.calculatingHitsProperty
+                                .or(simulatorController.simulationRunningProperty)
+                                .or(designerController.selectedMovingTargetProperty.isNull)
+                        )
+
                         setOnAction {
-                            controller.selectedMovingTarget.jammingSource = selectedProperty().get()
+                            designerController.selectedMovingTarget.jammingSource = selectedProperty().get()
                         }
                     }
                 }.apply {
@@ -180,15 +209,26 @@ class MovingTargetEditorView : View() {
 
                     hbox(4.0) {
                         synchroPulseRadarJammingSelector = checkbox {
-                            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+
+                            disableProperty().bind(
+                                designerController.calculatingHitsProperty
+                                    .or(simulatorController.simulationRunningProperty)
+                                    .or(designerController.selectedMovingTargetProperty.isNull)
+                            )
+
                             setOnAction {
-                                controller.selectedMovingTarget.synchroPulseRadarJamming = selectedProperty().get()
+                                designerController.selectedMovingTarget.synchroPulseRadarJamming = selectedProperty().get()
                             }
                         }
 
                         synchroPulseDelaySelector = slider {
                             visibleProperty().bind(synchroPulseRadarJammingSelector?.selectedProperty())
-                            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+
+                            disableProperty().bind(
+                                designerController.calculatingHitsProperty
+                                    .or(simulatorController.simulationRunningProperty)
+                                    .or(designerController.selectedMovingTargetProperty.isNull)
+                            )
 
                             tooltip("Controls sync pulse delay")
 
@@ -235,10 +275,14 @@ class MovingTargetEditorView : View() {
                             button("", fontAwesome.create(PLUS)) {
                                 tooltip("Add a new course to the list")
 
-                                disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+                                disableProperty().bind(
+                                    designerController.calculatingHitsProperty
+                                        .or(simulatorController.simulationRunningProperty)
+                                        .or(designerController.selectedMovingTargetProperty.isNull)
+                                )
 
                                 setOnAction {
-                                    controller.selectedMovingTarget.directionsProperty().value.add(Direction(
+                                    designerController.selectedMovingTarget.directionsProperty().value.add(Direction(
                                         destination = RadarCoordinate(0.0, 0.0),
                                         speedKmh = 0.0
                                     ))
@@ -247,15 +291,26 @@ class MovingTargetEditorView : View() {
                             removeDirectionItemButton = button("", fontAwesome.create(TRASH)) {
                                 tooltip("Remove the selected course to the list")
 
+                                disableProperty().bind(
+                                    designerController.calculatingHitsProperty
+                                        .or(simulatorController.simulationRunningProperty)
+                                        .or(designerController.selectedMovingTargetProperty.isNull)
+                                )
+
                                 setOnAction {
                                     val direction = directionsTableView?.selectionModel?.selectedItem ?: return@setOnAction
-                                    controller.selectedMovingTarget.directionsProperty().value.remove(direction)
+                                    designerController.selectedMovingTarget.directionsProperty().value.remove(direction)
                                 }
                             }
+
                             setDirectionEndpointButton = button("", fontAwesome.create(CROSSHAIRS)) {
                                 tooltip("Set the course destination coordinates with mouse in the radar screen")
 
-                                disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+                                disableProperty().bind(
+                                    designerController.calculatingHitsProperty
+                                        .or(simulatorController.simulationRunningProperty)
+                                        .or(designerController.selectedMovingTargetProperty.isNull)
+                                )
 
                                 setOnAction {
                                     if (coordinateClick != null) {
@@ -277,23 +332,28 @@ class MovingTargetEditorView : View() {
                         }
 
                         directionsTableView = tableview<Direction> {
-                            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+                            disableProperty().bind(designerController.selectedMovingTargetProperty.isNull)
 
                             maxHeight = 200.0
 
                             removeDirectionItemButton?.disableProperty()?.bind(
-                                controller.selectedMovingTargetProperty.isNull.or(
+                                designerController.selectedMovingTargetProperty.isNull.or(
                                     selectionModel.selectedItemProperty().isNull
                                 )
                             )
 
                             setDirectionEndpointButton?.disableProperty()?.bind(
-                                controller.selectedMovingTargetProperty.isNull.or(
+                                designerController.selectedMovingTargetProperty.isNull.or(
                                     selectionModel.selectedItemProperty().isNull
                                 )
                             )
 
-                            isEditable = true
+                            editableProperty().bind(
+                                designerController.selectedMovingTargetProperty.isNotNull
+                                    .and(designerController.calculatingHitsProperty.not())
+                                    .and(simulatorController.simulationRunningProperty.not())
+                            )
+
                             columnResizePolicy = SmartResize.POLICY
 
                             column("r [km]", Direction::rProperty).apply {
@@ -344,7 +404,7 @@ class MovingTargetEditorView : View() {
             }
         }
 
-        controller.selectedMovingTarget?.apply {
+        designerController.selectedMovingTarget?.apply {
             targetTypeSelector?.valueProperty()?.bindBidirectional(typeProperty())
             jammingSourceSelector?.selectedProperty()?.bindBidirectional(jammingSourceProperty())
             synchroPulseRadarJammingSelector?.selectedProperty()?.bindBidirectional(synchroPulseRadarJammingProperty())

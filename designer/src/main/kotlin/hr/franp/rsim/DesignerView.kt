@@ -462,13 +462,6 @@ class DesignerView : View() {
                 })
 
                 titledpane("Radar targets", vbox {
-
-                    disableProperty().bind(
-                        designerController.calculatingHitsProperty.or(
-                            simulationController.simulationRunningProperty
-                        )
-                    )
-
                     padding = Insets.EMPTY
                     this += movingTargetEditor.root
                     autosize()

@@ -7,7 +7,8 @@ import org.controlsfx.glyphfont.FontAwesome.Glyph.*
 import tornadofx.*
 
 class MovingTargetSelectorView : View() {
-    private val controller: DesignerController by inject()
+    private val designerController: DesignerController by inject()
+    private val simulatorController: SimulatorController by inject()
     private var fontAwesome = GlyphFontRegistry.font("FontAwesome")
     private var targetSelector by singleAssign<ComboBox<MovingTarget>>()
 
@@ -17,29 +18,35 @@ class MovingTargetSelectorView : View() {
 
             setOnMouseClicked {
                 targetSelector.selectionModel.clearSelection()
-                controller.selectedMovingTargetProperty.set(null)
+                designerController.selectedMovingTargetProperty.set(null)
             }
         }
 
         targetSelector = combobox<MovingTarget> {
-            controller.scenarioProperty.addListener { _, _, _ ->
-                itemsProperty().bind(controller.scenario.movingTargetsProperty())
+            designerController.scenarioProperty.addListener { _, _, _ ->
+                itemsProperty().bind(designerController.scenario.movingTargetsProperty())
             }
-            itemsProperty().bind(controller.scenario.movingTargetsProperty())
+            itemsProperty().bind(designerController.scenario.movingTargetsProperty())
 
             // Update the target inside the view model on selection change
-            valueProperty().bindBidirectional(controller.selectedMovingTargetProperty)
+            valueProperty().bindBidirectional(designerController.selectedMovingTargetProperty)
 
         }
 
         button("", fontAwesome.create(FontAwesome.Glyph.PLUS)) {
             tooltip("Adds a new target")
 
+            disableProperty().bind(
+                designerController.calculatingHitsProperty.or(
+                    simulatorController.simulationRunningProperty
+                )
+            )
+
             setOnAction {
                 val newMovingTarget = MovingTarget().apply {
-                    name = "T${controller.scenario.movingTargets.size + 1}"
+                    name = "T${designerController.scenario.movingTargets.size + 1}"
                 }
-                controller.scenario.movingTargets.add(newMovingTarget)
+                designerController.scenario.movingTargets.add(newMovingTarget)
                 targetSelector.selectionModel.select(newMovingTarget)
             }
         }
@@ -47,12 +54,16 @@ class MovingTargetSelectorView : View() {
         button("", fontAwesome.create(TRASH)) {
             tooltip("Removes the currently selected target")
 
-            disableProperty().bind(controller.selectedMovingTargetProperty.isNull)
+            disableProperty().bind(
+                designerController.calculatingHitsProperty
+                    .or(simulatorController.simulationRunningProperty)
+                    .or(designerController.selectedMovingTargetProperty.isNull)
+            )
 
             setOnAction {
-                controller.scenario.movingTargets.remove(controller.selectedMovingTarget)
+                designerController.scenario.movingTargets.remove(designerController.selectedMovingTarget)
                 targetSelector.selectionModel.clearSelection()
-                controller.selectedMovingTargetProperty.set(null)
+                designerController.selectedMovingTargetProperty.set(null)
             }
         }
 
