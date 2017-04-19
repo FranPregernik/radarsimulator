@@ -441,12 +441,15 @@ fun ByteBuffer.calculateClutterMapHits(hitRaster: RasterIterator,
 
     val originCart = origin.toCartesian()
 
+    val cx = hitRaster.width / scale / 2.0
+    val cy = hitRaster.height / scale / 2.0
+
     hitRaster.forEach { hit ->
 
         val cartHit = hit ?: return@forEach
 
-        val x = originCart.x + cartHit.x / scale - cParams.maxRadarDistanceKm
-        val y = originCart.y + cartHit.y / scale - cParams.maxRadarDistanceKm
+        val x = cartHit.x / scale - cx + originCart.x
+        val y = cartHit.y / scale - cy + originCart.y
 
         val radarDistanceKm = sqrt(pow(x, 2.0) + pow(y, 2.0))
         if (radarDistanceKm < cParams.minRadarDistanceKm || radarDistanceKm > cParams.maxRadarDistanceKm) {

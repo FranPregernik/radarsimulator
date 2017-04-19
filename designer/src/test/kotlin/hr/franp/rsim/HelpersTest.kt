@@ -411,13 +411,17 @@ class HelpersTest : Spek({
         beforeEachTest { buffer.clean() }
 
         val clutterMap = WritableImage(100, 100)
-        val cp1 = Point2D(50.0, 50.0)
-        val cp2 = cp1.add(30.0, 10.0)
-        val cp3 = cp1.add(15.0, 3.0)
+        val cp1 = Point2D(1.0, 1.0)
+        val cp2 = Point2D(50.0, 50.0)
+        val cp3 = Point2D(99.0, 99.0)
+        val cp4 = Point2D(1.0, 99.0)
 
-        clutterMap.pixelWriter.setColor(cp1.x.toInt(), cp1.y.toInt(), Color.WHITE)
-        clutterMap.pixelWriter.setColor(cp2.x.toInt(), cp2.y.toInt(), Color.WHITE)
-        clutterMap.pixelWriter.setColor(cp3.x.toInt(), cp3.y.toInt(), Color.WHITE)
+        clutterMap.pixelWriter.apply {
+            setColor(cp1.x.toInt(), cp1.y.toInt(), Color.WHITE)
+            setColor(cp2.x.toInt(), cp2.y.toInt(), Color.WHITE)
+            setColor(cp3.x.toInt(), cp3.y.toInt(), Color.WHITE)
+            setColor(cp4.x.toInt(), cp4.y.toInt(), Color.WHITE)
+        }
 
         val offset = RadarCoordinate(300.0, 33.0)
         val offsetCart = offset.toCartesian()
@@ -432,8 +436,19 @@ class HelpersTest : Spek({
             )
 
             it("should result in detection") {
-                val pts = listOf(cp1, cp2, cp3)
-                    .map { it.add(offsetCart.x, offsetCart.y) }
+                val pts = listOf(cp1, cp2, cp3, cp4)
+                    .map {
+                        Point2D(
+                            it.x - clutterMap.width / 2.0,
+                            it.y - clutterMap.height / 2.0
+                        )
+                    }
+                    .map {
+                        Point2D(
+                            offsetCart.x + it.x,
+                            offsetCart.y - it.y
+                        )
+                    }
 
                 val ri = RasterIterator(SwingFXUtils.toFXImage(
                     buffer.toCompressedHitImage(cParams),
