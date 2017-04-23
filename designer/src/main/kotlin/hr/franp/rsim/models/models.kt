@@ -285,7 +285,7 @@ class Scenario : JsonModel {
         with(json) {
             simulationDurationMin = double("simulationDurationMin")
             simulationStepUs = double("simulationStepUs")
-            movingTargets = getJsonArray("movingTargets")?.toModel()
+            movingTargets = getJsonArray("movingTargets")?.toModel() ?: observableArrayList<MovingTarget>(mutableListOf())
             clutter = getJsonObject("clutter")?.toModel() ?: Clutter()
         }
     }
