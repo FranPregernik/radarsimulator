@@ -1,0 +1,82 @@
+namespace java hr.franp.rsim
+namespace cpp hr.franp.rsim
+
+struct SimState {
+    1: i32 time;
+    3: bool enabled;
+    4: bool mtiEnabled;
+    5: bool normEnabled;
+    6: bool calibrated;
+    7: i32 arpUs;
+    8: i32 acpCnt;
+    9: i32 trigUs;
+    10: i32 simAcpIdx;
+    11: i32 currAcpIdx;
+    12: i32 loadedClutterAcpIndex;
+    13: i32 loadedTargetAcpIndex;
+    14: i32 loadedClutterAcp;
+    15: i32 loadedTargetAcp;
+}
+
+exception RadarSignalNotCalibratedException {}
+
+exception IncompatibleFileException {}
+
+service Simulator {
+
+    /**
+     * Resets the DMA and simulator hardware.
+     **/
+    void reset();
+
+    /**
+     * Ensure the HW is calibrated with the clock signals.
+     **/
+    void calibrate();
+
+    /**
+     * Enables the simulator output.
+     **/
+    void enable() throws (1: RadarSignalNotCalibratedException rsnc);
+
+    /**
+     * Enables the MTI simulator output.
+     **/
+    void enableMti() throws (1: RadarSignalNotCalibratedException rsnc);
+
+    /**
+     * Enables the NORM simulator output.
+     **/
+    void enableNorm() throws (1: RadarSignalNotCalibratedException rsnc);
+
+    /**
+     * Disables the simulator output.
+     **/
+    void disable();
+
+    /**
+     * Disables the MTI simulator output.
+     **/
+    void disableMti();
+
+    /**
+     * Disables the NORM simulator output.
+     **/
+    void disableNorm();
+
+    /**
+     * Loads the clutter map data from the common location.
+     **/
+    void loadClutterMap(1: i32 arpPosition) throws (1: IncompatibleFileException rsnc);
+
+    /**
+     * Loads the clutter map data from the common location.
+     **/
+    void loadTargetMap(1: i32 arpPosition) throws (1: IncompatibleFileException rsnc);
+
+    /**
+     * Returns the state of the simulator.
+     **/
+    SimState getState();
+
+}

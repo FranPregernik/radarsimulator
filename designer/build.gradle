@@ -13,26 +13,24 @@ buildscript {
 
     repositories {
         mavenCentral()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
     }
 
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "de.dynamicfiles.projects.gradle.plugins:javafx-gradle-plugin:8.8.2"
+        classpath "gradle.plugin.org.jruyi.gradle:thrift-gradle-plugin:0.4.0"
         classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.0-M3'
     }
 
 }
 
 apply plugin: 'kotlin'
+apply plugin: 'javafx-gradle-plugin'
+apply plugin: "org.jruyi.thrift"
 apply plugin: 'org.junit.platform.gradle.plugin'
-
-junitPlatform {
-    filters {
-        engines {
-            include 'spek'
-        }
-    }
-}
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
@@ -51,6 +49,8 @@ dependencies {
     // https://mvnrepository.com/artifact/org.jfxtras/jfxtras-labs
     compile 'org.jfxtras:jfxtras-labs:8.0-r5'
 
+    compile 'org.apache.thrift:libthrift:0.9.3'
+
     // SSH connection
     compile 'com.hierynomus:sshj:0.20.0'
     compile 'com.jcraft:jzlib:1.1.3'
@@ -68,7 +68,23 @@ dependencies {
     testCompile 'org.amshove.kluent:kluent:1.14'
 }
 
-apply plugin: 'javafx-gradle-plugin'
+
+
+compileThrift {
+    recurse true
+
+    generator 'html'
+    generator 'cpp'
+    generator 'java', 'private-members'
+}
+
+junitPlatform {
+    filters {
+        engines {
+            include 'spek'
+        }
+    }
+}
 
 jfx {
     // minimal requirement for jfxJar-task

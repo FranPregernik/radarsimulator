@@ -117,10 +117,14 @@ class DesignerView : View() {
 
                         setOnAction {
                             runAsync {
-                                simulationController.startSimulation({ progress, message ->
-                                    updateMessage(message)
-                                    updateProgress(progress, 1.0)
-                                })
+                                simulationController.startSimulation(
+                                    radarScreen.simulatedCurrentTimeSecProperty.get(),
+                                    { progress, message ->
+                                        updateMessage(message)
+                                        val max = simulationController.radarParameters.azimuthChangePulse * designerController.scenario.simulationDurationMin * MIN_TO_S / simulationController.radarParameters.seekTimeSec
+                                        updateProgress(progress, max)
+                                    }
+                                )
                             }
                         }
                     }

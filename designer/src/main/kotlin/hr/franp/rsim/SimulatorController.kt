@@ -7,12 +7,18 @@ import net.schmizz.sshj.*
 import net.schmizz.sshj.common.*
 import net.schmizz.sshj.xfer.*
 import org.apache.commons.math3.stat.regression.*
+import org.apache.thrift.*
+import org.apache.thrift.protocol.*
+import org.apache.thrift.transport.*
 import tornadofx.*
-import java.io.*
 import java.lang.Math.*
-import java.util.concurrent.*
+import java.lang.Thread.*
 
 class SimulatorController : Controller(), AutoCloseable {
+
+    val transport: TTransport
+    val simulatorClient: Simulator.Client
+
     var radarParameters by property(RadarParameters(
         impulsePeriodUs = 3003.0,
         impulseSignalUs = 3.0,
@@ -27,7 +33,6 @@ class SimulatorController : Controller(), AutoCloseable {
 
     val radarParametersProperty = getProperty(SimulatorController::radarParameters)
 
-
     private val timeShiftFunc = SimpleRegression()
     private val acpIdxFunc = SimpleRegression()
 
@@ -37,10 +42,24 @@ class SimulatorController : Controller(), AutoCloseable {
         useCompression()
     }
 
-    private fun connect() {
+    val simulationRunningProperty = SimpleBooleanProperty(false)
+
+    init {
+        try {
+            transport = TSocket(config.string("simulatorIp"), 9090)
+            //transport = TSocket(config.string("simulatorIp"), 9090)
+            transport.open()
+
+            simulatorClient = Simulator.Client(
+                TBinaryProtocol(transport)
+            )
+            simulatorClient.reset()
+
+        } catch (x: TException) {
+            throw RuntimeException("Unable to connect to simulator HW", x)
+        }
+
         sshClient.apply {
-            if (isConnected)
-                return
 
             try {
                 connect(config.string("simulatorIp"))
@@ -51,7 +70,7 @@ class SimulatorController : Controller(), AutoCloseable {
                     config.string("password", "root")
                 )
             } catch (ex: Exception) {
-                throw RuntimeException("Unable to connect to simulator HW")
+                throw RuntimeException("Unable to connect to simulator HW", ex)
             }
 
         }
@@ -59,16 +78,14 @@ class SimulatorController : Controller(), AutoCloseable {
     }
 
     override fun close() {
+        transport.close()
         sshClient.close()
     }
-
-    val simulationRunningProperty = SimpleBooleanProperty(false)
 
     fun uploadClutterFile(
         file: FileSystemFile,
         progressConsumer: (Double, String) -> Unit) {
 
-        connect()
         stopSimulation()
 
         sshClient.apply {
@@ -97,7 +114,6 @@ class SimulatorController : Controller(), AutoCloseable {
         file: FileSystemFile,
         progressConsumer: (Double, String) -> Unit) {
 
-        connect()
         stopSimulation()
 
         sshClient.apply {
@@ -120,74 +136,64 @@ class SimulatorController : Controller(), AutoCloseable {
         }
     }
 
-    fun startSimulation(progressConsumer: (Double, String) -> Unit) {
+    fun enableMti() = simulatorClient.enableMti()
+
+    fun enableNorm() = simulatorClient.enableMti()
+
+    fun startSimulation(
+        fromTimeSec: Double,
+        progressConsumer: (Double, String) -> Unit) {
 
         try {
-            connect()
-            stopSimulation()
+
             calibrate()
+
+            // calculate the first ARP before the specified time
+            val fromArp = floor(fromTimeSec / radarParameters.seekTimeSec).toInt()
 
             timeShiftFunc.clear()
             acpIdxFunc.clear()
 
-            sshClient.apply {
+            simulatorClient.apply {
 
-                // start sim
-                val reg = "\\w+=(\\d+)(/(\\d+))?".toRegex()
+                // load simulation data from the chosen ARP
+                loadClutterMap(fromArp)
+                loadTargetMap(fromArp)
 
-                startSession().use { session ->
-
-                    val cmd = session.exec("radar-sim-test -r --load-clutter-file /var/clutter.bin --load-target-file /var/targets.bin")
-
-                    runLater {
-                        simulationRunningProperty.set(true)
-                    }
-
-                    cmd.inputStream.use { stdout ->
-                        progressConsumer(0.0, "Running simulation")
-                        InputStreamReader(stdout).use { stdOutReader ->
-                            stdOutReader.forEachLine { line ->
-                                val t = System.currentTimeMillis().toDouble()
-                                log.finest { line }
-                                if (line.startsWith("SIM_ACP_IDX")) {
-                                    val matchResult = reg.matchEntire(line) ?: return@forEachLine
-                                    val values = matchResult.groupValues
-                                    if (values.size < 3) {
-                                        return@forEachLine
-                                    }
-
-                                    val acpIdx = values[1].toLong()
-                                    val simTime = values[3].toLong()
-                                    timeShiftFunc.addData(t, simTime.toDouble())
-                                    if (acpIdx > 0) {
-                                        acpIdxFunc.addData(simTime.toDouble(), acpIdx.toDouble())
-                                    }
-                                } else if (line.startsWith("DISABLE_SIM")) {
-                                    runLater {
-                                        simulationRunningProperty.set(false)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    cmd.errorStream.use { stdout ->
-                        InputStreamReader(stdout).use { stdOutReader ->
-                            stdOutReader.forEachLine { line ->
-                                log.severe { line }
-                            }
-                        }
-                    }
-
-                    // wait for termination
-                    cmd.join()
-
-                    val exitStatus = cmd.exitStatus ?: 0
-                    if (exitStatus > 0) {
-                        log.info { "Command exited with $exitStatus and message: \"${cmd.exitErrorMessage}\"" }
-                    }
-                }
+                enable()
             }
+
+            runLater {
+                simulationRunningProperty.set(true)
+            }
+
+            var state: SimState
+            do {
+
+                val t = System.currentTimeMillis().toDouble()
+                state = simulatorClient.state
+
+                timeShiftFunc.addData(t, state.time.toDouble())
+                if (state.simAcpIdx > 0) {
+                    acpIdxFunc.addData(
+                        state.time.toDouble(),
+                        state.simAcpIdx.toDouble()
+                    )
+
+                    progressConsumer(
+                        state.simAcpIdx.toDouble(),
+                        "Running simulation"
+                    )
+                }
+
+                sleep(1000)
+
+            } while (state.isEnabled)
+
+            progressConsumer(
+                state.simAcpIdx.toDouble(),
+                "Simulation complete"
+            )
 
         } finally {
             runLater {
@@ -205,18 +211,10 @@ class SimulatorController : Controller(), AutoCloseable {
     fun approxSimTime(t: Double = System.currentTimeMillis().toDouble()) =
         approxSimAcp(t).toDouble() / radarParameters.azimuthChangePulse * radarParameters.seekTimeSec
 
-    fun approxAzimuth(t: Double = System.currentTimeMillis().toDouble()) = toDegrees(
-        azimuthToAngle(TWO_PI * approxSimAcp(t) / radarParameters.azimuthChangePulse)
-    )
-
     fun stopSimulation() {
-        connect()
 
         try {
-            sshClient.apply {
-                // cleanup
-                startSession().use { it.exec("killall radar-sim-test").join() }
-            }
+            simulatorClient.disable()
         } finally {
             runLater {
                 simulationRunningProperty.set(false)
@@ -226,66 +224,24 @@ class SimulatorController : Controller(), AutoCloseable {
 
     fun calibrate() {
 
-        connect()
-        stopSimulation()
+        try {
 
-        var arpUs = 0.0
-        var acpCnt = 0
-        var trigUs = 0.0
-        var calibrated = false
-        val valueRegex = "\\w+=(\\d+)".toRegex()
+            simulatorClient.calibrate()
 
-        sshClient.apply {
+            val state = simulatorClient.state
+            radarParameters = radarParameters.copy(
+                seekTimeSec = state.arpUs / S_TO_US,
+                azimuthChangePulse = state.acpCnt,
+                impulsePeriodUs = state.trigUs.toDouble()
+            )
 
-            // calibrate sim
-            startSession().use { session ->
-
-                val cmd = session.exec("radar-sim-test -c")
-                cmd.inputStream.use command@ { stdout ->
-                    InputStreamReader(stdout).use { stdOutReader ->
-                        stdOutReader.forEachLine {
-                            log.info { it }
-                            val matchedValue = valueRegex.matchEntire(it)?.groups?.get(1)?.value
-                            if (it.startsWith("SIM_ARP_US")) {
-                                arpUs = matchedValue?.toDouble() ?: 0.0
-                            } else if (it.startsWith("SIM_ACP_CNT")) {
-                                acpCnt = matchedValue?.toInt() ?: 0
-                            } else if (it.startsWith("SIM_TRIG_US")) {
-                                trigUs = matchedValue?.toDouble() ?: 0.0
-                            } else if (it.startsWith("SIM_CAL")) {
-                                calibrated = (matchedValue?.toInt() ?: 0) > 0
-                            }
-                        }
-                    }
-                }
-
-                cmd.errorStream.use { stdout ->
-                    InputStreamReader(stdout).use { stdOutReader ->
-                        stdOutReader.forEachLine { line ->
-                            log.severe { line }
-                        }
-                    }
-                }
-
-                // wait for termination
-                cmd.join(1, TimeUnit.MINUTES)
-
-                val exitStatus = cmd.exitStatus ?: 0
-                if (!calibrated && exitStatus > 0) {
-                    log.info { "Command exited with $exitStatus and message: \"${cmd.exitErrorMessage}\"" }
-                }
+        } catch (te: TException) {
+            runLater {
+                simulationRunningProperty.set(false)
             }
+            throw te
         }
 
-        if (!calibrated || radarParameters.maxImpulsePeriodUs < trigUs) {
-            throw RuntimeException("Unable to calibrate (ARP_US=$arpUs, ACP_CNT=$acpCnt, TRIG_US=$trigUs")
-        }
-
-        radarParameters = radarParameters.copy(
-            seekTimeSec = arpUs / S_TO_US,
-            azimuthChangePulse = acpCnt,
-            impulsePeriodUs = trigUs
-        )
 
     }
 }
