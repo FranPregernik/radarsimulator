@@ -268,7 +268,7 @@ void RadarSimulator::initScatterGatherBufferDescriptors(XAxiDma *dma, UINTPTR vi
 void RadarSimulator::initClutterDma() {
 
     if (!calibrated) {
-        RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
+        //RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
     }
 
     // store pointer to the beginnings of the individual memory blocks
@@ -283,7 +283,7 @@ void RadarSimulator::initClutterDma() {
 void RadarSimulator::initTargetDma() {
 
     if (!calibrated) {
-        RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
+        //RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
     }
 
     // store pointer to the beginnings of the individual memory blocks
@@ -313,7 +313,7 @@ RadarSimulator::~RadarSimulator() {
 void RadarSimulator::enable() {
 
     if (!calibrated) {
-        RAISE(RadarSignalNotCalibratedException, "Radar signal not calibrated");
+        //RAISE(RadarSignalNotCalibratedException, "Radar signal not calibrated");
     }
 
     startDmaTransfer(&clutterDma, addrToPhysical((UINTPTR) clutterMemPtr), blockByteSize, CL_BLK_CNT);
