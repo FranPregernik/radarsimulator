@@ -118,7 +118,11 @@ void FXAxiDma_DumpBd(XAxiDma_Bd* BdPtr) {
     cout << endl;
 }
 
-void RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 simBlockByteSize, int blockCount) {
+void RadarSimulator::stopDmaTransfer(XAxiDma *dmaPtr) {
+    XAxiDma_Reset(dmaPtr);
+}
+
+XAxiDma_Bd* RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 simBlockByteSize, int blockCount) {
 
     XAxiDma_Bd *FirstBdPtr;
     XAxiDma_Bd *PrevBdPtr;
@@ -180,12 +184,15 @@ void RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 
 //        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
 //    }
 //    PrintDmaStatus(dmaPtr);
+
     /* Give the BD to DMA to kick off the transmission. */
     Status = XAxiDma_BdRingToHw(TxRingPtr, bdCount, FirstBdPtr);
     if (Status != XST_SUCCESS) {
         printf("to hw failed %d\r\n", Status);
         RAISE(DmaInitFailedException, "Unable for HW to process BDs");
     }
+
+    return FirstBdPtr;
 
 }
 
@@ -311,10 +318,15 @@ void RadarSimulator::enable() {
 
     startDmaTransfer(&clutterDma, addrToPhysical((UINTPTR) clutterMemPtr), blockByteSize, CL_BLK_CNT);
     startDmaTransfer(&targetDma, addrToPhysical((UINTPTR) targetMemPtr), blockByteSize, MT_BLK_CNT);
+
     ctrl->enabled = 0x1;
 }
 
 void RadarSimulator::disable() {
+
+    stopDmaTransfer(&clutterDma);
+    stopDmaTransfer(&targetDma);
+
     ctrl->enabled = 0x0;
 }
 
