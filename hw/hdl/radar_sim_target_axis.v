@@ -51,8 +51,6 @@ module radar_sim_target_axis #
 
         // is data stable
         output wire DATA_VALID,
-               
-        output reg [DATA_WIDTH-1:0] ACP_IDX = 0,
         
         output reg [DATA_WIDTH-1:0] ACP_POS = 0,
         
@@ -121,7 +119,6 @@ module radar_sim_target_axis #
         if (!S_AXIS_ARESETN || !EN) begin
         
             // Synchronous reset (active low)
-            ACP_IDX <= 0;
             BANK <= 0;
             ACP_POS <= 0;
             fast_fwd <= 0;
@@ -137,7 +134,6 @@ module radar_sim_target_axis #
             if (S_AXIS_TREADY && S_AXIS_TVALID) begin
             
                 // load new data from AXIS bus
-                ACP_IDX <= ACP_IDX + 1;
                 BANK <= { S_AXIS_TDATA[C_S_AXIS_TDATA_WIDTH-1:POS_BIT_CNT], 16'b0 };
                 ACP_POS <= S_AXIS_TDATA[POS_BIT_CNT-1:0];
                 S_AXIS_TREADY <= 0;

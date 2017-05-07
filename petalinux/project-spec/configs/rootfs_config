@@ -948,8 +948,8 @@ CONFIG_boost-random=y
 #
 # libevent 
 #
-# CONFIG_libevent is not set
-# CONFIG_libevent-dev is not set
+CONFIG_libevent=y
+CONFIG_libevent-dev=y
 # CONFIG_libevent-dbg is not set
 
 #
@@ -1062,8 +1062,8 @@ CONFIG_boost-random=y
 # libpciaccess 
 #
 # CONFIG_libpciaccess is not set
-# CONFIG_libpciaccess-dev is not set
 # CONFIG_libpciaccess-dbg is not set
+# CONFIG_libpciaccess-dev is not set
 
 #
 # libpng 
@@ -1561,8 +1561,8 @@ CONFIG_zlib-dev=y
 #
 # cryptodev-linux 
 #
-# CONFIG_cryptodev-linux is not set
-# CONFIG_cryptodev-linux-dev is not set
+CONFIG_cryptodev-linux=y
+CONFIG_cryptodev-linux-dev=y
 # CONFIG_cryptodev-linux-dbg is not set
 
 #
@@ -1608,10 +1608,10 @@ CONFIG_zlib-dev=y
 #
 # CONFIG_libstdcPLUSPLUS is not set
 # CONFIG_libitm is not set
+# CONFIG_libatomic-dev is not set
 # CONFIG_libssp is not set
 # CONFIG_libstdcPLUSPLUS-dev is not set
 # CONFIG_libatomic is not set
-# CONFIG_libatomic-dev is not set
 # CONFIG_libssp-dev is not set
 # CONFIG_libitm-dev is not set
 
@@ -2310,7 +2310,7 @@ CONFIG_tcf-agent=y
 # thrift 
 #
 CONFIG_thrift=y
-CONFIG_thrift-dbg=y
+# CONFIG_thrift-dbg is not set
 CONFIG_thrift-dev=y
 
 #
@@ -3007,6 +3007,13 @@ CONFIG_eth01-config=y
 CONFIG_peekpoke=y
 # CONFIG_peekpoke-dev is not set
 # CONFIG_peekpoke-dbg is not set
+
+#
+# radar-sim-server 
+#
+CONFIG_radar-sim-server=y
+# CONFIG_radar-sim-server-dev is not set
+# CONFIG_radar-sim-server-dbg is not set
 
 #
 # radar-sim-test 

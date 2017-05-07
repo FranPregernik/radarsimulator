@@ -232,13 +232,13 @@ CONFIG_mtd-utils=y
 # CONFIG_tzdata-arctic is not set
 # CONFIG_tzdata-posix is not set
 # CONFIG_tzdata-africa is not set
+# CONFIG_tzdata-pacific is not set
 # CONFIG_tzdata-antarctica is not set
 # CONFIG_tzdata-asia is not set
 # CONFIG_tzdata-americas is not set
-# CONFIG_tzdata-australia is not set
 # CONFIG_tzdata-europe is not set
+# CONFIG_tzdata-australia is not set
 # CONFIG_tzdata-right is not set
-# CONFIG_tzdata-pacific is not set
 # CONFIG_tzdata-atlantic is not set
 # CONFIG_tzdata-misc is not set
 
@@ -260,6 +260,7 @@ CONFIG_mtd-utils=y
 # util-linux 
 #
 # CONFIG_util-linux is not set
+# CONFIG_util-linux-lscpu is not set
 # CONFIG_util-linux-agetty is not set
 # CONFIG_util-linux-fstrim is not set
 # CONFIG_util-linux-mcookie is not set
@@ -267,7 +268,6 @@ CONFIG_mtd-utils=y
 # CONFIG_util-linux-swaponoff is not set
 # CONFIG_util-linux-uuidgen is not set
 # CONFIG_util-linux-cfdisk is not set
-# CONFIG_util-linux-lscpu is not set
 # CONFIG_util-linux-mount is not set
 # CONFIG_util-linux-partx is not set
 # CONFIG_util-linux-bash-completion is not set
@@ -341,8 +341,8 @@ CONFIG_canutils=y
 #
 # CONFIG_dropbear is not set
 # CONFIG_dropbear-openssh-sftp-server is not set
-# CONFIG_dropbear-dev is not set
 # CONFIG_dropbear-dbg is not set
+# CONFIG_dropbear-dev is not set
 
 #
 # ethtool 
@@ -563,10 +563,10 @@ CONFIG_pciutils=y
 # CONFIG_python-io is not set
 # CONFIG_python-hotshot is not set
 # CONFIG_python-pickle is not set
-# CONFIG_python-stringold is not set
 # CONFIG_python-multiprocessing is not set
 # CONFIG_python-lang is not set
 # CONFIG_python-pkgutil is not set
+# CONFIG_python-stringold is not set
 # CONFIG_python-dbg is not set
 # CONFIG_python-compression is not set
 # CONFIG_python-unixadmin is not set
@@ -640,8 +640,8 @@ CONFIG_pciutils=y
 # python-pygobject 
 #
 # CONFIG_python-pygobject is not set
-# CONFIG_python-pygobject-dev is not set
 # CONFIG_python-pygobject-dbg is not set
+# CONFIG_python-pygobject-dev is not set
 
 #
 # python-scons 
@@ -844,8 +844,8 @@ CONFIG_boost-random=y
 # gdbm 
 #
 # CONFIG_gdbm is not set
-# CONFIG_gdbm-compat is not set
 # CONFIG_gdbm-dev is not set
+# CONFIG_gdbm-compat is not set
 # CONFIG_gdbm-dbg is not set
 # CONFIG_gdbm-bin is not set
 
@@ -948,8 +948,8 @@ CONFIG_boost-random=y
 #
 # libevent 
 #
-# CONFIG_libevent is not set
-# CONFIG_libevent-dev is not set
+CONFIG_libevent=y
+CONFIG_libevent-dev=y
 # CONFIG_libevent-dbg is not set
 
 #
@@ -1062,8 +1062,8 @@ CONFIG_boost-random=y
 # libpciaccess 
 #
 # CONFIG_libpciaccess is not set
-# CONFIG_libpciaccess-dev is not set
 # CONFIG_libpciaccess-dbg is not set
+# CONFIG_libpciaccess-dev is not set
 
 #
 # libpng 
@@ -1287,8 +1287,8 @@ CONFIG_boost-random=y
 # libxt 
 #
 # CONFIG_libxt is not set
-# CONFIG_libxt-dbg is not set
 # CONFIG_libxt-dev is not set
+# CONFIG_libxt-dbg is not set
 
 #
 # libxtst 
@@ -1561,8 +1561,8 @@ CONFIG_zlib-dev=y
 #
 # cryptodev-linux 
 #
-# CONFIG_cryptodev-linux is not set
-# CONFIG_cryptodev-linux-dev is not set
+CONFIG_cryptodev-linux=y
+CONFIG_cryptodev-linux-dev=y
 # CONFIG_cryptodev-linux-dbg is not set
 
 #
@@ -1608,10 +1608,10 @@ CONFIG_zlib-dev=y
 #
 # CONFIG_libstdcPLUSPLUS is not set
 # CONFIG_libitm is not set
+# CONFIG_libatomic-dev is not set
 # CONFIG_libssp is not set
 # CONFIG_libstdcPLUSPLUS-dev is not set
 # CONFIG_libatomic is not set
-# CONFIG_libatomic-dev is not set
 # CONFIG_libssp-dev is not set
 # CONFIG_libitm-dev is not set
 
@@ -1628,10 +1628,10 @@ CONFIG_gdbserver=y
 #
 # CONFIG_glib-2.0 is not set
 # CONFIG_glib-2.0-dbg is not set
+# CONFIG_glib-2.0-codegen is not set
 # CONFIG_glib-2.0-bash-completion is not set
 # CONFIG_glib-2.0-dev is not set
 # CONFIG_glib-2.0-utils is not set
-# CONFIG_glib-2.0-codegen is not set
 
 #
 # glibc-xilinx 
@@ -1686,8 +1686,8 @@ CONFIG_gdbserver=y
 # CONFIG_icu-dev is not set
 # CONFIG_libicuio is not set
 # CONFIG_icu-dbg is not set
-# CONFIG_libicutu is not set
 # CONFIG_libicui18n is not set
+# CONFIG_libicutu is not set
 # CONFIG_libiculx is not set
 # CONFIG_libicule is not set
 
@@ -2307,6 +2307,13 @@ CONFIG_tcf-agent=y
 # CONFIG_tcf-agent-dbg is not set
 
 #
+# thrift 
+#
+CONFIG_thrift=y
+# CONFIG_thrift-dbg is not set
+CONFIG_thrift-dev=y
+
+#
 # tiff 
 #
 # CONFIG_tiff is not set
@@ -2820,15 +2827,15 @@ CONFIG_ntp=y
 # libpthread-stubs 
 #
 # CONFIG_libpthread-stubs is not set
-# CONFIG_libpthread-stubs-dbg is not set
 # CONFIG_libpthread-stubs-dev is not set
+# CONFIG_libpthread-stubs-dbg is not set
 
 #
 # libxcb 
 #
 # CONFIG_libxcb is not set
-# CONFIG_libxcb-dbg is not set
 # CONFIG_libxcb-dev is not set
+# CONFIG_libxcb-dbg is not set
 
 #
 # xcb-proto 
@@ -3000,6 +3007,13 @@ CONFIG_eth01-config=y
 CONFIG_peekpoke=y
 # CONFIG_peekpoke-dev is not set
 # CONFIG_peekpoke-dbg is not set
+
+#
+# radar-sim-server 
+#
+CONFIG_radar-sim-server=y
+# CONFIG_radar-sim-server-dev is not set
+# CONFIG_radar-sim-server-dbg is not set
 
 #
 # radar-sim-test 

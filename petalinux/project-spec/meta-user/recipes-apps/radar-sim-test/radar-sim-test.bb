@@ -10,7 +10,6 @@ DEPENDS = "bzip2 zlib boost thrift"
 
 SRC_URI = "file://xilinx \
            file://inc \
-           file://thrift \
            file://radar_simulator.hpp \
            file://radar_simulator.cpp \
            file://main.cpp \

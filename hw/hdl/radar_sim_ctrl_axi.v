@@ -47,6 +47,8 @@ module radar_sim_ctrl_axi #
         (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_HIGH" *)
         output reg RECAL = 0,
         
+        output reg [C_S_AXI_DATA_WIDTH-1:0] ACP_IDX,
+                
         input RADAR_CAL,
 
         input RADAR_ARP_PE,
@@ -58,10 +60,6 @@ module radar_sim_ctrl_axi #
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_ACP_CNT,
 
         input [C_S_AXI_DATA_WIDTH-1:0] RADAR_TRIG_US,
-
-        input [C_S_AXI_DATA_WIDTH-1:0] FT_ACP_IDX,
-
-        input [C_S_AXI_DATA_WIDTH-1:0] MT_ACP_IDX,
         
         input [C_S_AXI_DATA_WIDTH-1:0] FT_ACP_POS,
 
@@ -168,7 +166,6 @@ module radar_sim_ctrl_axi #
     
     // ACP_IDX - rotational position since the beginning of the simulation
     // replaced by ACP_IDX - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg5;
-    reg [C_S_AXI_DATA_WIDTH-1:0]    ACP_IDX;
     
     // ARP_ACP_IDX - rotational position since ARP
     // replaced by ARP_ACP_IDX - reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg6;
@@ -434,10 +431,8 @@ module radar_sim_ctrl_axi #
             4'h6   : reg_data_out <= RADAR_TRIG_US;
             4'h7   : reg_data_out <= ACP_IDX;
             4'h8   : reg_data_out <= ARP_ACP_IDX;
-            4'h9   : reg_data_out <= FT_ACP_IDX;
-            4'hA   : reg_data_out <= MT_ACP_IDX;
-            4'hB   : reg_data_out <= FT_ACP_POS;
-            4'hC   : reg_data_out <= MT_ACP_POS;
+            4'h9   : reg_data_out <= FT_ACP_POS;
+            4'hA   : reg_data_out <= MT_ACP_POS;
             default : reg_data_out <= 0;
           endcase
     end

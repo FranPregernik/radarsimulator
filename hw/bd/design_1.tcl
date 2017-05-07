@@ -169,14 +169,13 @@ proc create_hier_cell_radar_simulator { parentCell nameHier } {
 
   # Create pins
   create_bd_pin -dir I -type clk ACLK
+  create_bd_pin -dir O -from 31 -to 0 DBG_ACP_IDX
   create_bd_pin -dir O -from 31 -to 0 DBG_FT_ACP_CNT
-  create_bd_pin -dir O -from 31 -to 0 DBG_FT_ACP_IDX
   create_bd_pin -dir O -from 31 -to 0 DBG_FT_ACP_POS
   create_bd_pin -dir O DBG_FT_DATA_VALID
   create_bd_pin -dir O DBG_FT_READY
   create_bd_pin -dir O DBG_FT_VALID
   create_bd_pin -dir O -from 31 -to 0 DBG_MT_ACP_CNT
-  create_bd_pin -dir O -from 31 -to 0 DBG_MT_ACP_IDX
   create_bd_pin -dir O -from 31 -to 0 DBG_MT_ACP_POS
   create_bd_pin -dir O DBG_MT_DATA_VALID
   create_bd_pin -dir O DBG_MT_READY
@@ -358,10 +357,7 @@ CONFIG.SIZE {3072} \
   set_property -dict [ list \
 HDL_ATTRIBUTE.DEBUG {true} \
  ] [get_bd_nets radar_sim_ctrl_axi_0_SIM_EN]
-  connect_bd_net -net radar_sim_fixed_target_axis_ACP_IDX [get_bd_pins DBG_FT_ACP_IDX] [get_bd_pins radar_sim_ctrl_axi/FT_ACP_IDX] [get_bd_pins radar_sim_fixed_target_axis/ACP_IDX]
-  set_property -dict [ list \
-HDL_ATTRIBUTE.DEBUG {true} \
- ] [get_bd_nets radar_sim_fixed_target_axis_ACP_IDX]
+  connect_bd_net -net radar_sim_ctrl_axi_ACP_IDX [get_bd_pins DBG_ACP_IDX] [get_bd_pins radar_sim_ctrl_axi/ACP_IDX]
   connect_bd_net -net radar_sim_fixed_target_axis_ACP_POS [get_bd_pins DBG_FT_ACP_POS] [get_bd_pins radar_sim_ctrl_axi/FT_ACP_POS] [get_bd_pins radar_sim_fixed_target_axis/ACP_POS]
   set_property -dict [ list \
 HDL_ATTRIBUTE.DEBUG {true} \
@@ -383,10 +379,6 @@ HDL_ATTRIBUTE.DEBUG {true} \
   set_property -dict [ list \
 HDL_ATTRIBUTE.DEBUG {true} \
  ] [get_bd_nets radar_sim_fixed_target_axis_DBG_VALID]
-  connect_bd_net -net radar_sim_moving_target_axis_ACP_IDX [get_bd_pins DBG_MT_ACP_IDX] [get_bd_pins radar_sim_ctrl_axi/MT_ACP_IDX] [get_bd_pins radar_sim_moving_target_axis/ACP_IDX]
-  set_property -dict [ list \
-HDL_ATTRIBUTE.DEBUG {true} \
- ] [get_bd_nets radar_sim_moving_target_axis_ACP_IDX]
   connect_bd_net -net radar_sim_moving_target_axis_ACP_POS [get_bd_pins DBG_MT_ACP_POS] [get_bd_pins radar_sim_ctrl_axi/MT_ACP_POS] [get_bd_pins radar_sim_moving_target_axis/ACP_POS]
   set_property -dict [ list \
 HDL_ATTRIBUTE.DEBUG {true} \
@@ -419,91 +411,89 @@ HDL_ATTRIBUTE.DEBUG {true} \
   regenerate_bd_layout -hierarchy [get_bd_cells /radar_sim_subsytem/radar_simulator] -layout_string {
    guistr: "# # String gsaved with Nlview 6.6.5b  2016-09-06 bk=1.3687 VDI=39 GEI=35 GUI=JA:1.6
 #  -string -flagsOSRD
-preplace port DBG_MT_READY -pg 1 -y 780 -defaultsOSRD
-preplace port DBG_MT_DATA_VALID -pg 1 -y 640 -defaultsOSRD
-preplace port DBG_FT_DATA_VALID -pg 1 -y 410 -defaultsOSRD
-preplace port S_CTRL_AXI_ARESETN -pg 1 -y 950 -defaultsOSRD
-preplace port SIM_FT_SIG -pg 1 -y 1040 -defaultsOSRD
-preplace port S_CTRL_AXI -pg 1 -y 90 -defaultsOSRD
-preplace port ACLK -pg 1 -y 240 -defaultsOSRD
-preplace port SIM_EN -pg 1 -y 180 -defaultsOSRD
-preplace port RADAR_TRIG_PE -pg 1 -y 200 -defaultsOSRD
-preplace port DBG_FT_READY -pg 1 -y 580 -defaultsOSRD
-preplace port SIM_MT_SIG -pg 1 -y 920 -defaultsOSRD
-preplace port S_MT_AXIS -pg 1 -y 1070 -defaultsOSRD
-preplace port RADAR_ARP_PE -pg 1 -y 110 -defaultsOSRD
-preplace port DBG_MT_VALID -pg 1 -y 800 -defaultsOSRD
-preplace port SIM_CAL -pg 1 -y 20 -defaultsOSRD
-preplace port DBG_FT_VALID -pg 1 -y 600 -defaultsOSRD
-preplace port S_FT_AXIS -pg 1 -y 930 -defaultsOSRD
-preplace port RADAR_ACP_PE -pg 1 -y 130 -defaultsOSRD
-preplace port USEC_PE -pg 1 -y 220 -defaultsOSRD
-preplace portBus DBG_MT_ACP_CNT -pg 1 -y 820 -defaultsOSRD
-preplace portBus DBG_FT_ACP_POS -pg 1 -y 450 -defaultsOSRD
-preplace portBus DBG_FT_ACP_CNT -pg 1 -y 620 -defaultsOSRD
-preplace portBus DBG_MT_ACP_POS -pg 1 -y 680 -defaultsOSRD
-preplace portBus DBG_MT_ACP_IDX -pg 1 -y 660 -defaultsOSRD
-preplace portBus DBG_FT_ACP_IDX -pg 1 -y 430 -defaultsOSRD
-preplace inst radar_sim_moving_target_axis -pg 1 -lvl 3 -y 760 -defaultsOSRD
-preplace inst axis_dwidth_converter_mt -pg 1 -lvl 1 -y 1090 -defaultsOSRD
-preplace inst radar_sim_ctrl_axi -pg 1 -lvl 2 -y 210 -defaultsOSRD
-preplace inst signal_generator_mt -pg 1 -lvl 2 -y 560 -defaultsOSRD
-preplace inst radar_statistics -pg 1 -lvl 1 -y 190 -defaultsOSRD
-preplace inst axis_data_fifo_mt -pg 1 -lvl 2 -y 1110 -defaultsOSRD
-preplace inst axis_dwidth_converter_ft -pg 1 -lvl 1 -y 950 -defaultsOSRD
-preplace inst axis_data_fifo_ft -pg 1 -lvl 2 -y 970 -defaultsOSRD
-preplace inst signal_generator_ft -pg 1 -lvl 2 -y 820 -defaultsOSRD
-preplace inst mti_mux -pg 1 -lvl 3 -y 920 -defaultsOSRD
-preplace inst norm_mux -pg 1 -lvl 3 -y 1040 -defaultsOSRD
-preplace inst radar_sim_fixed_target_axis -pg 1 -lvl 3 -y 560 -defaultsOSRD
-preplace inst ground -pg 1 -lvl 2 -y 700 -defaultsOSRD
-preplace netloc S_CTRL_AXI_1 1 0 2 NJ 90 NJ
-preplace netloc radar_sim_moving_target_axis_DBG_READY 1 3 1 NJ
-preplace netloc radar_statistics_RADAR_ACP_CNT 1 1 2 410 460 870
-preplace netloc axis_data_fifo_ft_M_AXIS 1 2 1 810
-preplace netloc radar_sim_moving_target_axis_DATA_VALID 1 1 3 450 440 NJ 440 1300
-preplace netloc radar_sim_moving_target_axis_BANK 1 1 3 460 450 NJ 450 1280
-preplace netloc radar_sim_fixed_target_axis_ACP_IDX 1 1 3 430 390 NJ 390 1330
-preplace netloc radar_sim_ctrl_axi_0_RECAL 1 0 3 50 10 NJ 10 820
+preplace port DBG_MT_READY -pg 1 -y 130 -defaultsOSRD
+preplace port DBG_MT_DATA_VALID -pg 1 -y 20 -defaultsOSRD
+preplace port DBG_FT_DATA_VALID -pg 1 -y 270 -defaultsOSRD
+preplace port S_CTRL_AXI_ARESETN -pg 1 -y 90 -defaultsOSRD
+preplace port SIM_FT_SIG -pg 1 -y 860 -defaultsOSRD
+preplace port S_CTRL_AXI -pg 1 -y 530 -defaultsOSRD
+preplace port ACLK -pg 1 -y 270 -defaultsOSRD
+preplace port SIM_EN -pg 1 -y 470 -defaultsOSRD
+preplace port RADAR_TRIG_PE -pg 1 -y 660 -defaultsOSRD
+preplace port DBG_FT_READY -pg 1 -y 330 -defaultsOSRD
+preplace port SIM_MT_SIG -pg 1 -y 980 -defaultsOSRD
+preplace port S_MT_AXIS -pg 1 -y 50 -defaultsOSRD
+preplace port RADAR_ARP_PE -pg 1 -y 550 -defaultsOSRD
+preplace port DBG_MT_VALID -pg 1 -y 150 -defaultsOSRD
+preplace port SIM_CAL -pg 1 -y 450 -defaultsOSRD
+preplace port DBG_FT_VALID -pg 1 -y 350 -defaultsOSRD
+preplace port S_FT_AXIS -pg 1 -y 250 -defaultsOSRD
+preplace port RADAR_ACP_PE -pg 1 -y 570 -defaultsOSRD
+preplace port USEC_PE -pg 1 -y 680 -defaultsOSRD
+preplace portBus DBG_MT_ACP_CNT -pg 1 -y 170 -defaultsOSRD
+preplace portBus DBG_FT_ACP_POS -pg 1 -y 290 -defaultsOSRD
+preplace portBus DBG_FT_ACP_CNT -pg 1 -y 370 -defaultsOSRD
+preplace portBus DBG_ACP_IDX -pg 1 -y 670 -defaultsOSRD
+preplace portBus DBG_MT_ACP_POS -pg 1 -y 90 -defaultsOSRD
+preplace inst radar_sim_moving_target_axis -pg 1 -lvl 3 -y 120 -defaultsOSRD
+preplace inst axis_dwidth_converter_mt -pg 1 -lvl 1 -y 70 -defaultsOSRD
+preplace inst radar_sim_ctrl_axi -pg 1 -lvl 3 -y 630 -defaultsOSRD
+preplace inst signal_generator_mt -pg 1 -lvl 3 -y 1040 -defaultsOSRD
+preplace inst radar_statistics -pg 1 -lvl 2 -y 650 -defaultsOSRD
+preplace inst axis_data_fifo_mt -pg 1 -lvl 2 -y 90 -defaultsOSRD
+preplace inst axis_dwidth_converter_ft -pg 1 -lvl 1 -y 270 -defaultsOSRD
+preplace inst axis_data_fifo_ft -pg 1 -lvl 2 -y 290 -defaultsOSRD
+preplace inst signal_generator_ft -pg 1 -lvl 3 -y 880 -defaultsOSRD
+preplace inst mti_mux -pg 1 -lvl 4 -y 980 -defaultsOSRD
+preplace inst norm_mux -pg 1 -lvl 4 -y 860 -defaultsOSRD
+preplace inst radar_sim_fixed_target_axis -pg 1 -lvl 3 -y 320 -defaultsOSRD
+preplace inst ground -pg 1 -lvl 3 -y 1160 -defaultsOSRD
+preplace netloc S_CTRL_AXI_1 1 0 3 NJ 530 NJ 530 NJ
+preplace netloc radar_sim_moving_target_axis_DBG_READY 1 3 2 NJ 130 NJ
+preplace netloc radar_statistics_RADAR_ACP_CNT 1 2 1 620
+preplace netloc axis_data_fifo_ft_M_AXIS 1 2 1 N
+preplace netloc radar_sim_moving_target_axis_DATA_VALID 1 2 3 690 10 1150 10 1360J
+preplace netloc radar_sim_moving_target_axis_BANK 1 2 2 720 790 1110
+preplace netloc radar_sim_ctrl_axi_0_RECAL 1 1 3 280 440 NJ 440 1090
 preplace netloc axis_dwidth_converter_0_M_AXIS 1 1 1 N
-preplace netloc radar_statistics_0_RADAR_TRIG_US 1 1 1 390
-preplace netloc mux_2_1_0_M_OUT 1 3 1 NJ
-preplace netloc radar_sim_ctrl_axi_0_MTI_EN 1 2 1 840
-preplace netloc radar_sim_ctrl_axi_0_SIM_EN 1 2 2 920 180 NJ
+preplace netloc radar_statistics_0_RADAR_TRIG_US 1 2 1 680
+preplace netloc mux_2_1_0_M_OUT 1 4 1 NJ
+preplace netloc radar_sim_ctrl_axi_0_MTI_EN 1 3 1 1140
+preplace netloc radar_sim_ctrl_axi_0_SIM_EN 1 2 3 710 470 1120 470 NJ
 preplace netloc axis_data_fifo_mt_axis_wr_data_count 1 2 1 N
-preplace netloc radar_sim_fixed_target_axis_DBG_VALID 1 3 1 NJ
-preplace netloc radar_sim_fixed_target_axis_DBG_READY 1 3 1 NJ
-preplace netloc mux_2_1_1_M_OUT 1 3 1 NJ
-preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 0 3 20 330 390 650 900
-preplace netloc RadarStatistics_0_CALIBRATED 1 1 3 390 20 NJ 20 NJ
-preplace netloc radar_statistics_0_RADAR_ARP_US 1 1 1 410
-preplace netloc RADAR_TRIG_1 1 0 2 50 800 410
-preplace netloc RADAR_ACP_1 1 0 3 40 40 410 40 890
-preplace netloc radar_sim_fixed_target_axis_BANK 1 1 3 430 420 NJ 420 1290
-preplace netloc radar_sim_moving_target_axis_ACP_IDX 1 1 3 440 400 NJ 400 1340
+preplace netloc radar_sim_fixed_target_axis_DBG_VALID 1 3 2 NJ 350 NJ
+preplace netloc radar_sim_fixed_target_axis_DBG_READY 1 3 2 NJ 330 NJ
+preplace netloc mux_2_1_1_M_OUT 1 4 1 NJ
+preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 0 3 30 180 280 180 650
+preplace netloc RadarStatistics_0_CALIBRATED 1 2 3 640 450 NJ 450 NJ
+preplace netloc radar_statistics_0_RADAR_ARP_US 1 2 1 660
+preplace netloc RADAR_TRIG_1 1 0 3 NJ 660 240 860 640
+preplace netloc RADAR_ACP_1 1 0 3 10J 640 260 540 680
+preplace netloc radar_sim_fixed_target_axis_BANK 1 2 2 730 780 1100
 preplace netloc axis_data_fifo_mt_axis_data_count 1 2 1 N
-preplace netloc radar_sim_moving_target_axis_ACP_POS 1 1 3 460 380 NJ 380 1350
-preplace netloc radar_sim_fixed_target_axis_DATA_VALID 1 1 3 440 430 NJ 430 1320
-preplace netloc radar_sim_ctrl_axi_0_NORM_EN 1 2 1 860
-preplace netloc USEC_1 1 0 2 40 840 420
-preplace netloc radar_sim_fixed_target_axis_ACP_POS 1 1 3 450 410 NJ 410 1310
-preplace netloc signal_generator_mt_GEN_SIGNAL 1 2 1 830
-preplace netloc ground_dout 1 2 1 820
+preplace netloc radar_sim_ctrl_axi_ACP_IDX 1 3 2 NJ 670 NJ
+preplace netloc radar_sim_moving_target_axis_ACP_POS 1 2 3 720 460 1140 90 NJ
+preplace netloc radar_sim_fixed_target_axis_DATA_VALID 1 2 3 700 430 1150 430 1360J
+preplace netloc radar_sim_ctrl_axi_0_NORM_EN 1 3 1 1120
+preplace netloc USEC_1 1 0 3 NJ 680 230 900 620
+preplace netloc radar_sim_fixed_target_axis_ACP_POS 1 2 3 730 480 1130 290 NJ
+preplace netloc signal_generator_mt_GEN_SIGNAL 1 3 1 1150
+preplace netloc ground_dout 1 3 1 1140
 preplace netloc axis_data_fifo_ft_axis_rd_data_count 1 2 1 N
 preplace netloc axis_data_fifo_ft_axis_data_count 1 2 1 N
-preplace netloc radar_sim_moving_target_axis_DBG_VALID 1 3 1 NJ
-preplace netloc processing_system7_0_FCLK_CLK0 1 0 3 30 310 400 470 850
+preplace netloc radar_sim_moving_target_axis_DBG_VALID 1 3 2 NJ 150 NJ
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 3 20 920 250 920 670
 preplace netloc axis_data_fifo_ft_axis_wr_data_count 1 2 1 N
 preplace netloc axi_dma_mt_M_AXIS_MM2S 1 0 1 NJ
 preplace netloc axis_dwidth_converter_1_M_AXIS 1 1 1 N
-preplace netloc axis_data_fifo_mt_M_AXIS 1 2 1 880
-preplace netloc radar_sim_fixed_target_axis_DBG_ACP_CNT 1 3 1 NJ
-preplace netloc RADAR_ARP_1 1 0 3 20 30 460 30 910
+preplace netloc axis_data_fifo_mt_M_AXIS 1 2 1 N
+preplace netloc radar_sim_fixed_target_axis_DBG_ACP_CNT 1 3 2 NJ 370 NJ
+preplace netloc RADAR_ARP_1 1 0 3 NJ 550 270 550 630
 preplace netloc axi_dma_ft_M_AXIS_MM2S 1 0 1 NJ
-preplace netloc radar_sim_moving_target_axis_DBG_ACP_CNT 1 3 1 NJ
-preplace netloc signal_generator_ft_GEN_SIGNAL 1 2 1 800
+preplace netloc radar_sim_moving_target_axis_DBG_ACP_CNT 1 3 2 NJ 170 NJ
+preplace netloc signal_generator_ft_GEN_SIGNAL 1 3 1 N
 preplace netloc axis_data_fifo_mt_axis_rd_data_count 1 2 1 N
-levelinfo -pg 1 0 220 640 1100 1380 -top 0 -bot 1190
+levelinfo -pg 1 -10 130 450 910 1260 1380 -top 0 -bot 1210
 ",
 }
 
@@ -708,58 +698,6 @@ CONFIG.DIVIDER {100} \
   connect_bd_net -net trig_mux_M_OUT [get_bd_pins TRIG] [get_bd_pins trig_ed/async_sig] [get_bd_pins trig_mux/M_OUT]
   connect_bd_net -net usec_divider_OUT_SIG [get_bd_pins USEC_CLK] [get_bd_pins usec_divider/OUT_SIG] [get_bd_pins usec_ed/async_sig]
 
-  # Perform GUI Layout
-  regenerate_bd_layout -hierarchy [get_bd_cells /radar_sim_subsytem/radar_signal_selector] -layout_string {
-   guistr: "# # String gsaved with Nlview 6.6.5b  2016-09-06 bk=1.3687 VDI=39 GEI=35 GUI=JA:1.6
-#  -string -flagsOSRD
-preplace port EXT_RADAR_ARP -pg 1 -y 70 -defaultsOSRD
-preplace port TRIG_SEL -pg 1 -y 290 -defaultsOSRD
-preplace port USEC_CLK -pg 1 -y 390 -defaultsOSRD
-preplace port SYS_CLK -pg 1 -y 460 -defaultsOSRD
-preplace port EXT_RADAR_TRIG -pg 1 -y 310 -defaultsOSRD
-preplace port RADAR_TRIG_PE -pg 1 -y 320 -defaultsOSRD
-preplace port RADAR_ARP_PE -pg 1 -y 80 -defaultsOSRD
-preplace port ARP -pg 1 -y 30 -defaultsOSRD
-preplace port TRIG -pg 1 -y 270 -defaultsOSRD
-preplace port ACP_SEL -pg 1 -y 170 -defaultsOSRD
-preplace port EXT_RADAR_ACP -pg 1 -y 190 -defaultsOSRD
-preplace port ACP -pg 1 -y 150 -defaultsOSRD
-preplace port ARP_SEL -pg 1 -y 50 -defaultsOSRD
-preplace port RADAR_ACP_PE -pg 1 -y 200 -defaultsOSRD
-preplace port USEC_PE -pg 1 -y 440 -defaultsOSRD
-preplace inst trig_mux -pg 1 -lvl 2 -y 310 -defaultsOSRD
-preplace inst acp_generator_0 -pg 1 -lvl 1 -y 240 -defaultsOSRD
-preplace inst acp_mux -pg 1 -lvl 2 -y 190 -defaultsOSRD
-preplace inst usec_divider -pg 1 -lvl 2 -y 410 -defaultsOSRD
-preplace inst arp_generator_0 -pg 1 -lvl 1 -y 120 -defaultsOSRD
-preplace inst usec_ed -pg 1 -lvl 3 -y 450 -defaultsOSRD
-preplace inst arp_ed_0 -pg 1 -lvl 3 -y 90 -defaultsOSRD
-preplace inst trig_ed -pg 1 -lvl 3 -y 330 -defaultsOSRD
-preplace inst acp_ed -pg 1 -lvl 3 -y 210 -defaultsOSRD
-preplace inst trig_generator_0 -pg 1 -lvl 1 -y 360 -defaultsOSRD
-preplace inst arp_mux -pg 1 -lvl 2 -y 70 -defaultsOSRD
-preplace netloc ARP_SEL_1 1 0 2 NJ 50 NJ
-preplace netloc trig_mux_M_OUT 1 2 2 450 270 NJ
-preplace netloc edge_detect_0_rise 1 3 1 NJ
-preplace netloc EXT_RADAR_TRIG_1 1 0 2 NJ 310 NJ
-preplace netloc ACP_SEL_1 1 0 2 NJ 170 NJ
-preplace netloc TRIG_SEL_1 1 0 2 NJ 290 NJ
-preplace netloc trig_generator_0_RADAR_TRIG 1 1 1 240J
-preplace netloc arp_generator_0_RADAR_ARP 1 1 1 240J
-preplace netloc arp_mux_M_OUT 1 2 2 440 30 NJ
-preplace netloc acp_ed_rise 1 3 1 NJ
-preplace netloc usec_divider_OUT_SIG 1 2 2 450 390 NJ
-preplace netloc EXT_RADAR_ARP_1 1 0 2 NJ 70 NJ
-preplace netloc EXT_RADAR_ACP_1 1 0 2 NJ 190 NJ
-preplace netloc arp_ed_0_rise 1 3 1 NJ
-preplace netloc acp_mux_M_OUT 1 2 2 450 150 NJ
-preplace netloc processing_system7_0_FCLK_CLK0 1 0 3 20 460 240 460 440
-preplace netloc acp_generator_0_RADAR_ACP 1 1 1 240J
-preplace netloc trig_ed_rise 1 3 1 NJ
-levelinfo -pg 1 0 130 340 560 690 -top 0 -bot 510
-",
-}
-
   # Restore current instance
   current_bd_instance $oldCurInst
 }
@@ -807,18 +745,6 @@ proc create_hier_cell_radar_sim_subsytem { parentCell nameHier } {
   create_bd_pin -dir I -type clk ACLK
   create_bd_pin -dir I ACP_SEL
   create_bd_pin -dir I ARP_SEL
-  create_bd_pin -dir O -from 31 -to 0 DBG_FT_ACP_CNT
-  create_bd_pin -dir O -from 31 -to 0 DBG_FT_ACP_IDX
-  create_bd_pin -dir O -from 31 -to 0 DBG_FT_ACP_POS
-  create_bd_pin -dir O DBG_FT_DATA_VALID
-  create_bd_pin -dir O DBG_FT_READY
-  create_bd_pin -dir O DBG_FT_VALID
-  create_bd_pin -dir O -from 31 -to 0 DBG_MT_ACP_CNT
-  create_bd_pin -dir O -from 31 -to 0 DBG_MT_ACP_IDX
-  create_bd_pin -dir O -from 31 -to 0 DBG_MT_ACP_POS
-  create_bd_pin -dir O DBG_MT_DATA_VALID
-  create_bd_pin -dir O DBG_MT_READY
-  create_bd_pin -dir O DBG_MT_VALID
   create_bd_pin -dir I EXT_RADAR_ACP
   create_bd_pin -dir I EXT_RADAR_ARP
   create_bd_pin -dir I EXT_RADAR_TRIG
@@ -870,18 +796,6 @@ CONFIG.NUM_PORTS {8} \
   connect_bd_net -net radar_sim_axi_0_SIM_MT_SIG [get_bd_pins SIM_MT_SIG] [get_bd_pins radar_simulator/SIM_MT_SIG]
   connect_bd_net -net radar_simulator_1_RADAR_CAL [get_bd_pins led_concat/In1] [get_bd_pins radar_simulator/SIM_CAL]
   connect_bd_net -net radar_simulator_1_SIM_EN [get_bd_pins SIM_EN] [get_bd_pins led_concat/In0] [get_bd_pins radar_simulator/SIM_EN]
-  connect_bd_net -net radar_simulator_DBG_FT_ACP_CNT [get_bd_pins DBG_FT_ACP_CNT] [get_bd_pins radar_simulator/DBG_FT_ACP_CNT]
-  connect_bd_net -net radar_simulator_DBG_FT_ACP_IDX [get_bd_pins DBG_FT_ACP_IDX] [get_bd_pins radar_simulator/DBG_FT_ACP_IDX]
-  connect_bd_net -net radar_simulator_DBG_FT_ACP_POS [get_bd_pins DBG_FT_ACP_POS] [get_bd_pins radar_simulator/DBG_FT_ACP_POS]
-  connect_bd_net -net radar_simulator_DBG_FT_DATA_VALID [get_bd_pins DBG_FT_DATA_VALID] [get_bd_pins radar_simulator/DBG_FT_DATA_VALID]
-  connect_bd_net -net radar_simulator_DBG_FT_READY [get_bd_pins DBG_FT_READY] [get_bd_pins radar_simulator/DBG_FT_READY]
-  connect_bd_net -net radar_simulator_DBG_FT_VALID [get_bd_pins DBG_FT_VALID] [get_bd_pins radar_simulator/DBG_FT_VALID]
-  connect_bd_net -net radar_simulator_DBG_MT_ACP_CNT [get_bd_pins DBG_MT_ACP_CNT] [get_bd_pins radar_simulator/DBG_MT_ACP_CNT]
-  connect_bd_net -net radar_simulator_DBG_MT_ACP_IDX [get_bd_pins DBG_MT_ACP_IDX] [get_bd_pins radar_simulator/DBG_MT_ACP_IDX]
-  connect_bd_net -net radar_simulator_DBG_MT_ACP_POS [get_bd_pins DBG_MT_ACP_POS] [get_bd_pins radar_simulator/DBG_MT_ACP_POS]
-  connect_bd_net -net radar_simulator_DBG_MT_DATA_VALID [get_bd_pins DBG_MT_DATA_VALID] [get_bd_pins radar_simulator/DBG_MT_DATA_VALID]
-  connect_bd_net -net radar_simulator_DBG_MT_READY [get_bd_pins DBG_MT_READY] [get_bd_pins radar_simulator/DBG_MT_READY]
-  connect_bd_net -net radar_simulator_DBG_MT_VALID [get_bd_pins DBG_MT_VALID] [get_bd_pins radar_simulator/DBG_MT_VALID]
   connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn [get_bd_pins S_CTRL_AXI_ARESETN] [get_bd_pins radar_simulator/S_CTRL_AXI_ARESETN]
   connect_bd_net -net trig_mux_M_OUT [get_bd_pins radar_signal_selector/RADAR_TRIG_PE] [get_bd_pins radar_simulator/RADAR_TRIG_PE]
 
@@ -889,77 +803,53 @@ CONFIG.NUM_PORTS {8} \
   regenerate_bd_layout -hierarchy [get_bd_cells /radar_sim_subsytem] -layout_string {
    guistr: "# # String gsaved with Nlview 6.6.5b  2016-09-06 bk=1.3687 VDI=39 GEI=35 GUI=JA:1.6
 #  -string -flagsOSRD
-preplace port DBG_MT_READY -pg 1 -y 310 -defaultsOSRD
-preplace port DBG_MT_DATA_VALID -pg 1 -y 250 -defaultsOSRD
-preplace port RADAR_ACP -pg 1 -y 460 -defaultsOSRD
-preplace port DBG_FT_DATA_VALID -pg 1 -y 190 -defaultsOSRD
-preplace port EXT_RADAR_ARP -pg 1 -y 490 -defaultsOSRD
-preplace port TRIG_SEL -pg 1 -y 590 -defaultsOSRD
-preplace port S_CTRL_AXI_ARESETN -pg 1 -y 260 -defaultsOSRD
+preplace port RADAR_ACP -pg 1 -y 430 -defaultsOSRD
+preplace port EXT_RADAR_ARP -pg 1 -y 470 -defaultsOSRD
+preplace port TRIG_SEL -pg 1 -y 680 -defaultsOSRD
+preplace port S_CTRL_AXI_ARESETN -pg 1 -y 250 -defaultsOSRD
 preplace port SIM_FT_SIG -pg 1 -y 90 -defaultsOSRD
-preplace port S_CTRL_AXI -pg 1 -y 120 -defaultsOSRD
-preplace port USEC_CLK -pg 1 -y 520 -defaultsOSRD
-preplace port EXT_RADAR_TRIG -pg 1 -y 510 -defaultsOSRD
-preplace port ACLK -pg 1 -y 180 -defaultsOSRD
+preplace port S_CTRL_AXI -pg 1 -y 110 -defaultsOSRD
+preplace port USEC_CLK -pg 1 -y 470 -defaultsOSRD
+preplace port EXT_RADAR_TRIG -pg 1 -y 490 -defaultsOSRD
+preplace port ACLK -pg 1 -y 170 -defaultsOSRD
 preplace port SIM_EN -pg 1 -y 70 -defaultsOSRD
-preplace port DBG_FT_READY -pg 1 -y 130 -defaultsOSRD
 preplace port SIM_MT_SIG -pg 1 -y 110 -defaultsOSRD
-preplace port S_MT_AXIS -pg 1 -y 160 -defaultsOSRD
-preplace port DBG_MT_VALID -pg 1 -y 330 -defaultsOSRD
-preplace port DBG_FT_VALID -pg 1 -y 150 -defaultsOSRD
-preplace port S_FT_AXIS -pg 1 -y 140 -defaultsOSRD
-preplace port ACP_SEL -pg 1 -y 570 -defaultsOSRD
-preplace port RADAR_TRIG -pg 1 -y 500 -defaultsOSRD
-preplace port RADAR_ARP -pg 1 -y 480 -defaultsOSRD
-preplace port EXT_RADAR_ACP -pg 1 -y 470 -defaultsOSRD
-preplace port ARP_SEL -pg 1 -y 550 -defaultsOSRD
-preplace portBus DBG_MT_ACP_CNT -pg 1 -y 350 -defaultsOSRD
-preplace portBus DBG_FT_ACP_POS -pg 1 -y 230 -defaultsOSRD
-preplace portBus DBG_FT_ACP_CNT -pg 1 -y 170 -defaultsOSRD
-preplace portBus DBG_MT_ACP_POS -pg 1 -y 290 -defaultsOSRD
-preplace portBus LEDS -pg 1 -y 640 -defaultsOSRD
-preplace portBus DBG_MT_ACP_IDX -pg 1 -y 270 -defaultsOSRD
-preplace portBus DBG_FT_ACP_IDX -pg 1 -y 210 -defaultsOSRD
-preplace inst led_concat -pg 1 -lvl 2 -y 640 -defaultsOSRD
-preplace inst radar_simulator -pg 1 -lvl 1 -y 200 -defaultsOSRD
-preplace inst radar_signal_selector -pg 1 -lvl 1 -y 530 -defaultsOSRD
-preplace netloc radar_simulator_1_SIM_EN 1 1 2 530 70 NJ
-preplace netloc radar_simulator_DBG_MT_DATA_VALID 1 1 2 NJ 250 NJ
-preplace netloc trig_mux_M_OUT 1 0 2 60 660 450
-preplace netloc radar_signal_selector_USEC_CLK 1 1 2 520J 520 NJ
-preplace netloc radar_simulator_DBG_FT_READY 1 1 2 NJ 130 NJ
-preplace netloc radar_simulator_DBG_MT_ACP_POS 1 1 2 NJ 290 NJ
+preplace port S_MT_AXIS -pg 1 -y 150 -defaultsOSRD
+preplace port S_FT_AXIS -pg 1 -y 130 -defaultsOSRD
+preplace port ACP_SEL -pg 1 -y 660 -defaultsOSRD
+preplace port RADAR_TRIG -pg 1 -y 490 -defaultsOSRD
+preplace port RADAR_ARP -pg 1 -y 450 -defaultsOSRD
+preplace port EXT_RADAR_ACP -pg 1 -y 450 -defaultsOSRD
+preplace port ARP_SEL -pg 1 -y 640 -defaultsOSRD
+preplace portBus LEDS -pg 1 -y 610 -defaultsOSRD
+preplace inst led_concat -pg 1 -lvl 2 -y 610 -defaultsOSRD
+preplace inst radar_simulator -pg 1 -lvl 1 -y 190 -defaultsOSRD
+preplace inst radar_signal_selector -pg 1 -lvl 1 -y 510 -defaultsOSRD
+preplace netloc radar_simulator_1_SIM_EN 1 1 2 520 70 NJ
+preplace netloc trig_mux_M_OUT 1 0 2 60 650 430
+preplace netloc radar_signal_selector_USEC_CLK 1 1 2 470J 470 NJ
 preplace netloc radar_sim_axi_0_SIM_MT_SIG 1 1 2 NJ 110 NJ
-preplace netloc radar_simulator_DBG_FT_ACP_IDX 1 1 2 NJ 210 NJ
-preplace netloc ACP_SEL_1 1 0 2 30 690 NJ
+preplace netloc ACP_SEL_1 1 0 2 20 660 NJ
 preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 0 1 NJ
-preplace netloc radar_signal_selector_TRIG 1 1 2 510 500 NJ
-preplace netloc TRIG_SEL_1 1 0 2 20 710 NJ
+preplace netloc radar_signal_selector_TRIG 1 1 2 510 490 NJ
+preplace netloc TRIG_SEL_1 1 0 2 30 680 NJ
 preplace netloc RADAR_TRIG_1 1 0 1 NJ
 preplace netloc RADAR_ACP_1 1 0 1 NJ
-preplace netloc radar_simulator_DBG_MT_READY 1 1 2 NJ 310 NJ
-preplace netloc arp_mux_M_OUT 1 0 2 80 400 470
-preplace netloc radar_simulator_DBG_MT_VALID 1 1 2 NJ 330 NJ
-preplace netloc radar_simulator_DBG_FT_DATA_VALID 1 1 2 NJ 190 NJ
-preplace netloc radar_signal_selector_USEC 1 0 2 70 680 440
-preplace netloc radar_signal_selector_ARP 1 1 2 490 480 NJ
-preplace netloc SW_0_1 1 0 2 40 670 NJ
+preplace netloc arp_mux_M_OUT 1 0 2 40 670 460
+preplace netloc radar_signal_selector_USEC 1 0 2 70 380 450
+preplace netloc radar_signal_selector_ARP 1 1 2 490 460 710J
+preplace netloc SW_0_1 1 0 2 10 640 NJ
 preplace netloc led_concat_dout 1 2 1 NJ
-preplace netloc radar_simulator_DBG_FT_ACP_CNT 1 1 2 NJ 170 NJ
-preplace netloc acp_mux_M_OUT 1 0 2 50 650 460
+preplace netloc acp_mux_M_OUT 1 0 2 50 630 440
 preplace netloc radar_sim_axi_0_SIM_FT_SIG 1 1 2 NJ 90 NJ
-preplace netloc radar_simulator_DBG_MT_ACP_CNT 1 1 2 NJ 350 NJ
-preplace netloc radar_simulator_DBG_FT_VALID 1 1 2 NJ 150 NJ
-preplace netloc processing_system7_0_FCLK_CLK0 1 0 1 40
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 1 10
 preplace netloc axi_dma_mt_M_AXIS_MM2S 1 0 1 NJ
 preplace netloc ps7_0_axi_periph_M00_AXI 1 0 1 NJ
-preplace netloc radar_simulator_DBG_FT_ACP_POS 1 1 2 NJ 230 NJ
 preplace netloc RADAR_ARP_1 1 0 1 NJ
 preplace netloc axi_dma_ft_M_AXIS_MM2S 1 0 1 NJ
-preplace netloc radar_simulator_DBG_MT_ACP_IDX 1 1 2 NJ 270 NJ
 preplace netloc radar_simulator_1_RADAR_CAL 1 1 1 480
-preplace netloc radar_signal_selector_ACP 1 1 2 500 460 NJ
-levelinfo -pg 1 0 260 630 750 -top 0 -bot 760
+preplace netloc radar_signal_selector_ACP 1 1 2 500 440 710J
+levelinfo -pg 1 -10 250 620 740 -top 0 -bot 800
 ",
 }
 
@@ -2366,29 +2256,6 @@ CONFIG.NUM_MI {3} \
   # Create instance: rst_ps7_0_100M, and set properties
   set rst_ps7_0_100M [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_ps7_0_100M ]
 
-  # Create instance: system_ila, and set properties
-  set system_ila [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.0 system_ila ]
-  set_property -dict [ list \
-CONFIG.C_BRAM_CNT {3.5} \
-CONFIG.C_DATA_DEPTH {8192} \
-CONFIG.C_MON_TYPE {NATIVE} \
-CONFIG.C_NUM_OF_PROBES {14} \
-CONFIG.C_PROBE0_TYPE {0} \
-CONFIG.C_PROBE10_TYPE {0} \
-CONFIG.C_PROBE11_TYPE {0} \
-CONFIG.C_PROBE12_TYPE {0} \
-CONFIG.C_PROBE13_TYPE {0} \
-CONFIG.C_PROBE1_TYPE {0} \
-CONFIG.C_PROBE2_TYPE {0} \
-CONFIG.C_PROBE3_TYPE {0} \
-CONFIG.C_PROBE4_TYPE {0} \
-CONFIG.C_PROBE5_TYPE {0} \
-CONFIG.C_PROBE6_TYPE {0} \
-CONFIG.C_PROBE7_TYPE {0} \
-CONFIG.C_PROBE8_TYPE {0} \
-CONFIG.C_PROBE9_TYPE {0} \
- ] $system_ila
-
   # Create interface connections
   connect_bd_intf_net -intf_net axi_dma_ft_M_AXIS_MM2S [get_bd_intf_pins axi_dma_ft/M_AXIS_MM2S] [get_bd_intf_pins radar_sim_subsytem/S_FT_AXIS]
   connect_bd_intf_net -intf_net axi_dma_ft_M_AXI_MM2S [get_bd_intf_pins axi_dma_ft/M_AXI_MM2S] [get_bd_intf_pins axi_mem_intercon/S01_AXI]
@@ -2416,29 +2283,16 @@ CONFIG.C_PROBE9_TYPE {0} \
   connect_bd_net -net axi_dma_ft_mm2s_introut [get_bd_pins axi_dma_ft/mm2s_introut] [get_bd_pins irq_concat/In1]
   connect_bd_net -net axi_dma_mt_mm2s_introut [get_bd_pins axi_dma_mt/mm2s_introut] [get_bd_pins irq_concat/In0]
   connect_bd_net -net irq_concat_dout [get_bd_pins irq_concat/dout] [get_bd_pins processing_system7_0/IRQ_F2P]
-  connect_bd_net -net led_concat_dout [get_bd_ports LEDS] [get_bd_pins radar_sim_subsytem/LEDS] [get_bd_pins system_ila/probe13]
+  connect_bd_net -net led_concat_dout [get_bd_ports LEDS] [get_bd_pins radar_sim_subsytem/LEDS]
   set_property -dict [ list \
 HDL_ATTRIBUTE.DEBUG {true} \
  ] [get_bd_nets led_concat_dout]
-  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins axi_dma_ft/m_axi_mm2s_aclk] [get_bd_pins axi_dma_ft/m_axi_sg_aclk] [get_bd_pins axi_dma_ft/s_axi_lite_aclk] [get_bd_pins axi_dma_mt/m_axi_mm2s_aclk] [get_bd_pins axi_dma_mt/m_axi_sg_aclk] [get_bd_pins axi_dma_mt/s_axi_lite_aclk] [get_bd_pins axi_mem_intercon/ACLK] [get_bd_pins axi_mem_intercon/M00_ACLK] [get_bd_pins axi_mem_intercon/S00_ACLK] [get_bd_pins axi_mem_intercon/S01_ACLK] [get_bd_pins axi_mem_intercon_1/ACLK] [get_bd_pins axi_mem_intercon_1/M00_ACLK] [get_bd_pins axi_mem_intercon_1/S00_ACLK] [get_bd_pins axi_mem_intercon_1/S01_ACLK] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP1_ACLK] [get_bd_pins ps7_0_axi_periph/ACLK] [get_bd_pins ps7_0_axi_periph/M00_ACLK] [get_bd_pins ps7_0_axi_periph/M01_ACLK] [get_bd_pins ps7_0_axi_periph/M02_ACLK] [get_bd_pins ps7_0_axi_periph/S00_ACLK] [get_bd_pins radar_sim_subsytem/ACLK] [get_bd_pins rst_ps7_0_100M/slowest_sync_clk] [get_bd_pins system_ila/clk]
+  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins axi_dma_ft/m_axi_mm2s_aclk] [get_bd_pins axi_dma_ft/m_axi_sg_aclk] [get_bd_pins axi_dma_ft/s_axi_lite_aclk] [get_bd_pins axi_dma_mt/m_axi_mm2s_aclk] [get_bd_pins axi_dma_mt/m_axi_sg_aclk] [get_bd_pins axi_dma_mt/s_axi_lite_aclk] [get_bd_pins axi_mem_intercon/ACLK] [get_bd_pins axi_mem_intercon/M00_ACLK] [get_bd_pins axi_mem_intercon/S00_ACLK] [get_bd_pins axi_mem_intercon/S01_ACLK] [get_bd_pins axi_mem_intercon_1/ACLK] [get_bd_pins axi_mem_intercon_1/M00_ACLK] [get_bd_pins axi_mem_intercon_1/S00_ACLK] [get_bd_pins axi_mem_intercon_1/S01_ACLK] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP1_ACLK] [get_bd_pins ps7_0_axi_periph/ACLK] [get_bd_pins ps7_0_axi_periph/M00_ACLK] [get_bd_pins ps7_0_axi_periph/M01_ACLK] [get_bd_pins ps7_0_axi_periph/M02_ACLK] [get_bd_pins ps7_0_axi_periph/S00_ACLK] [get_bd_pins radar_sim_subsytem/ACLK] [get_bd_pins rst_ps7_0_100M/slowest_sync_clk]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N [get_bd_pins processing_system7_0/FCLK_RESET0_N] [get_bd_pins rst_ps7_0_100M/ext_reset_in]
   connect_bd_net -net radar_signal_selector_USEC [get_bd_ports USEC_CLK] [get_bd_pins radar_sim_subsytem/USEC_CLK]
   connect_bd_net -net radar_sim_axi_0_SIM_FT_SIG [get_bd_ports SIM_FT_SIG] [get_bd_pins radar_sim_subsytem/SIM_FT_SIG]
   connect_bd_net -net radar_sim_axi_0_SIM_MT_SIG [get_bd_ports SIM_MT_SIG] [get_bd_pins radar_sim_subsytem/SIM_MT_SIG]
-  connect_bd_net -net radar_sim_subsytem_DBG_FT_ACP_CNT [get_bd_pins radar_sim_subsytem/DBG_FT_ACP_CNT] [get_bd_pins system_ila/probe9]
-  connect_bd_net -net radar_sim_subsytem_DBG_FT_ACP_IDX [get_bd_pins radar_sim_subsytem/DBG_FT_ACP_IDX] [get_bd_pins system_ila/probe1]
-  connect_bd_net -net radar_sim_subsytem_DBG_FT_ACP_POS [get_bd_pins radar_sim_subsytem/DBG_FT_ACP_POS] [get_bd_pins system_ila/probe4]
-  connect_bd_net -net radar_sim_subsytem_DBG_FT_DATA_VALID [get_bd_pins radar_sim_subsytem/DBG_FT_DATA_VALID] [get_bd_pins system_ila/probe5]
-  connect_bd_net -net radar_sim_subsytem_DBG_FT_READY [get_bd_pins radar_sim_subsytem/DBG_FT_READY] [get_bd_pins system_ila/probe7]
-  connect_bd_net -net radar_sim_subsytem_DBG_FT_VALID [get_bd_pins radar_sim_subsytem/DBG_FT_VALID] [get_bd_pins system_ila/probe8]
-  connect_bd_net -net radar_sim_subsytem_DBG_MT_ACP_CNT [get_bd_pins radar_sim_subsytem/DBG_MT_ACP_CNT] [get_bd_pins system_ila/probe12]
-  connect_bd_net -net radar_sim_subsytem_DBG_MT_ACP_IDX [get_bd_pins radar_sim_subsytem/DBG_MT_ACP_IDX] [get_bd_pins system_ila/probe2]
-  connect_bd_net -net radar_sim_subsytem_DBG_MT_ACP_POS [get_bd_pins radar_sim_subsytem/DBG_MT_ACP_POS] [get_bd_pins system_ila/probe3]
-  connect_bd_net -net radar_sim_subsytem_DBG_MT_DATA_VALID [get_bd_pins radar_sim_subsytem/DBG_MT_DATA_VALID] [get_bd_pins system_ila/probe6]
-  connect_bd_net -net radar_sim_subsytem_DBG_MT_READY [get_bd_pins radar_sim_subsytem/DBG_MT_READY] [get_bd_pins system_ila/probe10]
-  connect_bd_net -net radar_sim_subsytem_DBG_MT_VALID [get_bd_pins radar_sim_subsytem/DBG_MT_VALID] [get_bd_pins system_ila/probe11]
   connect_bd_net -net radar_sim_subsytem_RADAR_ARP [get_bd_ports ARP_OUT] [get_bd_pins radar_sim_subsytem/RADAR_ARP]
-  connect_bd_net -net radar_sim_subsytem_SIM_EN [get_bd_pins radar_sim_subsytem/SIM_EN] [get_bd_pins system_ila/probe0]
   connect_bd_net -net rst_ps7_0_100M_interconnect_aresetn [get_bd_pins axi_mem_intercon/ARESETN] [get_bd_pins axi_mem_intercon_1/ARESETN] [get_bd_pins ps7_0_axi_periph/ARESETN] [get_bd_pins rst_ps7_0_100M/interconnect_aresetn]
   connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn [get_bd_pins axi_dma_ft/axi_resetn] [get_bd_pins axi_dma_mt/axi_resetn] [get_bd_pins axi_mem_intercon/M00_ARESETN] [get_bd_pins axi_mem_intercon/S00_ARESETN] [get_bd_pins axi_mem_intercon/S01_ARESETN] [get_bd_pins axi_mem_intercon_1/M00_ARESETN] [get_bd_pins axi_mem_intercon_1/S00_ARESETN] [get_bd_pins axi_mem_intercon_1/S01_ARESETN] [get_bd_pins ps7_0_axi_periph/M00_ARESETN] [get_bd_pins ps7_0_axi_periph/M01_ARESETN] [get_bd_pins ps7_0_axi_periph/M02_ARESETN] [get_bd_pins ps7_0_axi_periph/S00_ARESETN] [get_bd_pins radar_sim_subsytem/S_CTRL_AXI_ARESETN] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn]
   connect_bd_net -net trig_mux_M_OUT [get_bd_ports TRIG_OUT] [get_bd_pins radar_sim_subsytem/RADAR_TRIG]
@@ -2456,78 +2310,65 @@ HDL_ATTRIBUTE.DEBUG {true} \
   regenerate_bd_layout -layout_string {
    guistr: "# # String gsaved with Nlview 6.6.5b  2016-09-06 bk=1.3687 VDI=39 GEI=35 GUI=JA:1.6
 #  -string -flagsOSRD
-preplace port RADAR_ACP -pg 1 -y 220 -defaultsOSRD
-preplace port DDR -pg 1 -y 670 -defaultsOSRD
-preplace port SW5 -pg 1 -y 280 -defaultsOSRD
-preplace port SIM_FT_SIG -pg 1 -y 110 -defaultsOSRD
-preplace port SW6 -pg 1 -y 320 -defaultsOSRD
-preplace port USEC_CLK -pg 1 -y 150 -defaultsOSRD
-preplace port SW7 -pg 1 -y 340 -defaultsOSRD
-preplace port SIM_MT_SIG -pg 1 -y 130 -defaultsOSRD
-preplace port ACP_OUT -pg 1 -y 50 -defaultsOSRD
-preplace port FIXED_IO -pg 1 -y 690 -defaultsOSRD
-preplace port TRIG_OUT -pg 1 -y 90 -defaultsOSRD
-preplace port RADAR_TRIG -pg 1 -y 260 -defaultsOSRD
-preplace port RADAR_ARP -pg 1 -y 240 -defaultsOSRD
-preplace port ARP_OUT -pg 1 -y 70 -defaultsOSRD
-preplace portBus LEDS -pg 1 -y 30 -defaultsOSRD
-preplace inst axi_dma_ft -pg 1 -lvl 3 -y 530 -defaultsOSRD
-preplace inst axi_mem_intercon_1 -pg 1 -lvl 4 -y 740 -defaultsOSRD
-preplace inst radar_sim_subsytem -pg 1 -lvl 4 -y 240 -defaultsOSRD
-preplace inst system_ila -pg 1 -lvl 5 -y 310 -defaultsOSRD
-preplace inst axi_dma_mt -pg 1 -lvl 3 -y 690 -defaultsOSRD
-preplace inst ps7_0_axi_periph -pg 1 -lvl 2 -y 600 -defaultsOSRD
-preplace inst rst_ps7_0_100M -pg 1 -lvl 1 -y 520 -defaultsOSRD
-preplace inst axi_mem_intercon -pg 1 -lvl 4 -y 1040 -defaultsOSRD
-preplace inst processing_system7_0 -pg 1 -lvl 5 -y 750 -defaultsOSRD
-preplace inst irq_concat -pg 1 -lvl 4 -y 550 -defaultsOSRD
+preplace port RADAR_ACP -pg 1 -y 780 -defaultsOSRD
+preplace port DDR -pg 1 -y 420 -defaultsOSRD
+preplace port SW5 -pg 1 -y 840 -defaultsOSRD
+preplace port SIM_FT_SIG -pg 1 -y 810 -defaultsOSRD
+preplace port SW6 -pg 1 -y 880 -defaultsOSRD
+preplace port USEC_CLK -pg 1 -y 850 -defaultsOSRD
+preplace port SW7 -pg 1 -y 900 -defaultsOSRD
+preplace port SIM_MT_SIG -pg 1 -y 830 -defaultsOSRD
+preplace port ACP_OUT -pg 1 -y 750 -defaultsOSRD
+preplace port FIXED_IO -pg 1 -y 440 -defaultsOSRD
+preplace port TRIG_OUT -pg 1 -y 790 -defaultsOSRD
+preplace port RADAR_TRIG -pg 1 -y 820 -defaultsOSRD
+preplace port RADAR_ARP -pg 1 -y 800 -defaultsOSRD
+preplace port ARP_OUT -pg 1 -y 770 -defaultsOSRD
+preplace portBus LEDS -pg 1 -y 730 -defaultsOSRD
+preplace inst axi_dma_ft -pg 1 -lvl 3 -y 190 -defaultsOSRD
+preplace inst axi_mem_intercon_1 -pg 1 -lvl 4 -y 550 -defaultsOSRD
+preplace inst radar_sim_subsytem -pg 1 -lvl 5 -y 800 -defaultsOSRD
+preplace inst axi_dma_mt -pg 1 -lvl 3 -y 350 -defaultsOSRD
+preplace inst ps7_0_axi_periph -pg 1 -lvl 2 -y 620 -defaultsOSRD
+preplace inst rst_ps7_0_100M -pg 1 -lvl 1 -y 540 -defaultsOSRD
+preplace inst axi_mem_intercon -pg 1 -lvl 4 -y 140 -defaultsOSRD
+preplace inst processing_system7_0 -pg 1 -lvl 5 -y 500 -defaultsOSRD
+preplace inst irq_concat -pg 1 -lvl 4 -y 330 -defaultsOSRD
 preplace netloc processing_system7_0_DDR 1 5 1 NJ
-preplace netloc ps7_0_axi_periph_M02_AXI 1 2 1 670
-preplace netloc radar_sim_subsytem_DBG_MT_ACP_POS 1 4 1 N
-preplace netloc SW_4_1 1 0 4 NJ 340 NJ 340 NJ 340 NJ
-preplace netloc trig_mux_M_OUT 1 4 2 1510J 90 NJ
-preplace netloc radar_sim_subsytem_SIM_EN 1 4 1 N
-preplace netloc radar_sim_axi_0_SIM_MT_SIG 1 4 2 1520J 80 2020J
-preplace netloc processing_system7_0_M_AXI_GP0 1 1 5 390 890 NJ 890 NJ 890 NJ 890 2010
-preplace netloc axi_mem_intercon_1_M00_AXI 1 4 1 N
-preplace netloc axi_dma_mt_M_AXI_SG 1 3 1 N
-preplace netloc axi_dma_ft_M_AXI_SG 1 3 1 1070
-preplace netloc radar_sim_subsytem_DBG_FT_ACP_POS 1 4 1 N
-preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 1 3 370 1050 690 1050 1100
-preplace netloc radar_sim_subsytem_DBG_FT_DATA_VALID 1 4 1 N
-preplace netloc SW_3_1 1 0 4 NJ 320 NJ 320 NJ 320 NJ
-preplace netloc processing_system7_0_FCLK_RESET0_N 1 0 6 20 400 NJ 400 NJ 400 1090J 490 1510J 500 2020
-preplace netloc axi_dma_ft_mm2s_introut 1 3 1 1080
-preplace netloc RADAR_TRIG_1 1 0 4 NJ 260 NJ 260 NJ 260 NJ
-preplace netloc RADAR_ACP_1 1 0 4 NJ 220 NJ 220 NJ 220 NJ
-preplace netloc axi_mem_intercon_M00_AXI 1 4 1 1530
-preplace netloc radar_sim_subsytem_DBG_MT_ACP_IDX 1 4 1 N
-preplace netloc ps7_0_axi_periph_M01_AXI 1 2 1 680
-preplace netloc radar_signal_selector_USEC 1 4 2 1540J 120 2010J
+preplace netloc ps7_0_axi_periph_M02_AXI 1 2 1 700
+preplace netloc SW_4_1 1 0 5 NJ 900 NJ 900 NJ 900 NJ 900 NJ
+preplace netloc trig_mux_M_OUT 1 5 1 NJ
+preplace netloc radar_sim_axi_0_SIM_MT_SIG 1 5 1 NJ
+preplace netloc processing_system7_0_M_AXI_GP0 1 1 5 390 440 NJ 440 1130J 400 1410J 370 1880
+preplace netloc axi_mem_intercon_1_M00_AXI 1 4 1 1410
+preplace netloc axi_dma_mt_M_AXI_SG 1 3 1 1070
+preplace netloc axi_dma_ft_M_AXI_SG 1 3 1 1050
+preplace netloc rst_ps7_0_100M_peripheral_aresetn 1 1 4 360 860 690 860 1120 860 NJ
+preplace netloc SW_3_1 1 0 5 NJ 880 NJ 880 NJ 880 NJ 880 NJ
+preplace netloc processing_system7_0_FCLK_RESET0_N 1 0 6 20 820 NJ 820 NJ 820 NJ 820 1410J 640 1870
+preplace netloc axi_dma_ft_mm2s_introut 1 3 1 1110
+preplace netloc RADAR_TRIG_1 1 0 5 10J 810 NJ 810 NJ 810 NJ 810 1420J
+preplace netloc RADAR_ACP_1 1 0 5 NJ 780 NJ 780 NJ 780 NJ 780 NJ
+preplace netloc axi_mem_intercon_M00_AXI 1 4 1 1430
+preplace netloc ps7_0_axi_periph_M01_AXI 1 2 1 670
+preplace netloc radar_signal_selector_USEC 1 5 1 NJ
 preplace netloc axi_dma_mt_mm2s_introut 1 3 1 1090
-preplace netloc radar_sim_subsytem_DBG_MT_VALID 1 4 1 N
-preplace netloc radar_sim_subsytem_DBG_MT_READY 1 4 1 N
-preplace netloc led_concat_dout 1 4 2 1480 30 NJ
+preplace netloc led_concat_dout 1 5 1 NJ
 preplace netloc processing_system7_0_FIXED_IO 1 5 1 NJ
-preplace netloc radar_sim_subsytem_DBG_FT_VALID 1 4 1 N
-preplace netloc radar_sim_subsytem_DBG_FT_READY 1 4 1 N
-preplace netloc radar_sim_subsytem_DBG_FT_ACP_IDX 1 4 1 N
-preplace netloc SW_2_1 1 0 4 NJ 280 NJ 280 NJ 280 NJ
-preplace netloc acp_mux_M_OUT 1 4 2 1490J 50 NJ
-preplace netloc radar_sim_subsytem_DBG_MT_ACP_CNT 1 4 1 N
-preplace netloc radar_sim_subsytem_DBG_FT_ACP_CNT 1 4 1 N
-preplace netloc radar_sim_axi_0_SIM_FT_SIG 1 4 2 1530J 110 NJ
-preplace netloc ps7_0_axi_periph_M00_AXI 1 2 2 670 140 NJ
-preplace netloc axi_dma_mt_M_AXIS_MM2S 1 3 1 1060
-preplace netloc axi_dma_ft_M_AXI_MM2S 1 3 1 1050
-preplace netloc irq_concat_dout 1 4 1 1500
-preplace netloc RADAR_ARP_1 1 0 4 NJ 240 NJ 240 NJ 240 NJ
-preplace netloc axi_dma_mt_M_AXI_MM2S 1 3 1 N
-preplace netloc axi_dma_ft_M_AXIS_MM2S 1 3 1 1040
-preplace netloc radar_sim_subsytem_DBG_MT_DATA_VALID 1 4 1 N
-preplace netloc rst_ps7_0_100M_interconnect_aresetn 1 1 3 380 1010 NJ 1010 1110
-preplace netloc radar_sim_subsytem_RADAR_ARP 1 4 2 1500J 70 NJ
-levelinfo -pg 1 0 200 530 870 1300 1790 2050 -top 0 -bot 1180
+preplace netloc SW_2_1 1 0 5 NJ 840 NJ 840 NJ 840 NJ 840 NJ
+preplace netloc acp_mux_M_OUT 1 5 1 NJ
+preplace netloc radar_sim_axi_0_SIM_FT_SIG 1 5 1 NJ
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 6 20 90 380 90 680 90 1100 710 1430 630 1880
+preplace netloc ps7_0_axi_periph_M00_AXI 1 2 3 680J 700 NJ 700 NJ
+preplace netloc axi_dma_mt_M_AXIS_MM2S 1 3 2 1040 740 NJ
+preplace netloc axi_dma_ft_M_AXI_MM2S 1 3 1 1060
+preplace netloc irq_concat_dout 1 4 1 1420
+preplace netloc RADAR_ARP_1 1 0 5 NJ 800 NJ 800 NJ 800 NJ 800 NJ
+preplace netloc axi_dma_mt_M_AXI_MM2S 1 3 1 1050
+preplace netloc axi_dma_ft_M_AXIS_MM2S 1 3 2 1060 720 NJ
+preplace netloc rst_ps7_0_100M_interconnect_aresetn 1 1 3 370 790 NJ 790 1080
+preplace netloc radar_sim_subsytem_RADAR_ARP 1 5 1 NJ
+levelinfo -pg 1 -10 190 530 870 1270 1650 1900 -top 0 -bot 950
 ",
 }
 
@@ -2545,6 +2386,4 @@ levelinfo -pg 1 0 200 530 870 1300 1790 2050 -top 0 -bot 1180
 
 create_root_design ""
 
-
-common::send_msg_id "BD_TCL-1000" "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
 
