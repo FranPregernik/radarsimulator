@@ -71,20 +71,12 @@ class SimulatorIf {
   virtual void disableNorm() = 0;
 
   /**
-   * Loads the clutter map data from the common location.
+   * Loads the clutter and target map data from the common location.
    * 
    * 
    * @param arpPosition
    */
-  virtual void loadClutterMap(const int32_t arpPosition) = 0;
-
-  /**
-   * Loads the clutter map data from the common location.
-   * 
-   * 
-   * @param arpPosition
-   */
-  virtual void loadTargetMap(const int32_t arpPosition) = 0;
+  virtual void loadMap(const int32_t arpPosition) = 0;
 
   /**
    * Returns the state of the simulator.
@@ -144,10 +136,7 @@ class SimulatorNull : virtual public SimulatorIf {
   void disableNorm() {
     return;
   }
-  void loadClutterMap(const int32_t /* arpPosition */) {
-    return;
-  }
-  void loadTargetMap(const int32_t /* arpPosition */) {
+  void loadMap(const int32_t /* arpPosition */) {
     return;
   }
   void getState(SimState& /* _return */) {
@@ -432,10 +421,6 @@ class Simulator_enableMti_pargs {
 
 };
 
-typedef struct _Simulator_enableMti_result__isset {
-  _Simulator_enableMti_result__isset() : rsnc(false) {}
-  bool rsnc :1;
-} _Simulator_enableMti_result__isset;
 
 class Simulator_enableMti_result {
  public:
@@ -446,16 +431,9 @@ class Simulator_enableMti_result {
   }
 
   virtual ~Simulator_enableMti_result() throw();
-  RadarSignalNotCalibratedException rsnc;
 
-  _Simulator_enableMti_result__isset __isset;
-
-  void __set_rsnc(const RadarSignalNotCalibratedException& val);
-
-  bool operator == (const Simulator_enableMti_result & rhs) const
+  bool operator == (const Simulator_enableMti_result & /* rhs */) const
   {
-    if (!(rsnc == rhs.rsnc))
-      return false;
     return true;
   }
   bool operator != (const Simulator_enableMti_result &rhs) const {
@@ -469,19 +447,12 @@ class Simulator_enableMti_result {
 
 };
 
-typedef struct _Simulator_enableMti_presult__isset {
-  _Simulator_enableMti_presult__isset() : rsnc(false) {}
-  bool rsnc :1;
-} _Simulator_enableMti_presult__isset;
 
 class Simulator_enableMti_presult {
  public:
 
 
   virtual ~Simulator_enableMti_presult() throw();
-  RadarSignalNotCalibratedException rsnc;
-
-  _Simulator_enableMti_presult__isset __isset;
 
   uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
 
@@ -524,10 +495,6 @@ class Simulator_enableNorm_pargs {
 
 };
 
-typedef struct _Simulator_enableNorm_result__isset {
-  _Simulator_enableNorm_result__isset() : rsnc(false) {}
-  bool rsnc :1;
-} _Simulator_enableNorm_result__isset;
 
 class Simulator_enableNorm_result {
  public:
@@ -538,16 +505,9 @@ class Simulator_enableNorm_result {
   }
 
   virtual ~Simulator_enableNorm_result() throw();
-  RadarSignalNotCalibratedException rsnc;
 
-  _Simulator_enableNorm_result__isset __isset;
-
-  void __set_rsnc(const RadarSignalNotCalibratedException& val);
-
-  bool operator == (const Simulator_enableNorm_result & rhs) const
+  bool operator == (const Simulator_enableNorm_result & /* rhs */) const
   {
-    if (!(rsnc == rhs.rsnc))
-      return false;
     return true;
   }
   bool operator != (const Simulator_enableNorm_result &rhs) const {
@@ -561,19 +521,12 @@ class Simulator_enableNorm_result {
 
 };
 
-typedef struct _Simulator_enableNorm_presult__isset {
-  _Simulator_enableNorm_presult__isset() : rsnc(false) {}
-  bool rsnc :1;
-} _Simulator_enableNorm_presult__isset;
 
 class Simulator_enableNorm_presult {
  public:
 
 
   virtual ~Simulator_enableNorm_presult() throw();
-  RadarSignalNotCalibratedException rsnc;
-
-  _Simulator_enableNorm_presult__isset __isset;
 
   uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
 
@@ -801,37 +754,37 @@ class Simulator_disableNorm_presult {
 
 };
 
-typedef struct _Simulator_loadClutterMap_args__isset {
-  _Simulator_loadClutterMap_args__isset() : arpPosition(false) {}
+typedef struct _Simulator_loadMap_args__isset {
+  _Simulator_loadMap_args__isset() : arpPosition(false) {}
   bool arpPosition :1;
-} _Simulator_loadClutterMap_args__isset;
+} _Simulator_loadMap_args__isset;
 
-class Simulator_loadClutterMap_args {
+class Simulator_loadMap_args {
  public:
 
-  Simulator_loadClutterMap_args(const Simulator_loadClutterMap_args&);
-  Simulator_loadClutterMap_args& operator=(const Simulator_loadClutterMap_args&);
-  Simulator_loadClutterMap_args() : arpPosition(0) {
+  Simulator_loadMap_args(const Simulator_loadMap_args&);
+  Simulator_loadMap_args& operator=(const Simulator_loadMap_args&);
+  Simulator_loadMap_args() : arpPosition(0) {
   }
 
-  virtual ~Simulator_loadClutterMap_args() throw();
+  virtual ~Simulator_loadMap_args() throw();
   int32_t arpPosition;
 
-  _Simulator_loadClutterMap_args__isset __isset;
+  _Simulator_loadMap_args__isset __isset;
 
   void __set_arpPosition(const int32_t val);
 
-  bool operator == (const Simulator_loadClutterMap_args & rhs) const
+  bool operator == (const Simulator_loadMap_args & rhs) const
   {
     if (!(arpPosition == rhs.arpPosition))
       return false;
     return true;
   }
-  bool operator != (const Simulator_loadClutterMap_args &rhs) const {
+  bool operator != (const Simulator_loadMap_args &rhs) const {
     return !(*this == rhs);
   }
 
-  bool operator < (const Simulator_loadClutterMap_args & ) const;
+  bool operator < (const Simulator_loadMap_args & ) const;
 
   uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
@@ -839,171 +792,67 @@ class Simulator_loadClutterMap_args {
 };
 
 
-class Simulator_loadClutterMap_pargs {
+class Simulator_loadMap_pargs {
  public:
 
 
-  virtual ~Simulator_loadClutterMap_pargs() throw();
+  virtual ~Simulator_loadMap_pargs() throw();
   const int32_t* arpPosition;
 
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 
 };
 
-typedef struct _Simulator_loadClutterMap_result__isset {
-  _Simulator_loadClutterMap_result__isset() : rsnc(false) {}
+typedef struct _Simulator_loadMap_result__isset {
+  _Simulator_loadMap_result__isset() : rsnc(false) {}
   bool rsnc :1;
-} _Simulator_loadClutterMap_result__isset;
+} _Simulator_loadMap_result__isset;
 
-class Simulator_loadClutterMap_result {
+class Simulator_loadMap_result {
  public:
 
-  Simulator_loadClutterMap_result(const Simulator_loadClutterMap_result&);
-  Simulator_loadClutterMap_result& operator=(const Simulator_loadClutterMap_result&);
-  Simulator_loadClutterMap_result() {
+  Simulator_loadMap_result(const Simulator_loadMap_result&);
+  Simulator_loadMap_result& operator=(const Simulator_loadMap_result&);
+  Simulator_loadMap_result() {
   }
 
-  virtual ~Simulator_loadClutterMap_result() throw();
+  virtual ~Simulator_loadMap_result() throw();
   IncompatibleFileException rsnc;
 
-  _Simulator_loadClutterMap_result__isset __isset;
+  _Simulator_loadMap_result__isset __isset;
 
   void __set_rsnc(const IncompatibleFileException& val);
 
-  bool operator == (const Simulator_loadClutterMap_result & rhs) const
+  bool operator == (const Simulator_loadMap_result & rhs) const
   {
     if (!(rsnc == rhs.rsnc))
       return false;
     return true;
   }
-  bool operator != (const Simulator_loadClutterMap_result &rhs) const {
+  bool operator != (const Simulator_loadMap_result &rhs) const {
     return !(*this == rhs);
   }
 
-  bool operator < (const Simulator_loadClutterMap_result & ) const;
+  bool operator < (const Simulator_loadMap_result & ) const;
 
   uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 
 };
 
-typedef struct _Simulator_loadClutterMap_presult__isset {
-  _Simulator_loadClutterMap_presult__isset() : rsnc(false) {}
+typedef struct _Simulator_loadMap_presult__isset {
+  _Simulator_loadMap_presult__isset() : rsnc(false) {}
   bool rsnc :1;
-} _Simulator_loadClutterMap_presult__isset;
+} _Simulator_loadMap_presult__isset;
 
-class Simulator_loadClutterMap_presult {
+class Simulator_loadMap_presult {
  public:
 
 
-  virtual ~Simulator_loadClutterMap_presult() throw();
+  virtual ~Simulator_loadMap_presult() throw();
   IncompatibleFileException rsnc;
 
-  _Simulator_loadClutterMap_presult__isset __isset;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-
-};
-
-typedef struct _Simulator_loadTargetMap_args__isset {
-  _Simulator_loadTargetMap_args__isset() : arpPosition(false) {}
-  bool arpPosition :1;
-} _Simulator_loadTargetMap_args__isset;
-
-class Simulator_loadTargetMap_args {
- public:
-
-  Simulator_loadTargetMap_args(const Simulator_loadTargetMap_args&);
-  Simulator_loadTargetMap_args& operator=(const Simulator_loadTargetMap_args&);
-  Simulator_loadTargetMap_args() : arpPosition(0) {
-  }
-
-  virtual ~Simulator_loadTargetMap_args() throw();
-  int32_t arpPosition;
-
-  _Simulator_loadTargetMap_args__isset __isset;
-
-  void __set_arpPosition(const int32_t val);
-
-  bool operator == (const Simulator_loadTargetMap_args & rhs) const
-  {
-    if (!(arpPosition == rhs.arpPosition))
-      return false;
-    return true;
-  }
-  bool operator != (const Simulator_loadTargetMap_args &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const Simulator_loadTargetMap_args & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-};
-
-
-class Simulator_loadTargetMap_pargs {
- public:
-
-
-  virtual ~Simulator_loadTargetMap_pargs() throw();
-  const int32_t* arpPosition;
-
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-};
-
-typedef struct _Simulator_loadTargetMap_result__isset {
-  _Simulator_loadTargetMap_result__isset() : rsnc(false) {}
-  bool rsnc :1;
-} _Simulator_loadTargetMap_result__isset;
-
-class Simulator_loadTargetMap_result {
- public:
-
-  Simulator_loadTargetMap_result(const Simulator_loadTargetMap_result&);
-  Simulator_loadTargetMap_result& operator=(const Simulator_loadTargetMap_result&);
-  Simulator_loadTargetMap_result() {
-  }
-
-  virtual ~Simulator_loadTargetMap_result() throw();
-  IncompatibleFileException rsnc;
-
-  _Simulator_loadTargetMap_result__isset __isset;
-
-  void __set_rsnc(const IncompatibleFileException& val);
-
-  bool operator == (const Simulator_loadTargetMap_result & rhs) const
-  {
-    if (!(rsnc == rhs.rsnc))
-      return false;
-    return true;
-  }
-  bool operator != (const Simulator_loadTargetMap_result &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const Simulator_loadTargetMap_result & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-};
-
-typedef struct _Simulator_loadTargetMap_presult__isset {
-  _Simulator_loadTargetMap_presult__isset() : rsnc(false) {}
-  bool rsnc :1;
-} _Simulator_loadTargetMap_presult__isset;
-
-class Simulator_loadTargetMap_presult {
- public:
-
-
-  virtual ~Simulator_loadTargetMap_presult() throw();
-  IncompatibleFileException rsnc;
-
-  _Simulator_loadTargetMap_presult__isset __isset;
+  _Simulator_loadMap_presult__isset __isset;
 
   uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
 
@@ -1150,12 +999,9 @@ class SimulatorClient : virtual public SimulatorIf {
   void disableNorm();
   void send_disableNorm();
   void recv_disableNorm();
-  void loadClutterMap(const int32_t arpPosition);
-  void send_loadClutterMap(const int32_t arpPosition);
-  void recv_loadClutterMap();
-  void loadTargetMap(const int32_t arpPosition);
-  void send_loadTargetMap(const int32_t arpPosition);
-  void recv_loadTargetMap();
+  void loadMap(const int32_t arpPosition);
+  void send_loadMap(const int32_t arpPosition);
+  void recv_loadMap();
   void getState(SimState& _return);
   void send_getState();
   void recv_getState(SimState& _return);
@@ -1182,8 +1028,7 @@ class SimulatorProcessor : public ::apache::thrift::TDispatchProcessor {
   void process_disable(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_disableMti(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_disableNorm(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
-  void process_loadClutterMap(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
-  void process_loadTargetMap(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_loadMap(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_getState(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
  public:
   SimulatorProcessor(boost::shared_ptr<SimulatorIf> iface) :
@@ -1196,8 +1041,7 @@ class SimulatorProcessor : public ::apache::thrift::TDispatchProcessor {
     processMap_["disable"] = &SimulatorProcessor::process_disable;
     processMap_["disableMti"] = &SimulatorProcessor::process_disableMti;
     processMap_["disableNorm"] = &SimulatorProcessor::process_disableNorm;
-    processMap_["loadClutterMap"] = &SimulatorProcessor::process_loadClutterMap;
-    processMap_["loadTargetMap"] = &SimulatorProcessor::process_loadTargetMap;
+    processMap_["loadMap"] = &SimulatorProcessor::process_loadMap;
     processMap_["getState"] = &SimulatorProcessor::process_getState;
   }
 
@@ -1299,22 +1143,13 @@ class SimulatorMultiface : virtual public SimulatorIf {
     ifaces_[i]->disableNorm();
   }
 
-  void loadClutterMap(const int32_t arpPosition) {
+  void loadMap(const int32_t arpPosition) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->loadClutterMap(arpPosition);
+      ifaces_[i]->loadMap(arpPosition);
     }
-    ifaces_[i]->loadClutterMap(arpPosition);
-  }
-
-  void loadTargetMap(const int32_t arpPosition) {
-    size_t sz = ifaces_.size();
-    size_t i = 0;
-    for (; i < (sz - 1); ++i) {
-      ifaces_[i]->loadTargetMap(arpPosition);
-    }
-    ifaces_[i]->loadTargetMap(arpPosition);
+    ifaces_[i]->loadMap(arpPosition);
   }
 
   void getState(SimState& _return) {
@@ -1381,12 +1216,9 @@ class SimulatorConcurrentClient : virtual public SimulatorIf {
   void disableNorm();
   int32_t send_disableNorm();
   void recv_disableNorm(const int32_t seqid);
-  void loadClutterMap(const int32_t arpPosition);
-  int32_t send_loadClutterMap(const int32_t arpPosition);
-  void recv_loadClutterMap(const int32_t seqid);
-  void loadTargetMap(const int32_t arpPosition);
-  int32_t send_loadTargetMap(const int32_t arpPosition);
-  void recv_loadTargetMap(const int32_t seqid);
+  void loadMap(const int32_t arpPosition);
+  int32_t send_loadMap(const int32_t arpPosition);
+  void recv_loadMap(const int32_t seqid);
   void getState(SimState& _return);
   int32_t send_getState();
   void recv_getState(SimState& _return, const int32_t seqid);

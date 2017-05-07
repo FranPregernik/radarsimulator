@@ -102,11 +102,7 @@ class SimulatorMock : Simulator.Iface, AutoCloseable {
         simState.isNormEnabled = false
     }
 
-    override fun loadClutterMap(arpPosition: Int) {
-        // noop
-    }
-
-    override fun loadTargetMap(arpPosition: Int) {
+    override fun loadMap(arpPosition: Int) {
         // noop
     }
 

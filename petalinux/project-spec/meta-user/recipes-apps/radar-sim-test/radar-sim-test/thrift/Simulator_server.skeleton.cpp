@@ -95,25 +95,14 @@ class SimulatorHandler : virtual public SimulatorIf {
   }
 
   /**
-   * Loads the clutter map data from the common location.
+   * Loads the clutter and target map data from the common location.
    * 
    * 
    * @param arpPosition
    */
-  void loadClutterMap(const int32_t arpPosition) {
+  void loadMap(const int32_t arpPosition) {
     // Your implementation goes here
-    printf("loadClutterMap\n");
-  }
-
-  /**
-   * Loads the clutter map data from the common location.
-   * 
-   * 
-   * @param arpPosition
-   */
-  void loadTargetMap(const int32_t arpPosition) {
-    // Your implementation goes here
-    printf("loadTargetMap\n");
+    printf("loadMap\n");
   }
 
   /**

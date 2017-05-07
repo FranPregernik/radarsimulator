@@ -526,20 +526,7 @@ uint32_t Simulator_enableMti_result::read(::apache::thrift::protocol::TProtocol*
     if (ftype == ::apache::thrift::protocol::T_STOP) {
       break;
     }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->rsnc.read(iprot);
-          this->__isset.rsnc = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
+    xfer += iprot->skip(ftype);
     xfer += iprot->readFieldEnd();
   }
 
@@ -554,11 +541,6 @@ uint32_t Simulator_enableMti_result::write(::apache::thrift::protocol::TProtocol
 
   xfer += oprot->writeStructBegin("Simulator_enableMti_result");
 
-  if (this->__isset.rsnc) {
-    xfer += oprot->writeFieldBegin("rsnc", ::apache::thrift::protocol::T_STRUCT, 1);
-    xfer += this->rsnc.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  }
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -588,20 +570,7 @@ uint32_t Simulator_enableMti_presult::read(::apache::thrift::protocol::TProtocol
     if (ftype == ::apache::thrift::protocol::T_STOP) {
       break;
     }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->rsnc.read(iprot);
-          this->__isset.rsnc = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
+    xfer += iprot->skip(ftype);
     xfer += iprot->readFieldEnd();
   }
 
@@ -692,20 +661,7 @@ uint32_t Simulator_enableNorm_result::read(::apache::thrift::protocol::TProtocol
     if (ftype == ::apache::thrift::protocol::T_STOP) {
       break;
     }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->rsnc.read(iprot);
-          this->__isset.rsnc = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
+    xfer += iprot->skip(ftype);
     xfer += iprot->readFieldEnd();
   }
 
@@ -720,11 +676,6 @@ uint32_t Simulator_enableNorm_result::write(::apache::thrift::protocol::TProtoco
 
   xfer += oprot->writeStructBegin("Simulator_enableNorm_result");
 
-  if (this->__isset.rsnc) {
-    xfer += oprot->writeFieldBegin("rsnc", ::apache::thrift::protocol::T_STRUCT, 1);
-    xfer += this->rsnc.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  }
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -754,20 +705,7 @@ uint32_t Simulator_enableNorm_presult::read(::apache::thrift::protocol::TProtoco
     if (ftype == ::apache::thrift::protocol::T_STOP) {
       break;
     }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->rsnc.read(iprot);
-          this->__isset.rsnc = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
+    xfer += iprot->skip(ftype);
     xfer += iprot->readFieldEnd();
   }
 
@@ -1182,11 +1120,11 @@ uint32_t Simulator_disableNorm_presult::read(::apache::thrift::protocol::TProtoc
 }
 
 
-Simulator_loadClutterMap_args::~Simulator_loadClutterMap_args() throw() {
+Simulator_loadMap_args::~Simulator_loadMap_args() throw() {
 }
 
 
-uint32_t Simulator_loadClutterMap_args::read(::apache::thrift::protocol::TProtocol* iprot) {
+uint32_t Simulator_loadMap_args::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
   uint32_t xfer = 0;
@@ -1227,10 +1165,10 @@ uint32_t Simulator_loadClutterMap_args::read(::apache::thrift::protocol::TProtoc
   return xfer;
 }
 
-uint32_t Simulator_loadClutterMap_args::write(::apache::thrift::protocol::TProtocol* oprot) const {
+uint32_t Simulator_loadMap_args::write(::apache::thrift::protocol::TProtocol* oprot) const {
   uint32_t xfer = 0;
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("Simulator_loadClutterMap_args");
+  xfer += oprot->writeStructBegin("Simulator_loadMap_args");
 
   xfer += oprot->writeFieldBegin("arpPosition", ::apache::thrift::protocol::T_I32, 1);
   xfer += oprot->writeI32(this->arpPosition);
@@ -1242,14 +1180,14 @@ uint32_t Simulator_loadClutterMap_args::write(::apache::thrift::protocol::TProto
 }
 
 
-Simulator_loadClutterMap_pargs::~Simulator_loadClutterMap_pargs() throw() {
+Simulator_loadMap_pargs::~Simulator_loadMap_pargs() throw() {
 }
 
 
-uint32_t Simulator_loadClutterMap_pargs::write(::apache::thrift::protocol::TProtocol* oprot) const {
+uint32_t Simulator_loadMap_pargs::write(::apache::thrift::protocol::TProtocol* oprot) const {
   uint32_t xfer = 0;
   apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("Simulator_loadClutterMap_pargs");
+  xfer += oprot->writeStructBegin("Simulator_loadMap_pargs");
 
   xfer += oprot->writeFieldBegin("arpPosition", ::apache::thrift::protocol::T_I32, 1);
   xfer += oprot->writeI32((*(this->arpPosition)));
@@ -1261,11 +1199,11 @@ uint32_t Simulator_loadClutterMap_pargs::write(::apache::thrift::protocol::TProt
 }
 
 
-Simulator_loadClutterMap_result::~Simulator_loadClutterMap_result() throw() {
+Simulator_loadMap_result::~Simulator_loadMap_result() throw() {
 }
 
 
-uint32_t Simulator_loadClutterMap_result::read(::apache::thrift::protocol::TProtocol* iprot) {
+uint32_t Simulator_loadMap_result::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
   uint32_t xfer = 0;
@@ -1306,11 +1244,11 @@ uint32_t Simulator_loadClutterMap_result::read(::apache::thrift::protocol::TProt
   return xfer;
 }
 
-uint32_t Simulator_loadClutterMap_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
+uint32_t Simulator_loadMap_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
 
   uint32_t xfer = 0;
 
-  xfer += oprot->writeStructBegin("Simulator_loadClutterMap_result");
+  xfer += oprot->writeStructBegin("Simulator_loadMap_result");
 
   if (this->__isset.rsnc) {
     xfer += oprot->writeFieldBegin("rsnc", ::apache::thrift::protocol::T_STRUCT, 1);
@@ -1323,198 +1261,11 @@ uint32_t Simulator_loadClutterMap_result::write(::apache::thrift::protocol::TPro
 }
 
 
-Simulator_loadClutterMap_presult::~Simulator_loadClutterMap_presult() throw() {
+Simulator_loadMap_presult::~Simulator_loadMap_presult() throw() {
 }
 
 
-uint32_t Simulator_loadClutterMap_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->rsnc.read(iprot);
-          this->__isset.rsnc = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-
-Simulator_loadTargetMap_args::~Simulator_loadTargetMap_args() throw() {
-}
-
-
-uint32_t Simulator_loadTargetMap_args::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->arpPosition);
-          this->__isset.arpPosition = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t Simulator_loadTargetMap_args::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("Simulator_loadTargetMap_args");
-
-  xfer += oprot->writeFieldBegin("arpPosition", ::apache::thrift::protocol::T_I32, 1);
-  xfer += oprot->writeI32(this->arpPosition);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-
-Simulator_loadTargetMap_pargs::~Simulator_loadTargetMap_pargs() throw() {
-}
-
-
-uint32_t Simulator_loadTargetMap_pargs::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("Simulator_loadTargetMap_pargs");
-
-  xfer += oprot->writeFieldBegin("arpPosition", ::apache::thrift::protocol::T_I32, 1);
-  xfer += oprot->writeI32((*(this->arpPosition)));
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-
-Simulator_loadTargetMap_result::~Simulator_loadTargetMap_result() throw() {
-}
-
-
-uint32_t Simulator_loadTargetMap_result::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->rsnc.read(iprot);
-          this->__isset.rsnc = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t Simulator_loadTargetMap_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
-
-  uint32_t xfer = 0;
-
-  xfer += oprot->writeStructBegin("Simulator_loadTargetMap_result");
-
-  if (this->__isset.rsnc) {
-    xfer += oprot->writeFieldBegin("rsnc", ::apache::thrift::protocol::T_STRUCT, 1);
-    xfer += this->rsnc.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  }
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-
-Simulator_loadTargetMap_presult::~Simulator_loadTargetMap_presult() throw() {
-}
-
-
-uint32_t Simulator_loadTargetMap_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
+uint32_t Simulator_loadMap_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
   uint32_t xfer = 0;
@@ -1929,9 +1680,6 @@ void SimulatorClient::recv_enableMti()
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
 
-  if (result.__isset.rsnc) {
-    throw result.rsnc;
-  }
   return;
 }
 
@@ -1984,9 +1732,6 @@ void SimulatorClient::recv_enableNorm()
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
 
-  if (result.__isset.rsnc) {
-    throw result.rsnc;
-  }
   return;
 }
 
@@ -2146,18 +1891,18 @@ void SimulatorClient::recv_disableNorm()
   return;
 }
 
-void SimulatorClient::loadClutterMap(const int32_t arpPosition)
+void SimulatorClient::loadMap(const int32_t arpPosition)
 {
-  send_loadClutterMap(arpPosition);
-  recv_loadClutterMap();
+  send_loadMap(arpPosition);
+  recv_loadMap();
 }
 
-void SimulatorClient::send_loadClutterMap(const int32_t arpPosition)
+void SimulatorClient::send_loadMap(const int32_t arpPosition)
 {
   int32_t cseqid = 0;
-  oprot_->writeMessageBegin("loadClutterMap", ::apache::thrift::protocol::T_CALL, cseqid);
+  oprot_->writeMessageBegin("loadMap", ::apache::thrift::protocol::T_CALL, cseqid);
 
-  Simulator_loadClutterMap_pargs args;
+  Simulator_loadMap_pargs args;
   args.arpPosition = &arpPosition;
   args.write(oprot_);
 
@@ -2166,7 +1911,7 @@ void SimulatorClient::send_loadClutterMap(const int32_t arpPosition)
   oprot_->getTransport()->flush();
 }
 
-void SimulatorClient::recv_loadClutterMap()
+void SimulatorClient::recv_loadMap()
 {
 
   int32_t rseqid = 0;
@@ -2186,68 +1931,12 @@ void SimulatorClient::recv_loadClutterMap()
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
   }
-  if (fname.compare("loadClutterMap") != 0) {
+  if (fname.compare("loadMap") != 0) {
     iprot_->skip(::apache::thrift::protocol::T_STRUCT);
     iprot_->readMessageEnd();
     iprot_->getTransport()->readEnd();
   }
-  Simulator_loadClutterMap_presult result;
-  result.read(iprot_);
-  iprot_->readMessageEnd();
-  iprot_->getTransport()->readEnd();
-
-  if (result.__isset.rsnc) {
-    throw result.rsnc;
-  }
-  return;
-}
-
-void SimulatorClient::loadTargetMap(const int32_t arpPosition)
-{
-  send_loadTargetMap(arpPosition);
-  recv_loadTargetMap();
-}
-
-void SimulatorClient::send_loadTargetMap(const int32_t arpPosition)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("loadTargetMap", ::apache::thrift::protocol::T_CALL, cseqid);
-
-  Simulator_loadTargetMap_pargs args;
-  args.arpPosition = &arpPosition;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->writeEnd();
-  oprot_->getTransport()->flush();
-}
-
-void SimulatorClient::recv_loadTargetMap()
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TMessageType mtype;
-
-  iprot_->readMessageBegin(fname, mtype, rseqid);
-  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
-    ::apache::thrift::TApplicationException x;
-    x.read(iprot_);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw x;
-  }
-  if (mtype != ::apache::thrift::protocol::T_REPLY) {
-    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-  }
-  if (fname.compare("loadTargetMap") != 0) {
-    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-  }
-  Simulator_loadTargetMap_presult result;
+  Simulator_loadMap_presult result;
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
@@ -2520,9 +2209,6 @@ void SimulatorProcessor::process_enableMti(int32_t seqid, ::apache::thrift::prot
   Simulator_enableMti_result result;
   try {
     iface_->enableMti();
-  } catch (RadarSignalNotCalibratedException &rsnc) {
-    result.rsnc = rsnc;
-    result.__isset.rsnc = true;
   } catch (const std::exception& e) {
     if (this->eventHandler_.get() != NULL) {
       this->eventHandler_->handlerError(ctx, "Simulator.enableMti");
@@ -2576,9 +2262,6 @@ void SimulatorProcessor::process_enableNorm(int32_t seqid, ::apache::thrift::pro
   Simulator_enableNorm_result result;
   try {
     iface_->enableNorm();
-  } catch (RadarSignalNotCalibratedException &rsnc) {
-    result.rsnc = rsnc;
-    result.__isset.rsnc = true;
   } catch (const std::exception& e) {
     if (this->eventHandler_.get() != NULL) {
       this->eventHandler_->handlerError(ctx, "Simulator.enableNorm");
@@ -2767,40 +2450,40 @@ void SimulatorProcessor::process_disableNorm(int32_t seqid, ::apache::thrift::pr
   }
 }
 
-void SimulatorProcessor::process_loadClutterMap(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+void SimulatorProcessor::process_loadMap(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
 {
   void* ctx = NULL;
   if (this->eventHandler_.get() != NULL) {
-    ctx = this->eventHandler_->getContext("Simulator.loadClutterMap", callContext);
+    ctx = this->eventHandler_->getContext("Simulator.loadMap", callContext);
   }
-  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "Simulator.loadClutterMap");
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "Simulator.loadMap");
 
   if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preRead(ctx, "Simulator.loadClutterMap");
+    this->eventHandler_->preRead(ctx, "Simulator.loadMap");
   }
 
-  Simulator_loadClutterMap_args args;
+  Simulator_loadMap_args args;
   args.read(iprot);
   iprot->readMessageEnd();
   uint32_t bytes = iprot->getTransport()->readEnd();
 
   if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postRead(ctx, "Simulator.loadClutterMap", bytes);
+    this->eventHandler_->postRead(ctx, "Simulator.loadMap", bytes);
   }
 
-  Simulator_loadClutterMap_result result;
+  Simulator_loadMap_result result;
   try {
-    iface_->loadClutterMap(args.arpPosition);
+    iface_->loadMap(args.arpPosition);
   } catch (IncompatibleFileException &rsnc) {
     result.rsnc = rsnc;
     result.__isset.rsnc = true;
   } catch (const std::exception& e) {
     if (this->eventHandler_.get() != NULL) {
-      this->eventHandler_->handlerError(ctx, "Simulator.loadClutterMap");
+      this->eventHandler_->handlerError(ctx, "Simulator.loadMap");
     }
 
     ::apache::thrift::TApplicationException x(e.what());
-    oprot->writeMessageBegin("loadClutterMap", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    oprot->writeMessageBegin("loadMap", ::apache::thrift::protocol::T_EXCEPTION, seqid);
     x.write(oprot);
     oprot->writeMessageEnd();
     oprot->getTransport()->writeEnd();
@@ -2809,73 +2492,17 @@ void SimulatorProcessor::process_loadClutterMap(int32_t seqid, ::apache::thrift:
   }
 
   if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preWrite(ctx, "Simulator.loadClutterMap");
+    this->eventHandler_->preWrite(ctx, "Simulator.loadMap");
   }
 
-  oprot->writeMessageBegin("loadClutterMap", ::apache::thrift::protocol::T_REPLY, seqid);
+  oprot->writeMessageBegin("loadMap", ::apache::thrift::protocol::T_REPLY, seqid);
   result.write(oprot);
   oprot->writeMessageEnd();
   bytes = oprot->getTransport()->writeEnd();
   oprot->getTransport()->flush();
 
   if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postWrite(ctx, "Simulator.loadClutterMap", bytes);
-  }
-}
-
-void SimulatorProcessor::process_loadTargetMap(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
-{
-  void* ctx = NULL;
-  if (this->eventHandler_.get() != NULL) {
-    ctx = this->eventHandler_->getContext("Simulator.loadTargetMap", callContext);
-  }
-  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "Simulator.loadTargetMap");
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preRead(ctx, "Simulator.loadTargetMap");
-  }
-
-  Simulator_loadTargetMap_args args;
-  args.read(iprot);
-  iprot->readMessageEnd();
-  uint32_t bytes = iprot->getTransport()->readEnd();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postRead(ctx, "Simulator.loadTargetMap", bytes);
-  }
-
-  Simulator_loadTargetMap_result result;
-  try {
-    iface_->loadTargetMap(args.arpPosition);
-  } catch (IncompatibleFileException &rsnc) {
-    result.rsnc = rsnc;
-    result.__isset.rsnc = true;
-  } catch (const std::exception& e) {
-    if (this->eventHandler_.get() != NULL) {
-      this->eventHandler_->handlerError(ctx, "Simulator.loadTargetMap");
-    }
-
-    ::apache::thrift::TApplicationException x(e.what());
-    oprot->writeMessageBegin("loadTargetMap", ::apache::thrift::protocol::T_EXCEPTION, seqid);
-    x.write(oprot);
-    oprot->writeMessageEnd();
-    oprot->getTransport()->writeEnd();
-    oprot->getTransport()->flush();
-    return;
-  }
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preWrite(ctx, "Simulator.loadTargetMap");
-  }
-
-  oprot->writeMessageBegin("loadTargetMap", ::apache::thrift::protocol::T_REPLY, seqid);
-  result.write(oprot);
-  oprot->writeMessageEnd();
-  bytes = oprot->getTransport()->writeEnd();
-  oprot->getTransport()->flush();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postWrite(ctx, "Simulator.loadTargetMap", bytes);
+    this->eventHandler_->postWrite(ctx, "Simulator.loadMap", bytes);
   }
 }
 
@@ -3241,10 +2868,6 @@ void SimulatorConcurrentClient::recv_enableMti(const int32_t seqid)
       iprot_->readMessageEnd();
       iprot_->getTransport()->readEnd();
 
-      if (result.__isset.rsnc) {
-        sentry.commit();
-        throw result.rsnc;
-      }
       sentry.commit();
       return;
     }
@@ -3322,10 +2945,6 @@ void SimulatorConcurrentClient::recv_enableNorm(const int32_t seqid)
       iprot_->readMessageEnd();
       iprot_->getTransport()->readEnd();
 
-      if (result.__isset.rsnc) {
-        sentry.commit();
-        throw result.rsnc;
-      }
       sentry.commit();
       return;
     }
@@ -3568,19 +3187,19 @@ void SimulatorConcurrentClient::recv_disableNorm(const int32_t seqid)
   } // end while(true)
 }
 
-void SimulatorConcurrentClient::loadClutterMap(const int32_t arpPosition)
+void SimulatorConcurrentClient::loadMap(const int32_t arpPosition)
 {
-  int32_t seqid = send_loadClutterMap(arpPosition);
-  recv_loadClutterMap(seqid);
+  int32_t seqid = send_loadMap(arpPosition);
+  recv_loadMap(seqid);
 }
 
-int32_t SimulatorConcurrentClient::send_loadClutterMap(const int32_t arpPosition)
+int32_t SimulatorConcurrentClient::send_loadMap(const int32_t arpPosition)
 {
   int32_t cseqid = this->sync_.generateSeqId();
   ::apache::thrift::async::TConcurrentSendSentry sentry(&this->sync_);
-  oprot_->writeMessageBegin("loadClutterMap", ::apache::thrift::protocol::T_CALL, cseqid);
+  oprot_->writeMessageBegin("loadMap", ::apache::thrift::protocol::T_CALL, cseqid);
 
-  Simulator_loadClutterMap_pargs args;
+  Simulator_loadMap_pargs args;
   args.arpPosition = &arpPosition;
   args.write(oprot_);
 
@@ -3592,7 +3211,7 @@ int32_t SimulatorConcurrentClient::send_loadClutterMap(const int32_t arpPosition
   return cseqid;
 }
 
-void SimulatorConcurrentClient::recv_loadClutterMap(const int32_t seqid)
+void SimulatorConcurrentClient::recv_loadMap(const int32_t seqid)
 {
 
   int32_t rseqid = 0;
@@ -3621,7 +3240,7 @@ void SimulatorConcurrentClient::recv_loadClutterMap(const int32_t seqid)
         iprot_->readMessageEnd();
         iprot_->getTransport()->readEnd();
       }
-      if (fname.compare("loadClutterMap") != 0) {
+      if (fname.compare("loadMap") != 0) {
         iprot_->skip(::apache::thrift::protocol::T_STRUCT);
         iprot_->readMessageEnd();
         iprot_->getTransport()->readEnd();
@@ -3630,89 +3249,7 @@ void SimulatorConcurrentClient::recv_loadClutterMap(const int32_t seqid)
         using ::apache::thrift::protocol::TProtocolException;
         throw TProtocolException(TProtocolException::INVALID_DATA);
       }
-      Simulator_loadClutterMap_presult result;
-      result.read(iprot_);
-      iprot_->readMessageEnd();
-      iprot_->getTransport()->readEnd();
-
-      if (result.__isset.rsnc) {
-        sentry.commit();
-        throw result.rsnc;
-      }
-      sentry.commit();
-      return;
-    }
-    // seqid != rseqid
-    this->sync_.updatePending(fname, mtype, rseqid);
-
-    // this will temporarily unlock the readMutex, and let other clients get work done
-    this->sync_.waitForWork(seqid);
-  } // end while(true)
-}
-
-void SimulatorConcurrentClient::loadTargetMap(const int32_t arpPosition)
-{
-  int32_t seqid = send_loadTargetMap(arpPosition);
-  recv_loadTargetMap(seqid);
-}
-
-int32_t SimulatorConcurrentClient::send_loadTargetMap(const int32_t arpPosition)
-{
-  int32_t cseqid = this->sync_.generateSeqId();
-  ::apache::thrift::async::TConcurrentSendSentry sentry(&this->sync_);
-  oprot_->writeMessageBegin("loadTargetMap", ::apache::thrift::protocol::T_CALL, cseqid);
-
-  Simulator_loadTargetMap_pargs args;
-  args.arpPosition = &arpPosition;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->writeEnd();
-  oprot_->getTransport()->flush();
-
-  sentry.commit();
-  return cseqid;
-}
-
-void SimulatorConcurrentClient::recv_loadTargetMap(const int32_t seqid)
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TMessageType mtype;
-
-  // the read mutex gets dropped and reacquired as part of waitForWork()
-  // The destructor of this sentry wakes up other clients
-  ::apache::thrift::async::TConcurrentRecvSentry sentry(&this->sync_, seqid);
-
-  while(true) {
-    if(!this->sync_.getPending(fname, mtype, rseqid)) {
-      iprot_->readMessageBegin(fname, mtype, rseqid);
-    }
-    if(seqid == rseqid) {
-      if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
-        ::apache::thrift::TApplicationException x;
-        x.read(iprot_);
-        iprot_->readMessageEnd();
-        iprot_->getTransport()->readEnd();
-        sentry.commit();
-        throw x;
-      }
-      if (mtype != ::apache::thrift::protocol::T_REPLY) {
-        iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-        iprot_->readMessageEnd();
-        iprot_->getTransport()->readEnd();
-      }
-      if (fname.compare("loadTargetMap") != 0) {
-        iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-        iprot_->readMessageEnd();
-        iprot_->getTransport()->readEnd();
-
-        // in a bad state, don't commit
-        using ::apache::thrift::protocol::TProtocolException;
-        throw TProtocolException(TProtocolException::INVALID_DATA);
-      }
-      Simulator_loadTargetMap_presult result;
+      Simulator_loadMap_presult result;
       result.read(iprot_);
       iprot_->readMessageEnd();
       iprot_->getTransport()->readEnd();

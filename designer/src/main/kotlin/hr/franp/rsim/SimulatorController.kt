@@ -157,9 +157,7 @@ class SimulatorController : Controller(), AutoCloseable {
             simulatorClient.apply {
 
                 // load simulation data from the chosen ARP
-                loadClutterMap(fromArp)
-                loadTargetMap(fromArp)
-
+                loadMap(fromArp)
                 enable()
             }
 

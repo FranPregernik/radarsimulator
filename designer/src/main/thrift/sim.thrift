@@ -42,12 +42,12 @@ service Simulator {
     /**
      * Enables the MTI simulator output.
      **/
-    void enableMti() throws (1: RadarSignalNotCalibratedException rsnc);
+    void enableMti();
 
     /**
      * Enables the NORM simulator output.
      **/
-    void enableNorm() throws (1: RadarSignalNotCalibratedException rsnc);
+    void enableNorm();
 
     /**
      * Disables the simulator output.
@@ -65,14 +65,9 @@ service Simulator {
     void disableNorm();
 
     /**
-     * Loads the clutter map data from the common location.
+     * Loads the clutter and target map data from the common location.
      **/
-    void loadClutterMap(1: i32 arpPosition) throws (1: IncompatibleFileException rsnc);
-
-    /**
-     * Loads the clutter map data from the common location.
-     **/
-    void loadTargetMap(1: i32 arpPosition) throws (1: IncompatibleFileException rsnc);
+    void loadMap(1: i32 arpPosition) throws (1: IncompatibleFileException rsnc);
 
     /**
      * Returns the state of the simulator.
