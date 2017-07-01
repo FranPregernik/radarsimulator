@@ -53,10 +53,14 @@ class SimulatorController : Controller(), AutoCloseable {
             simulatorClient = Simulator.Client(
                 TBinaryProtocol(transport)
             )
-            simulatorClient.reset()
-
         } catch (x: TException) {
             throw RuntimeException("Unable to connect to simulator HW", x)
+        }
+
+        try {
+            simulatorClient.reset()
+        } catch (x: TException) {
+            throw RuntimeException("Unable to reset simulator HW", x)
         }
 
         sshClient.apply {
@@ -136,9 +140,23 @@ class SimulatorController : Controller(), AutoCloseable {
         }
     }
 
-    fun enableMti() = simulatorClient.enableMti()
+    fun toggleMti(enable: Boolean): Boolean {
+        if (enable) {
+            simulatorClient.enableMti()
+        } else {
+            simulatorClient.disableMti()
+        }
+        return simulatorClient.state.isMtiEnabled
+    }
 
-    fun enableNorm() = simulatorClient.enableMti()
+    fun toggleNorm(enable: Boolean): Boolean {
+        if (enable) {
+            simulatorClient.enableNorm()
+        } else {
+            simulatorClient.disableNorm()
+        }
+        return simulatorClient.state.isNormEnabled
+    }
 
     fun startSimulation(
         fromTimeSec: Double,

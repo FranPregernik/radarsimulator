@@ -352,7 +352,7 @@ class DesignerView : View() {
                                         }
                                     }
                                     this += normSlider
-                                    checkbox {
+                                    val normToggle = checkbox {
                                         disableProperty().bind(
                                             simulationController.simulationRunningProperty
                                         )
@@ -360,13 +360,10 @@ class DesignerView : View() {
                                         tooltip("NORM")
                                         selectedProperty().set(true)
                                         setOnAction {
-                                            // TODO: set NORM on HW
-                                            normSlider.value = if (selectedProperty().get())
-                                                1.0
-                                            else
-                                                0.0
+                                            // noop
                                         }
                                     }
+                                    this += normToggle
                                 }
                             }
 
