@@ -1,5 +1,6 @@
 package hr.franp.rsim
 
+import hr.franp.rsim.Simulator.Client
 import hr.franp.rsim.models.*
 import javafx.application.Platform.*
 import javafx.beans.property.*
@@ -13,11 +14,11 @@ import org.apache.thrift.transport.*
 import tornadofx.*
 import java.lang.Math.*
 import java.lang.Thread.*
+import java.util.logging.Level
 
 class SimulatorController : Controller(), AutoCloseable {
 
-    val transport: TTransport
-    val simulatorClient: Simulator.Client
+    private val simulatorClient: Client
 
     var radarParameters by property(RadarParameters(
         impulsePeriodUs = 3003.0,
@@ -36,23 +37,49 @@ class SimulatorController : Controller(), AutoCloseable {
     private val timeShiftFunc = SimpleRegression()
     private val acpIdxFunc = SimpleRegression()
 
-    private val sshClient = SSHClient().apply {
-        // no need to verify, not really security oriented
-        addHostKeyVerifier { _, _, _ -> true }
-        useCompression()
-    }
+    private val sshClient: SSHClient
 
     val simulationRunningProperty = SimpleBooleanProperty(false)
 
     init {
+        simulatorClient = initSimulator()
+        sshClient = initSsh()
+    }
+
+    private fun initSsh() = SSHClient().apply {
+        // no need to verify, not really security oriented
+        addHostKeyVerifier { _, _, _ -> true }
+        useCompression()
+
+        timeout = 2000
+
         try {
-            transport = TSocket(config.string("simulatorIp"), 9090)
+            connect(config.string("simulatorIp"))
+
+            // again security here is not an issue - petalinux default login
+            authPassword(
+                config.string("username", "root"),
+                config.string("password", "root")
+            )
+        } catch (ex: Exception) {
+            throw RuntimeException("Unable to connect to simulator HW", ex)
+        }
+
+    }
+
+    private fun initSimulator(): Client {
+
+        var simulatorClient: Client
+
+        try {
+            val transport = TSocket(config.string("simulatorIp"), 9090)
             //transport = TSocket(config.string("simulatorIp"), 9090)
             transport.open()
 
-            simulatorClient = Simulator.Client(
+            simulatorClient = Client(
                 TBinaryProtocol(transport)
             )
+
         } catch (x: TException) {
             throw RuntimeException("Unable to connect to simulator HW", x)
         }
@@ -63,27 +90,25 @@ class SimulatorController : Controller(), AutoCloseable {
             throw RuntimeException("Unable to reset simulator HW", x)
         }
 
-        sshClient.apply {
-
-            try {
-                connect(config.string("simulatorIp"))
-
-                // again security here is not an issue - petalinux default login
-                authPassword(
-                    config.string("username", "root"),
-                    config.string("password", "root")
-                )
-            } catch (ex: Exception) {
-                throw RuntimeException("Unable to connect to simulator HW", ex)
-            }
-
-        }
-
+        return simulatorClient
     }
 
     override fun close() {
-        transport.close()
-        sshClient.close()
+        try {
+            simulatorClient.inputProtocol?.transport?.close()
+        } catch (e: Exception) {
+            log.log(Level.ALL, "Unable to close transport to simulator", e)
+        }
+        try {
+            simulatorClient.outputProtocol?.transport?.close()
+        } catch (e: Exception) {
+            log.log(Level.ALL, "Unable to close transport to simulator", e)
+        }
+        try {
+            sshClient.close()
+        } catch (e: Exception) {
+            log.log(Level.ALL, "Unable to close SSH to simulator", e)
+        }
     }
 
     fun uploadClutterFile(
@@ -250,6 +275,8 @@ class SimulatorController : Controller(), AutoCloseable {
                 azimuthChangePulse = state.acpCnt,
                 impulsePeriodUs = state.trigUs.toDouble()
             )
+
+        } catch (te: TTransportException) {
 
         } catch (te: TException) {
             runLater {

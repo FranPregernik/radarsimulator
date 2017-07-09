@@ -1,33 +1,43 @@
 package hr.franp.rsim
 
 import hr.franp.rsim.models.*
-import javafx.beans.property.*
-import javafx.embed.swing.*
-import javafx.event.*
-import javafx.geometry.*
-import javafx.scene.*
-import javafx.scene.canvas.*
-import javafx.scene.image.*
-import javafx.scene.layout.*
-import javafx.scene.paint.*
-import javafx.scene.shape.*
-import javafx.scene.text.*
-import javafx.scene.transform.*
-import javafx.stage.*
-import org.apache.commons.collections4.map.*
+import javafx.beans.property.SimpleDoubleProperty
+import javafx.beans.property.SimpleObjectProperty
+import javafx.embed.swing.SwingFXUtils
+import javafx.event.EventHandler
+import javafx.geometry.BoundingBox
+import javafx.geometry.Point2D
+import javafx.geometry.VPos
+import javafx.scene.SnapshotParameters
+import javafx.scene.canvas.GraphicsContext
+import javafx.scene.image.Image
+import javafx.scene.image.WritableImage
+import javafx.scene.layout.Pane
+import javafx.scene.paint.Color
+import javafx.scene.shape.Rectangle
+import javafx.scene.text.Font
+import javafx.scene.text.TextAlignment
+import javafx.scene.transform.Affine
+import javafx.scene.transform.Transform
+import javafx.stage.FileChooser
+import org.apache.commons.collections4.map.LRUMap
 import tornadofx.*
-import java.awt.image.*
+import java.awt.image.BufferedImage
 import java.lang.Math.*
-import java.nio.*
-import java.time.*
-import java.time.format.*
-import java.util.Collections.*
-import java.util.stream.*
-import javax.imageio.*
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.*
+import java.util.Collections.synchronizedMap
+import java.util.stream.IntStream
+import javax.imageio.ImageIO
 import kotlin.collections.set
-import kotlin.concurrent.*
-import kotlin.experimental.*
-import kotlin.system.*
+import kotlin.concurrent.timer
+import kotlin.experimental.or
+import kotlin.system.measureTimeMillis
 
 class RadarScreenView : View() {
 
@@ -84,24 +94,22 @@ class RadarScreenView : View() {
 
     private var hitsCache = LRUMap<Int, ByteBuffer>(20)
     private var hitImage: BufferedImage? = null
-    private val hitCalculator = timer(
-        daemon = true,
-        name = "hitCalculator",
-        period = 100
-    ) {
 
+    private var hitCalculator: Timer? = null
+
+    private fun calculateHits() {
         // no need to calculate if there are no targets
         if (designerController.scenario.movingTargets.isEmpty()) {
-            return@timer
+            return
         }
 
         val imgCnt = displayParameters.plotHistoryCount
         if (imgCnt == 0) {
-            return@timer
+            return
         }
 
         if (sketch.width <= 0.0 || sketch.height <= 0.0) {
-            return@timer
+            return
         }
 
 
@@ -144,7 +152,7 @@ class RadarScreenView : View() {
                             compress = true
                         )
                     }
-//                    println("Calc time: $calcTime ms")
+                    //                    println("Calc time: $calcTime ms")
                     sm.put(arpIdx, buff)
                 }
         } catch (e: Exception) {
@@ -208,14 +216,12 @@ class RadarScreenView : View() {
         } catch (e: Exception) {
             log.info { e.message }
         }
-//        println("History draw time: $histDrawTime ms")
-
+        //        println("History draw time: $histDrawTime ms")
     }
 
     private val canvas = Canvas2D(sketch).apply {
         widthProperty().bind(root.widthProperty())
         heightProperty().bind(root.heightProperty())
-        start()
     }
 
     init {
@@ -984,6 +990,23 @@ az=${angleStringConverter.toString(az)}"""
             "png",
             file
         )
+    }
+
+    override fun onUndock() {
+        canvas.stop()
+        hitCalculator?.cancel()
+        hitCalculator?.purge()
+    }
+
+    override fun onDock() {
+        canvas.start()
+        hitCalculator = timer(
+            daemon = true,
+            name = "hitCalculator",
+            period = 100
+        ) {
+            calculateHits()
+        }
     }
 
 }

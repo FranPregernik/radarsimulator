@@ -47,8 +47,10 @@ int main(int argc, char *argv[]) {
     boost::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
     TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
+    cout << "STARTING_SERVER" << endl;
     server.serve();
 
+    cout << "SHUTDOWN_SERVER" << endl;
     return 0;
 }
 

@@ -1,12 +1,15 @@
 package hr.franp.rsim
 
-import javafx.stage.*
-import org.controlsfx.glyphfont.*
-import org.slf4j.bridge.*
+import javafx.stage.Stage
+import org.controlsfx.glyphfont.FontAwesome
+import org.controlsfx.glyphfont.GlyphFont
+import org.controlsfx.glyphfont.GlyphFontRegistry
+import org.slf4j.bridge.SLF4JBridgeHandler
 import tornadofx.*
 
 class Main : App(DesignerView::class, Styles::class) {
 
+    val radarScreenView = find(RadarScreenView::class)
     val simController = find(SimulatorController::class)
 
     init {
@@ -33,7 +36,9 @@ class Main : App(DesignerView::class, Styles::class) {
     }
 
     override fun stop() {
-        super.stop()
+        radarScreenView.onUndock()
         simController.close()
+
+        super.stop()
     }
 }
