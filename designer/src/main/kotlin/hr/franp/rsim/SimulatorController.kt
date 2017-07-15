@@ -1,24 +1,30 @@
 package hr.franp.rsim
 
+import kotlin.jvm.javaClass
 import hr.franp.rsim.Simulator.Client
-import hr.franp.rsim.models.*
-import javafx.application.Platform.*
-import javafx.beans.property.*
-import net.schmizz.sshj.*
-import net.schmizz.sshj.common.*
-import net.schmizz.sshj.xfer.*
-import org.apache.commons.math3.stat.regression.*
-import org.apache.thrift.*
-import org.apache.thrift.protocol.*
-import org.apache.thrift.transport.*
+import hr.franp.rsim.helpers.ReconnectingThriftClient.wrap
+import hr.franp.rsim.models.RadarParameters
+import javafx.application.Platform.runLater
+import javafx.beans.property.SimpleBooleanProperty
+import net.schmizz.sshj.SSHClient
+import net.schmizz.sshj.common.StreamCopier
+import net.schmizz.sshj.xfer.FileSystemFile
+import net.schmizz.sshj.xfer.TransferListener
+import org.apache.commons.math3.stat.regression.SimpleRegression
+import org.apache.thrift.TException
+import org.apache.thrift.protocol.TBinaryProtocol
+import org.apache.thrift.transport.TSocket
+import org.apache.thrift.transport.TTransportException
 import tornadofx.*
-import java.lang.Math.*
-import java.lang.Thread.*
+import java.lang.Math.floor
+import java.lang.Thread.sleep
+import java.util.*
 import java.util.logging.Level
+import kotlin.concurrent.timer
 
-class SimulatorController : Controller(), AutoCloseable {
+class SimulatorController : Controller() {
 
-    private val simulatorClient: Client
+    private val simulatorClient: Simulator.Iface
 
     var radarParameters by property(RadarParameters(
         impulsePeriodUs = 3003.0,
@@ -41,9 +47,33 @@ class SimulatorController : Controller(), AutoCloseable {
 
     val simulationRunningProperty = SimpleBooleanProperty(false)
 
+    private val statusTimer: Timer
+
     init {
         simulatorClient = initSimulator()
+
+        try {
+            simulatorClient.reset()
+        } catch (x: TException) {
+            throw RuntimeException("Unable to reset simulator HW", x)
+        }
+
         sshClient = initSsh()
+
+        statusTimer = timer("sim_status", period = 5000L) {
+            try {
+                synchronized(simulatorClient) {
+                    simulatorClient.state
+                }.apply {
+                    log.log(Level.INFO, "CURR_ACP_IDX $currAcpIdx")
+                    log.log(Level.INFO, "SIM_ACP_IDX $simAcpIdx")
+                    log.log(Level.INFO, "CLUTTER_ACP_IDX $loadedClutterAcpIndex")
+                    log.log(Level.INFO, "TARGET_ACP_IDX $loadedTargetAcpIndex")
+                }
+            } catch (e: Exception) {
+                log.log(Level.WARNING, e.message)
+            }
+        }
     }
 
     private fun initSsh() = SSHClient().apply {
@@ -67,47 +97,15 @@ class SimulatorController : Controller(), AutoCloseable {
 
     }
 
-    private fun initSimulator(): Client {
-
-        var simulatorClient: Client
-
-        try {
+    private fun initSimulator(): Simulator.Iface {
+        return try {
             val transport = TSocket(config.string("simulatorIp"), 9090)
-            //transport = TSocket(config.string("simulatorIp"), 9090)
             transport.open()
 
-            simulatorClient = Client(
-                TBinaryProtocol(transport)
-            )
-
+            // create 
+            wrap(Client(TBinaryProtocol(transport)))
         } catch (x: TException) {
             throw RuntimeException("Unable to connect to simulator HW", x)
-        }
-
-        try {
-            simulatorClient.reset()
-        } catch (x: TException) {
-            throw RuntimeException("Unable to reset simulator HW", x)
-        }
-
-        return simulatorClient
-    }
-
-    override fun close() {
-        try {
-            simulatorClient.inputProtocol?.transport?.close()
-        } catch (e: Exception) {
-            log.log(Level.ALL, "Unable to close transport to simulator", e)
-        }
-        try {
-            simulatorClient.outputProtocol?.transport?.close()
-        } catch (e: Exception) {
-            log.log(Level.ALL, "Unable to close transport to simulator", e)
-        }
-        try {
-            sshClient.close()
-        } catch (e: Exception) {
-            log.log(Level.ALL, "Unable to close SSH to simulator", e)
         }
     }
 
@@ -166,21 +164,25 @@ class SimulatorController : Controller(), AutoCloseable {
     }
 
     fun toggleMti(enable: Boolean): Boolean {
-        if (enable) {
-            simulatorClient.enableMti()
-        } else {
-            simulatorClient.disableMti()
+        return synchronized(simulatorClient) {
+            if (enable) {
+                simulatorClient.enableMti()
+            } else {
+                simulatorClient.disableMti()
+            }
+            simulatorClient.state.isMtiEnabled
         }
-        return simulatorClient.state.isMtiEnabled
     }
 
     fun toggleNorm(enable: Boolean): Boolean {
-        if (enable) {
-            simulatorClient.enableNorm()
-        } else {
-            simulatorClient.disableNorm()
+        return synchronized(simulatorClient) {
+            if (enable) {
+                simulatorClient.enableNorm()
+            } else {
+                simulatorClient.disableNorm()
+            }
+            simulatorClient.state.isNormEnabled
         }
-        return simulatorClient.state.isNormEnabled
     }
 
     fun startSimulation(
@@ -197,11 +199,13 @@ class SimulatorController : Controller(), AutoCloseable {
             timeShiftFunc.clear()
             acpIdxFunc.clear()
 
-            simulatorClient.apply {
-
-                // load simulation data from the chosen ARP
-                loadMap(fromArp)
-                enable()
+            synchronized(simulatorClient) {
+                simulatorClient.apply {
+                    disable()
+                    // load simulation data from the chosen ARP
+                    loadMap(fromArp)
+                    enable()
+                }
             }
 
             runLater {
@@ -212,7 +216,9 @@ class SimulatorController : Controller(), AutoCloseable {
             do {
 
                 val t = System.currentTimeMillis().toDouble()
-                state = simulatorClient.state
+                state = synchronized(simulatorClient) {
+                    simulatorClient.state
+                }
 
                 timeShiftFunc.addData(t, state.time.toDouble())
                 if (state.simAcpIdx > 0) {
@@ -255,7 +261,9 @@ class SimulatorController : Controller(), AutoCloseable {
     fun stopSimulation() {
 
         try {
-            simulatorClient.disable()
+            synchronized(simulatorClient) {
+                simulatorClient.disable()
+            }
         } finally {
             runLater {
                 simulationRunningProperty.set(false)
@@ -267,9 +275,11 @@ class SimulatorController : Controller(), AutoCloseable {
 
         try {
 
-            simulatorClient.calibrate()
+            val state = synchronized(simulatorClient) {
+                simulatorClient.calibrate()
+                simulatorClient.state
+            }
 
-            val state = simulatorClient.state
             radarParameters = radarParameters.copy(
                 seekTimeSec = state.arpUs / S_TO_US,
                 azimuthChangePulse = state.acpCnt,

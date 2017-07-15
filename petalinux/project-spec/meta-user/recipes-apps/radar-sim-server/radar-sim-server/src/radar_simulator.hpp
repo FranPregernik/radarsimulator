@@ -256,6 +256,8 @@ private:
     XAxiDma_Bd *firstClutterBdPtr;
 
     XAxiDma_Bd *firstTargetBdPtr;
+
+    void logState();
 };
 
 #endif /* RADAR_SIMULATOR_ */

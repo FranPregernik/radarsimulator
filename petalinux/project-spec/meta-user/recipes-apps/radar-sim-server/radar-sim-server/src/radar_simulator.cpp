@@ -338,15 +338,24 @@ SimulatorHandler::SimulatorHandler() {
 
     calibrate();
 
+    cout << "STARTED_SERVER" << endl;
 }
 
 SimulatorHandler::~SimulatorHandler() {
     reset();
+
+    cout << "STOPING_REFRESH_THREAD" << endl;
+    if (refreshThread.joinable()) {
+        refreshThread.join();
+        cout << "STOP_REFRESH_THREAD" << endl;
+    }
+
     close(devMemHandle);
 }
 
 void SimulatorHandler::reset() {
     disable();
+    fromArpIdx = 0;
     clearClutterMap();
     clearTargetMap();
 }
@@ -386,19 +395,20 @@ void SimulatorHandler::disable() {
 
     if (clutterDma.Initialized) {
         stopDmaTransfer(&clutterDma);
-        cout << "STOP_CL_CMA" << endl;
+        cout << "STOP_CL_DMA" << endl;
     }
     if (targetDma.Initialized) {
         stopDmaTransfer(&targetDma);
-        cout << "STOP_MT_CMA" << endl;
+        cout << "STOP_MT_DMA" << endl;
     }
 
-    ctrl->enabled = 0x0;
+    ctrl->enabled = 0;
     cout << "DISABLE_SIM" << endl;
 
+    cout << "STOPING_REFRESH_THREAD" << endl;
     if (refreshThread.joinable()) {
         refreshThread.join();
-        cout << "STOP_RFRSH_THRD" << endl;
+        cout << "STOP_REFRESH_THREAD" << endl;
     }
 
     cout << "DISABLED" << endl;
@@ -438,15 +448,11 @@ void SimulatorHandler::loadMap(const int32_t arpPosition) {
     // store current ARP
     fromArpIdx = (u32) arpPosition;
 
-    /* Initialize scratch mem */
-    clearClutterMap();
-
-    /* Initialize scratch mem */
-    clearTargetMap();
-
     // set initial queue pointer and force initial load
     clutterArpLoadIdx = fromArpIdx - 1;
     targetArpLoadIdx = fromArpIdx - 1;
+
+    cout << "LOADING_MAPS_FROM_ARP=" << fromArpIdx << endl;
 
     loadNextTargetMap(mtFile);
     loadNextClutterMap(clFile);
@@ -565,18 +571,19 @@ void SimulatorHandler::loadNextTargetMap(istream &input) {
     // load the next block
     targetArpLoadIdx = targetArpLoadIdx + 1;
     if (targetArpLoadIdx >= blockCount - 1) {
+        cout << "STOP_TARGET_MAP_NO_MORE_DATA" << endl;
         return;
     }
 
     // rewind the file past the headers to correct position of next block to load
     input.seekg(headerOffset + targetArpLoadIdx * fileBlockByteSize);
     if (input.eof()) {
+        cout << "STOP_CLUTTER_MAP_EOF" << endl;
         return;
     }
 
     // block index to write (circular buffer) with 0 being the starting ARP (fromArpIdx)
     int idx = (targetArpLoadIdx - fromArpIdx) % MT_BLK_CNT;
-    // TODO: Align to DMA_DATA_WIDTH
     UINTPTR memPtr = ((UINTPTR) targetMemPtr) + idx * blockByteSize;
 
     // read from file or clear
@@ -618,12 +625,14 @@ void SimulatorHandler::loadNextClutterMap(istream &input) {
     // load the next block
     clutterArpLoadIdx = clutterArpLoadIdx + 1;
     if (clutterArpLoadIdx >= blockCount - 1) {
+        cout << "STOP_CLUTTER_MAP_NO_MORE_DATA" << endl;
         return;
     }
 
     // rewind the file past the headers to correct position of next block to load
     input.seekg(headerOffset + clutterArpLoadIdx * fileBlockByteSize);
     if (input.eof()) {
+        cout << "STOP_CLUTTER_MAP_EOF" << endl;
         return;
     }
 
@@ -636,17 +645,6 @@ void SimulatorHandler::loadNextClutterMap(istream &input) {
     input.read((char *) memPtr, fileBlockByteSize);
     cout << "LOAD_CL_ARP_MAP=" << clutterArpLoadIdx << "/" << idx << endl;
 
-}
-
-u32 roundUp(u32 numToRound, u32 multiple) {
-    if (multiple == 0)
-        return numToRound;
-
-    int remainder = numToRound % multiple;
-    if (remainder == 0)
-        return numToRound;
-
-    return numToRound + multiple - remainder;
 }
 
 void SimulatorHandler::calibrate() {
@@ -681,4 +679,19 @@ void SimulatorHandler::calibrate() {
     targetMapWordSize = MT_BLK_CNT * mem_blk_word_cnt;
     clutterMapWordSize = CL_BLK_CNT * mem_blk_word_cnt;
 
+}
+
+void SimulatorHandler::logState() {
+    cout << "SIM_STATUS" << endl;
+    cout << "SIM_ENABLED=" << ctrl->enabled << endl;
+    cout << "SIM_CAL=" << ctrl->calibrated << endl;
+    cout << "SIM_NORM_ENABLED=" << ctrl->normEnabled << endl;
+    cout << "SIM_MTI_ENABLED=" << ctrl->mtiEnabled << endl;
+    cout << "SIM_ACP_CNT=" << ctrl->acpCnt << endl;
+    cout << "SIM_ARP_US=" << ctrl->arpUs << endl;
+    cout << "SIM_TRIG_US=" << ctrl->trigUs << endl;
+    cout << "SIM_LOAD_CL_ACP=" << ctrl->loadedClutterAcp << endl;
+    cout << "SIM_LOAD_TT_ACP=" << ctrl->loadedTargetAcp << endl;
+    cout << "SIM_SIM_ACP_IDX=" << ctrl->simAcpIdx << endl;
+    cout << "SIM_CURR_ACP_IDX=" << ctrl->currAcpIdx << endl;
 }

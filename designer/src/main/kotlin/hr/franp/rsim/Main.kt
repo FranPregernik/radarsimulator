@@ -10,7 +10,6 @@ import tornadofx.*
 class Main : App(DesignerView::class, Styles::class) {
 
     val radarScreenView = find(RadarScreenView::class)
-    val simController = find(SimulatorController::class)
 
     init {
         // Optionally remove existing handlers attached to j.u.l root logger
@@ -37,8 +36,6 @@ class Main : App(DesignerView::class, Styles::class) {
 
     override fun stop() {
         radarScreenView.onUndock()
-        simController.close()
-
         super.stop()
     }
 }
