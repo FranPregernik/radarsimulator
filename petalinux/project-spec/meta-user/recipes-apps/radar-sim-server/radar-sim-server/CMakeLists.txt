@@ -10,4 +10,4 @@ target_link_libraries(radar_sim_server thrift)
 target_link_libraries(radar_sim_server pthread)
 
 install(TARGETS radar_sim_server DESTINATION bin)
-install(FILES radar_sim_server DESTINATION /etc/init.d)
+install(FILES radar_sim_server.sh DESTINATION /etc/init.d/radar_sim_server)

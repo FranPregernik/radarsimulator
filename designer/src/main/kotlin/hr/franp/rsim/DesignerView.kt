@@ -291,7 +291,7 @@ class DesignerView : View() {
                             field("Target hit layer") {
                                 hbox(4.0) {
 
-                                    val mtiSlider = slider {
+                                    slider {
                                         tooltip("Controls transparency of the target hit layer")
 
                                         prefWidth = 200.0
@@ -305,40 +305,28 @@ class DesignerView : View() {
                                             radarScreen.configTargetHitLayerOpacity(newValue.toDouble())
                                         }
                                     }
-
-                                    this += mtiSlider
-
                                     checkbox {
-                                        disableProperty().bind(
-                                            simulationController.simulationRunningProperty
-                                        )
-
                                         tooltip("MTI")
                                         selectedProperty().set(true)
                                         setOnAction {
-                                            // TODO: set MTI on HW
-                                            mtiSlider.value = if (selectedProperty().get())
-                                                1.0
-                                            else
-                                                0.0
+                                            simulationController.toggleMti(this.isSelected)
                                         }
                                     }
+                                }
+                                combobox<Int> {
+                                    tooltip("Number of previous hits to display")
+                                    items = listOf(0, 1, 2, 3, 4, 5, 6).observable()
 
-                                    combobox<Int> {
-                                        tooltip("Number of previous hits to display")
-                                        items = listOf(0, 1, 2, 3, 4, 5, 6).observable()
-
-                                        value = radarScreen.displayParameters.plotHistoryCount
-                                        valueProperty().addListener { _, _, newValue ->
-                                            radarScreen.configPlotHistory(newValue)
-                                        }
+                                    value = radarScreen.displayParameters.plotHistoryCount
+                                    valueProperty().addListener { _, _, newValue ->
+                                        radarScreen.configPlotHistory(newValue)
                                     }
                                 }
                             }
 
                             field("Clutter layer") {
                                 hbox(4.0) {
-                                    val normSlider = slider {
+                                    slider {
                                         tooltip("Controls transparency of the clutter layer")
                                         prefWidth = 200.0
 
@@ -351,19 +339,13 @@ class DesignerView : View() {
                                             radarScreen.configClutterLayerOpacity(newValue.toDouble())
                                         }
                                     }
-                                    this += normSlider
-                                    val normToggle = checkbox {
-                                        disableProperty().bind(
-                                            simulationController.simulationRunningProperty
-                                        )
-
+                                    checkbox {
                                         tooltip("NORM")
                                         selectedProperty().set(true)
                                         setOnAction {
-                                            // noop
+                                            simulationController.toggleNorm(this.isSelected)
                                         }
                                     }
-                                    this += normToggle
                                 }
                             }
 

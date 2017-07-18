@@ -9,7 +9,7 @@ LICENSE = "CLOSED"
 DEPENDS = "bzip2 zlib boost thrift"
 
 SRC_URI = "file://src \
-           file://radar_sim_server \
+           file://radar_sim_server.sh \
            file://CMakeLists.txt \
 	"
 

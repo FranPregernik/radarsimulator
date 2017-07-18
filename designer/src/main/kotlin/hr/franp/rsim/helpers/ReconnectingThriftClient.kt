@@ -53,7 +53,7 @@ class ReconnectingClientProxy<T : TServiceClient>(private val baseClient: T, pri
 
         while (errors < maxRetries) {
             try {
-                LOG.info("Attempting to reconnect...")
+                LOG.info("Attempting to reconnect... $errors/$maxRetries")
                 transport.open()
                 LOG.info("Reconnection successful")
                 break

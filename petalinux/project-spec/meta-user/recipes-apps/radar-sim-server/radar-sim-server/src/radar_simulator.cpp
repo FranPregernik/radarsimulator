@@ -362,12 +362,12 @@ void SimulatorHandler::reset() {
 
 void SimulatorHandler::enableMti() {
     ctrl->mtiEnabled = 1;
-    cout << "MTI_STATUS" << (ctrl->normEnabled == 1) << endl;
+    cout << "MTI_STATUS=" << (ctrl->normEnabled == 1) << endl;
 }
 
 void SimulatorHandler::enableNorm() {
     ctrl->normEnabled = 1;
-    cout << "NORM_STATUS" << (ctrl->normEnabled == 1) << endl;
+    cout << "NORM_STATUS=" << (ctrl->normEnabled == 1) << endl;
 }
 
 void SimulatorHandler::enable() {
@@ -416,12 +416,12 @@ void SimulatorHandler::disable() {
 
 void SimulatorHandler::disableMti() {
     ctrl->mtiEnabled = 0;
-    cout << "NORM_STATUS" << (ctrl->normEnabled == 1) << endl;
+    cout << "MTI_STATUS=" << (ctrl->normEnabled == 1) << endl;
 }
 
 void SimulatorHandler::disableNorm() {
     ctrl->normEnabled = 0;
-    cout << "NORM_STATUS" << (ctrl->normEnabled == 1) << endl;
+    cout << "NORM_STATUS=" << (ctrl->normEnabled == 1) << endl;
 }
 
 void SimulatorHandler::loadMap(const int32_t arpPosition) {
@@ -449,8 +449,8 @@ void SimulatorHandler::loadMap(const int32_t arpPosition) {
     fromArpIdx = (u32) arpPosition;
 
     // set initial queue pointer and force initial load
-    clutterArpLoadIdx = fromArpIdx - 1;
-    targetArpLoadIdx = fromArpIdx - 1;
+    clutterArpLoadIdx = arpPosition - 1;
+    targetArpLoadIdx = arpPosition - 1;
 
     cout << "LOADING_MAPS_FROM_ARP=" << fromArpIdx << endl;
 
@@ -559,37 +559,41 @@ void SimulatorHandler::loadNextTargetMap(istream &input) {
     auto currArp = fromArpIdx + currAcpIdx / calAcpCnt;
 
     auto fileBlockByteSize = acpCnt * TRIG_WORD_CNT * WORD_SIZE;
-    //cout << "LOAD_NEXT_TARGET_MAP_FILE_BYTE_BLOCK_SIZE=" << fileBlockByteSize << "/" << blockByteSize << endl;
+//    cout << "DBG_LOAD_NEXT_TARGET_MAP_FILE_BYTE_BLOCK_SIZE=" << fileBlockByteSize << "/" << blockByteSize << endl;
+//    cout << "DBG_LOAD_NEXT_TARGET_MAP_IDX=" << targetArpLoadIdx << "/" << currArp << "/" << MT_BLK_CNT - 1 << endl;
 
     // ensure circular queue is not full
-    if (targetArpLoadIdx - currArp >= MT_BLK_CNT - 1) {
+    if ((targetArpLoadIdx >= 0) && (targetArpLoadIdx - (int) currArp >= MT_BLK_CNT - 1)) {
         return;
     }
 
-    cout << "CURR_ARP_IDX=" << currArp << "/" << (currArp % MT_BLK_CNT) << endl;
+    cout << "CURR_ARP_IDX=" << currArp << "/" << ((currArp - fromArpIdx) % MT_BLK_CNT) << endl;
 
-    // load the next block
-    targetArpLoadIdx = targetArpLoadIdx + 1;
-    if (targetArpLoadIdx >= blockCount - 1) {
-        cout << "STOP_TARGET_MAP_NO_MORE_DATA" << endl;
-        return;
+    while ((targetArpLoadIdx < 0) || (targetArpLoadIdx - (int) currArp < MT_BLK_CNT - 1)) {
+
+        // load the next block
+        targetArpLoadIdx = targetArpLoadIdx + 1;
+        if (targetArpLoadIdx >= blockCount - 1) {
+            cout << "STOP_TARGET_MAP_NO_MORE_DATA" << endl;
+            return;
+        }
+
+        // rewind the file past the headers to correct position of next block to load
+        input.seekg(headerOffset + targetArpLoadIdx * fileBlockByteSize);
+        if (input.eof()) {
+            cout << "STOP_TARGET_MAP_EOF" << endl;
+            return;
+        }
+
+        // block index to write (circular buffer) with 0 being the starting ARP (fromArpIdx)
+        int idx = (targetArpLoadIdx - fromArpIdx) % MT_BLK_CNT;
+        UINTPTR memPtr = ((UINTPTR) targetMemPtr) + idx * blockByteSize;
+
+        // read from file or clear
+        memset((u8 *) memPtr, 0x0, blockByteSize);
+        input.read((char *) memPtr, fileBlockByteSize);
+        cout << "LOAD_MT_ARP_MAP=" << targetArpLoadIdx << "/" << idx << endl;
     }
-
-    // rewind the file past the headers to correct position of next block to load
-    input.seekg(headerOffset + targetArpLoadIdx * fileBlockByteSize);
-    if (input.eof()) {
-        cout << "STOP_CLUTTER_MAP_EOF" << endl;
-        return;
-    }
-
-    // block index to write (circular buffer) with 0 being the starting ARP (fromArpIdx)
-    int idx = (targetArpLoadIdx - fromArpIdx) % MT_BLK_CNT;
-    UINTPTR memPtr = ((UINTPTR) targetMemPtr) + idx * blockByteSize;
-
-    // read from file or clear
-    memset((u8 *) memPtr, 0x0, blockByteSize);
-    input.read((char *) memPtr, fileBlockByteSize);
-    cout << "LOAD_MT_ARP_MAP=" << targetArpLoadIdx << "/" << idx << endl;
 
 }
 
@@ -613,37 +617,42 @@ void SimulatorHandler::loadNextClutterMap(istream &input) {
     auto currArp = fromArpIdx + currAcpIdx / calAcpCnt;
 
     auto fileBlockByteSize = acpCnt * TRIG_WORD_CNT * WORD_SIZE;
-    //cout << "LOAD_NEXT_CLUTTER_MAP_FILE_BYTE_BLOCK_SIZE=" << fileBlockByteSize << "/" << blockByteSize << endl;
+//    cout << "DBG_LOAD_NEXT_CLUTTER_MAP_FILE_BYTE_BLOCK_SIZE=" << fileBlockByteSize << "/" << blockByteSize << endl;
+//    cout << "DBG_LOAD_NEXT_CLUTTER_MAP_IDX=" << targetArpLoadIdx << "/" << currArp << "/" << CL_BLK_CNT - 1 << endl;
 
     // ensure circular queue is not full
-    if (clutterArpLoadIdx - currArp >= CL_BLK_CNT - 1) {
+    if ((clutterArpLoadIdx >= 0) && (clutterArpLoadIdx - (int) currArp >= CL_BLK_CNT - 1)) {
         return;
     }
 
-    cout << "CURR_ARP_IDX=" << currArp << "/" << (currArp % CL_BLK_CNT) << endl;
+    cout << "CURR_ARP_IDX=" << currArp << "/" << ((currArp - fromArpIdx) % CL_BLK_CNT) << endl;
 
-    // load the next block
-    clutterArpLoadIdx = clutterArpLoadIdx + 1;
-    if (clutterArpLoadIdx >= blockCount - 1) {
-        cout << "STOP_CLUTTER_MAP_NO_MORE_DATA" << endl;
-        return;
+    while ((clutterArpLoadIdx < 0) || (clutterArpLoadIdx - (int)currArp < CL_BLK_CNT - 1)) {
+
+        // load the next block
+        clutterArpLoadIdx = clutterArpLoadIdx + 1;
+        if (clutterArpLoadIdx >= blockCount - 1) {
+            cout << "STOP_CLUTTER_MAP_NO_MORE_DATA" << endl;
+            return;
+        }
+
+        // rewind the file past the headers to correct position of next block to load
+        input.seekg(headerOffset + clutterArpLoadIdx * fileBlockByteSize);
+        if (input.eof()) {
+            cout << "STOP_CLUTTER_MAP_EOF" << endl;
+            return;
+        }
+
+        // block index to write (circular buffer) with 0 being the starting ARP (fromArpIdx)
+        int idx = (clutterArpLoadIdx - fromArpIdx) % CL_BLK_CNT;
+        UINTPTR memPtr = ((UINTPTR) clutterMemPtr) + idx * blockByteSize;
+
+        // read from file or clear
+        memset((u8 *) memPtr, 0x0, blockByteSize);
+        input.read((char *) memPtr, fileBlockByteSize);
+        cout << "LOAD_CL_ARP_MAP=" << clutterArpLoadIdx << "/" << idx << endl;
     }
 
-    // rewind the file past the headers to correct position of next block to load
-    input.seekg(headerOffset + clutterArpLoadIdx * fileBlockByteSize);
-    if (input.eof()) {
-        cout << "STOP_CLUTTER_MAP_EOF" << endl;
-        return;
-    }
-
-    // block index to write (circular buffer) with 0 being the starting ARP (fromArpIdx)
-    int idx = (clutterArpLoadIdx - fromArpIdx) % CL_BLK_CNT;
-    UINTPTR memPtr = ((UINTPTR) clutterMemPtr) + idx * blockByteSize;
-
-    // read from file or clear
-    memset((u8 *) memPtr, 0x0, blockByteSize);
-    input.read((char *) memPtr, fileBlockByteSize);
-    cout << "LOAD_CL_ARP_MAP=" << clutterArpLoadIdx << "/" << idx << endl;
 
 }
 

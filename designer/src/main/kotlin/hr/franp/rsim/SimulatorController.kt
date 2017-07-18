@@ -1,6 +1,5 @@
 package hr.franp.rsim
 
-import kotlin.jvm.javaClass
 import hr.franp.rsim.Simulator.Client
 import hr.franp.rsim.helpers.ReconnectingThriftClient.wrap
 import hr.franp.rsim.models.RadarParameters
@@ -22,7 +21,7 @@ import java.util.*
 import java.util.logging.Level
 import kotlin.concurrent.timer
 
-class SimulatorController : Controller() {
+class SimulatorController : Controller(), AutoCloseable {
 
     private val simulatorClient: Simulator.Iface
 
@@ -41,8 +40,8 @@ class SimulatorController : Controller() {
     val radarParametersProperty = getProperty(SimulatorController::radarParameters)
 
     private val timeShiftFunc = SimpleRegression()
-    private val acpIdxFunc = SimpleRegression()
 
+    private val acpIdxFunc = SimpleRegression()
     private val sshClient: SSHClient
 
     val simulationRunningProperty = SimpleBooleanProperty(false)
@@ -76,6 +75,11 @@ class SimulatorController : Controller() {
         }
     }
 
+    override fun close() {
+        statusTimer.cancel()
+        sshClient.close()
+    }
+
     private fun initSsh() = SSHClient().apply {
         // no need to verify, not really security oriented
         addHostKeyVerifier { _, _, _ -> true }
@@ -102,7 +106,7 @@ class SimulatorController : Controller() {
             val transport = TSocket(config.string("simulatorIp"), 9090)
             transport.open()
 
-            // create 
+            // create
             wrap(Client(TBinaryProtocol(transport)))
         } catch (x: TException) {
             throw RuntimeException("Unable to connect to simulator HW", x)
