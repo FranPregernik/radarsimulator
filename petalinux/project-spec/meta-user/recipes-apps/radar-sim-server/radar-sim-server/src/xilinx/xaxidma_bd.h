@@ -674,7 +674,7 @@ typedef u32 XAxiDma_Bd[XAXIDMA_BD_NUM_WORDS];
  *
  *****************************************************************************/
 #define XAxiDma_BdSetNext(BdPtr, NextBdPtr, BdRingPtr)                                      \
-    (XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_NDESC_OFFSET, XAXIDMA_BD_VIRT_TO_PHYS((NextBdPtr), (TxRingPtr))))
+    (XAxiDma_BdWrite((BdPtr), XAXIDMA_BD_NDESC_OFFSET, XAXIDMA_BD_VIRT_TO_PHYS((NextBdPtr), (BdRingPtr))))
 
 #define XAxiDma_BdGetNext(BdPtr)                                      \
     (XAxiDma_BdRead((BdPtr), XAXIDMA_BD_NDESC_OFFSET))
