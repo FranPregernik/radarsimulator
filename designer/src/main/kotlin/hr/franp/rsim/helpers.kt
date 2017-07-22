@@ -955,7 +955,7 @@ fun ByteBuffer.writeHitsHeader(radarParameters: RadarParameters,
     putInt(4, radarParameters.azimuthChangePulse)
     putInt(8, radarParameters.impulsePeriodUs.toInt())
     putInt(12, radarParameters.maxImpulsePeriodUs.toInt())
-    putInt(16, max(rotations, rotations))
+    putInt(16, rotations)
 }
 
 fun ByteBuffer.writeHit(acpIdx: Int,

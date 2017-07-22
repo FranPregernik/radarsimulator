@@ -22,144 +22,8 @@ using namespace std;
 #include "inc/exceptions.hpp"
 #include "radar_simulator.hpp"
 
-void SimulatorHandler::stopDmaTransfer(XAxiDma *dmaPtr) {
-    XAxiDma_Reset(dmaPtr);
-}
-
-XAxiDma_Bd *SimulatorHandler::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAddr, u32 simBlockByteSize, int blockCount, XAxiDma_Bd *oldFirstBtPtr) {
-
-    XAxiDma_Bd *FirstBdPtr;
-    XAxiDma_Bd *PrevBdPtr;
-    XAxiDma_Bd *CurrBdPtr;
-    int status;
-
-    XAxiDma_BdRing *TxRingPtr = XAxiDma_GetTxRing(dmaPtr);
-
-    // free old BDs
-    if (oldFirstBtPtr) {
-        cout << "DMA_INIT_CLEAN_OLD" << endl;
-        int oldBdCnt = XAxiDma_BdRingFromHw(TxRingPtr, XAXIDMA_ALL_BDS, &oldFirstBtPtr);
-        if (oldBdCnt > 0) {
-            cout << "DMA_INIT_CLEAN_OLD_CNT=" << oldBdCnt << endl;
-            status = XAxiDma_BdRingFree(TxRingPtr, oldBdCnt, oldFirstBtPtr); // Return the list
-            if (status != XST_SUCCESS) {
-                RAISE(DmaInitFailedException, "Unable to clean old BD ring");
-            }
-        }
-    }
-
-    cout << "DMA_INIT_BLOCK_SIZE=" << simBlockByteSize << endl;
-
-    int bdCount = max(2, blockCount);
-    cout << "DMA_INIT_BD_COUNT=" << bdCount << endl;
-
-    /* Allocate a couple of BD */
-    status = XAxiDma_BdRingAlloc(TxRingPtr, bdCount, &FirstBdPtr);
-    if (status != XST_SUCCESS) {
-        RAISE(DmaInitFailedException, "Unable to allocate BD ring");
-    }
-
-    /* For set SOF on first BD */
-    XAxiDma_BdSetCtrl(FirstBdPtr, XAXIDMA_BD_CTRL_TXSOF_MASK);
-    cout << "DMA_INIT_FIRST_BD_PTR " << PADHEX(8, FirstBdPtr) << endl;
-
-    CurrBdPtr = FirstBdPtr;
-    u32 memIdx = 0;
-    for (int i = 0; i < bdCount; i++) {
-
-        /* Set up the BD using the information of the packet to transmit */
-        status = XAxiDma_BdSetBufAddr(CurrBdPtr, physMemAddr + memIdx * simBlockByteSize);
-        if (status != XST_SUCCESS) {
-            cerr << "Tx set buffer addr "
-                 << PADHEX(8, physMemAddr + memIdx * simBlockByteSize)
-                 << " on BD "
-                 << PADHEX(8, CurrBdPtr)
-                 << " failed with status "
-                 << dec << noshowbase << status
-                 << endl;
-            RAISE(DmaInitFailedException, "Unable to set BD buffer address");
-        }
-
-        status = XAxiDma_BdSetLength(CurrBdPtr, simBlockByteSize, TxRingPtr->MaxTransferLen);
-        if (status != XST_SUCCESS) {
-            cerr << "Tx set length "
-                 << simBlockByteSize
-                 << " on BD "
-                 << PADHEX(8, CurrBdPtr)
-                 << " failed with status "
-                 << dec << noshowbase << status
-                 << endl;
-            RAISE(DmaInitFailedException, "Unable to set BD buffer length");
-        }
-
-        XAxiDma_BdSetId(CurrBdPtr, i);
-
-        /* advance pointer */
-        PrevBdPtr = CurrBdPtr;
-        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
-
-        /* advance memory (with loop around protection) */
-        if (blockCount > 1) {
-            memIdx = (memIdx + 1) % blockCount;
-        }
-
-    }
-
-    // set up cyclic mode, i.e. wrap around pointer to first (CurrBdPtr = last BD ptr)
-    XAxiDma_BdSetNext(PrevBdPtr, FirstBdPtr, TxRingPtr);
-
-    /* For set EOF on last BD */
-    XAxiDma_BdSetCtrl(PrevBdPtr, XAXIDMA_BD_CTRL_TXEOF_MASK);
-
-    /*  debug print */
-//    CurrBdPtr = FirstBdPtr;
-//    for (int i = 0; i < bdCount; i++) {
-//        FXAxiDma_DumpBd(CurrBdPtr);
-//        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
-//    }
-//    PrintDmaStatus(dmaPtr);
-
-    /* Give the BD to DMA to kick off the transmission. */
-    status = XAxiDma_BdRingToHw(TxRingPtr, bdCount, FirstBdPtr);
-    if (status != XST_SUCCESS) {
-        cerr << "to hw failed " << status << endl;
-        RAISE(DmaInitFailedException, "Unable for HW to process BDs");
-    }
-
-    return FirstBdPtr;
-
-}
-
-void SimulatorHandler::initDmaEngine(int devId,
-                                     int devMemHandle,
-                                     XAxiDma *dma) {
-
-    int Status;
-    XAxiDma_Config *Config;
-
-    /* Get Clutter DMA config */
-    Config = XAxiDma_LookupConfig(devId);
-    if (!Config) {
-        RAISE(DmaConfigNotFoundException, "No config found for " << devId);
-    }
-
-    /* Initialize CLUTTER DMA engine */
-    Status = XAxiDma_CfgInitialize(dma, devMemHandle, Config);
-    if (Status != XST_SUCCESS) {
-        RAISE(DmaInitFailedException, "Initialization failed for DMA " << devId << ": " << Status);
-    }
-
-    if (!XAxiDma_HasSg(dma)) {
-        RAISE(NonScatterGatherDmaException, "Device " << devId << " configured as Simple mode");
-    }
-
-    // enable cyclic
-    Status = XAxiDma_SelectCyclicMode(dma, XAXIDMA_DMA_TO_DEVICE, TRUE);
-    if (Status != XST_SUCCESS) {
-        RAISE(DmaInitFailedException, "Failed to create set cyclic mode for " << devId);
-    }
-
-}
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
 void FXAxiDma_DumpBd(XAxiDma_Bd *BdPtr) {
     cout << "Dump BD " << PADHEX(8, BdPtr) << endl;
@@ -207,6 +71,158 @@ void FXAxiDma_DumpBd(XAxiDma_Bd *BdPtr) {
     cout << "\tDRE: " << PADHEX(8, XAxiDma_BdRead(BdPtr, XAXIDMA_BD_HAS_DRE_OFFSET)) << endl;
 
     cout << endl;
+}
+
+void dumpMem(char const *data, size_t const bytes) {
+    std::ofstream b_stream("/var/radar_sim_server_mem.bin", std::fstream::out | std::fstream::binary);
+    if (b_stream) {
+        b_stream.write(data, bytes);
+        cout << "DUMP_COMPLETE" << endl;
+    } else {
+        cout << "DUMP_ERR" << endl;
+    }
+}
+
+void SimulatorHandler::stopDmaTransfer(XAxiDma *dmaPtr) {
+    XAxiDma_Reset(dmaPtr);
+}
+
+XAxiDma_Bd *SimulatorHandler::startDmaTransfer(XAxiDma *dmaPtr,
+                                               UINTPTR physMemAddr,
+                                               u32 simBlockByteSize,
+                                               int blockCount,
+                                               XAxiDma_Bd *oldFirstBtPtr) {
+
+    XAxiDma_Bd *firstBdPtr;
+    XAxiDma_Bd *prevBdPtr;
+    XAxiDma_Bd *currBdPtr;
+    int status;
+
+    XAxiDma_BdRing *txRingPtr = XAxiDma_GetTxRing(dmaPtr);
+
+    // free old BDs
+    if (oldFirstBtPtr) {
+        cout << "DMA_INIT_CLEAN_OLD" << endl;
+        int oldBdCnt = XAxiDma_BdRingFromHw(txRingPtr, XAXIDMA_ALL_BDS, &oldFirstBtPtr);
+        if (oldBdCnt > 0) {
+            cout << "DMA_INIT_CLEAN_OLD_CNT=" << oldBdCnt << endl;
+            status = XAxiDma_BdRingFree(txRingPtr, oldBdCnt, oldFirstBtPtr); // Return the list
+            if (status != XST_SUCCESS) {
+                RAISE(DmaInitFailedException, "Unable to clean old BD ring");
+            }
+        }
+    }
+
+    cout << "DMA_INIT_BLOCK_SIZE=" << simBlockByteSize << endl;
+
+    int bdCount = max(2, blockCount);
+    cout << "DMA_INIT_BD_COUNT=" << bdCount << endl;
+
+    /* Allocate a couple of BD */
+    status = XAxiDma_BdRingAlloc(txRingPtr, bdCount, &firstBdPtr);
+    if (status != XST_SUCCESS) {
+        RAISE(DmaInitFailedException, "Unable to allocate BD ring");
+    }
+
+    /* For set SOF on first BD */
+    XAxiDma_BdSetCtrl(firstBdPtr, XAXIDMA_BD_CTRL_TXSOF_MASK);
+    cout << "DMA_INIT_FIRST_BD_PTR " << PADHEX(8, firstBdPtr) << endl;
+
+    currBdPtr = firstBdPtr;
+    u32 memIdx = 0;
+    for (int i = 0; i < bdCount; i++) {
+
+        /* Set up the BD using the information of the packet to transmit */
+        status = XAxiDma_BdSetBufAddr(currBdPtr, physMemAddr + memIdx * simBlockByteSize);
+        if (status != XST_SUCCESS) {
+            cerr << "Tx set buffer addr "
+                 << PADHEX(8, physMemAddr + memIdx * simBlockByteSize)
+                 << " on BD "
+                 << PADHEX(8, currBdPtr)
+                 << " failed with status "
+                 << dec << noshowbase << status
+                 << endl;
+            RAISE(DmaInitFailedException, "Unable to set BD buffer address");
+        }
+
+        status = XAxiDma_BdSetLength(currBdPtr, simBlockByteSize, txRingPtr->MaxTransferLen);
+        if (status != XST_SUCCESS) {
+            cerr << "Tx set length "
+                 << simBlockByteSize
+                 << " on BD "
+                 << PADHEX(8, currBdPtr)
+                 << " failed with status "
+                 << dec << noshowbase << status
+                 << endl;
+            RAISE(DmaInitFailedException, "Unable to set BD buffer length");
+        }
+
+        XAxiDma_BdSetId(currBdPtr, i);
+
+        /* advance pointer */
+        prevBdPtr = currBdPtr;
+        currBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(txRingPtr, currBdPtr);
+
+        /* advance memory (with loop around protection) */
+        if (blockCount > 1) {
+            memIdx = (memIdx + 1) % blockCount;
+        }
+
+    }
+
+    // set up cyclic mode, i.e. wrap around pointer to first (CurrBdPtr = last BD ptr)
+    XAxiDma_BdSetNext(prevBdPtr, firstBdPtr, txRingPtr);
+
+    /* For set EOF on last BD */
+    XAxiDma_BdSetCtrl(prevBdPtr, XAXIDMA_BD_CTRL_TXEOF_MASK);
+
+    /*  debug print */
+    currBdPtr = firstBdPtr;
+    for (int i = 0; i < bdCount; i++) {
+        FXAxiDma_DumpBd(currBdPtr);
+        currBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(txRingPtr, currBdPtr);
+    }
+
+    /* Give the BD to DMA to kick off the transmission. */
+    status = XAxiDma_BdRingToHw(txRingPtr, bdCount, firstBdPtr);
+    if (status != XST_SUCCESS) {
+        cerr << "to hw failed " << status << endl;
+        RAISE(DmaInitFailedException, "Unable for HW to process BDs");
+    }
+
+    return firstBdPtr;
+
+}
+
+void SimulatorHandler::initDmaEngine(int devId,
+                                     int devMemHandle,
+                                     XAxiDma *dma) {
+
+    int status;
+    XAxiDma_Config *Config;
+
+    /* Get Clutter DMA config */
+    Config = XAxiDma_LookupConfig(devId);
+    if (!Config) {
+        RAISE(DmaConfigNotFoundException, "No config found for " << devId);
+    }
+
+    /* Initialize CLUTTER DMA engine */
+    status = XAxiDma_CfgInitialize(dma, devMemHandle, Config);
+    if (status != XST_SUCCESS) {
+        RAISE(DmaInitFailedException, "Initialization failed for DMA " << devId << ": " << status);
+    }
+
+    if (!XAxiDma_HasSg(dma)) {
+        RAISE(NonScatterGatherDmaException, "Device " << devId << " configured as Simple mode");
+    }
+
+    // enable cyclic
+    status = XAxiDma_SelectCyclicMode(dma, XAXIDMA_DMA_TO_DEVICE, TRUE);
+    if (status != XST_SUCCESS) {
+        RAISE(DmaInitFailedException, "Failed to create set cyclic mode for " << devId);
+    }
+
 }
 
 void SimulatorHandler::initScatterGatherBufferDescriptors(XAxiDma *dma,
@@ -260,13 +276,13 @@ void SimulatorHandler::initScatterGatherBufferDescriptors(XAxiDma *dma,
 
 void SimulatorHandler::initClutterDma() {
 
-    if (!calibrated) {
-        //RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
-    }
-
     // store pointer to the beginnings of the individual memory blocks
     u32 dataOffset = (DATA_BASE - MEM_BASE_ADDR) / WORD_SIZE;
     clutterMemPtr = scratchMem + dataOffset;
+    cout << "CLUTTER_MEM_PTR="
+         << PADHEX(8, addrToPhysical((UINTPTR) clutterMemPtr)) << "/"
+         << dec << clutterMapWordSize
+         << endl;
 
     initDmaEngine(CL_DMA_DEV_ID, devMemHandle, &clutterDma);
     initScatterGatherBufferDescriptors(
@@ -280,13 +296,13 @@ void SimulatorHandler::initClutterDma() {
 
 void SimulatorHandler::initTargetDma() {
 
-    if (!calibrated) {
-        //RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
-    }
-
     // store pointer to the beginnings of the individual memory blocks
     u32 dataOffset = (DATA_BASE - MEM_BASE_ADDR) / WORD_SIZE;
     targetMemPtr = scratchMem + dataOffset + clutterMapWordSize;
+    cout << "TARGET_MEM_PTR="
+         << PADHEX(8, addrToPhysical((UINTPTR) targetMemPtr)) << "/"
+         << dec << targetMapWordSize
+         << endl;
 
     initDmaEngine(MT_DMA_DEV_ID, devMemHandle, &targetDma);
     initScatterGatherBufferDescriptors(
@@ -322,6 +338,8 @@ SimulatorHandler::SimulatorHandler() {
         MEM_BASE_ADDR
     );
 
+    calibrate();
+
     clearAll();
 
     /* Initialize CLUTTER DMA engine */
@@ -335,8 +353,6 @@ SimulatorHandler::SimulatorHandler() {
 
     /* Initialize scratch mem */
     clearTargetMap();
-
-    calibrate();
 
     cout << "STARTED_SERVER" << endl;
 }
@@ -372,12 +388,29 @@ void SimulatorHandler::enableNorm() {
 
 void SimulatorHandler::enable() {
 
-    if (!calibrated) {
+    if (!ctrl->calibrated) {
         throw RadarSignalNotCalibratedException();
+    }
+
+    if (!clutterDma.Initialized) {
+        cout << "ERR_CL_DMA_NOT_INITIALIZED" << endl;
+        auto ex = DmaNotInitializedException();
+        ex.subSystem = SubSystem::CLUTTER;
+        throw ex;
+    }
+
+    if (!targetDma.Initialized) {
+        cout << "ERR_MT_DMA_NOT_INITIALIZED" << endl;
+        auto ex = DmaNotInitializedException();
+        ex.subSystem = SubSystem::MOVING_TARGET;
+        throw ex;
     }
 
     firstClutterBdPtr = startDmaTransfer(&clutterDma, addrToPhysical((UINTPTR) clutterMemPtr), blockByteSize, CL_BLK_CNT, firstClutterBdPtr);
     firstTargetBdPtr = startDmaTransfer(&targetDma, addrToPhysical((UINTPTR) targetMemPtr), blockByteSize, MT_BLK_CNT, firstTargetBdPtr);
+
+    // DEBUG
+    dumpMem((char *) scratchMem, MEM_SCRATCH_SIZE);
 
     ctrl->enabled = 0x1;
 
@@ -389,6 +422,7 @@ void SimulatorHandler::enable() {
         loadNextMaps();
     });
 
+    cout << "ENABLED_SIM" << endl;
 }
 
 void SimulatorHandler::disable() {
@@ -430,16 +464,18 @@ void SimulatorHandler::loadMap(const int32_t arpPosition) {
     ifstream clFile(cf, ios_base::in | ios_base::binary);
     if (!clFile || !clFile.is_open()) {
         cerr << "ERR=Unable to open file " << cf << endl;
-        // TODO: throw
-        exit(2);
+        auto ex = IncompatibleFileException();
+        ex.subSystem = SubSystem::CLUTTER;
+        throw ex;
     }
 
     auto mf = "/var/targets.bin";
     ifstream mtFile(mf, ios_base::in | ios_base::binary);
     if (!mtFile || !mtFile.is_open()) {
         cerr << "ERR=Unable to open file " << mf << endl;
-        // TODO: throw
-        exit(2);
+        auto ex = IncompatibleFileException();
+        ex.subSystem = SubSystem::MOVING_TARGET;
+        throw ex;
     }
 
     // stop simulator
@@ -449,8 +485,8 @@ void SimulatorHandler::loadMap(const int32_t arpPosition) {
     fromArpIdx = (u32) arpPosition;
 
     // set initial queue pointer and force initial load
-    clutterArpLoadIdx = arpPosition - 1;
-    targetArpLoadIdx = arpPosition - 1;
+    clutterArpLoadIdx = 0;
+    targetArpLoadIdx = 0;
 
     cout << "LOADING_MAPS_FROM_ARP=" << fromArpIdx << endl;
 
@@ -532,8 +568,8 @@ void SimulatorHandler::loadNextMaps() {
     std::chrono::seconds sleepDuration(1);
 
     while (ctrl->enabled) {
-        loadNextTargetMap(mtFile);
         loadNextClutterMap(ctFile);
+        loadNextTargetMap(mtFile);
         // sleep
         this_thread::sleep_for(sleepDuration);
     }
@@ -553,48 +589,79 @@ void SimulatorHandler::loadNextTargetMap(istream &input) {
     input.read((char *) &trigUs, sizeof(u32));
     input.read((char *) &trigSize, sizeof(u32));
     input.read((char *) &blockCount, sizeof(u32));
+
     auto headerOffset = (u32) input.tellg();
-
-    auto currAcpIdx = ctrl->simAcpIdx;
-    auto currArp = fromArpIdx + currAcpIdx / calAcpCnt;
-
     auto fileBlockByteSize = acpCnt * TRIG_WORD_CNT * WORD_SIZE;
-//    cout << "DBG_LOAD_NEXT_TARGET_MAP_FILE_BYTE_BLOCK_SIZE=" << fileBlockByteSize << "/" << blockByteSize << endl;
-//    cout << "DBG_LOAD_NEXT_TARGET_MAP_IDX=" << targetArpLoadIdx << "/" << currArp << "/" << MT_BLK_CNT - 1 << endl;
 
-    // ensure circular queue is not full
-    if ((targetArpLoadIdx >= 0) && (targetArpLoadIdx - (int) currArp >= MT_BLK_CNT - 1)) {
+    // a zero based, non modulo, set of indexes for the circular queue of a fixed size
+    auto currArp = MAX(ctrl->simAcpIdx / calAcpCnt, 0);
+    targetArpLoadIdx = MAX(targetArpLoadIdx, 0);
+
+    // early exit for EOF
+    auto blockFilePos = fromArpIdx + targetArpLoadIdx;
+    if (blockFilePos >= blockCount) {
         return;
     }
 
-    cout << "CURR_ARP_IDX=" << currArp << "/" << ((currArp - fromArpIdx) % MT_BLK_CNT) << endl;
+    // early exit for full queue
+    auto queueSize = targetArpLoadIdx - currArp;
+    if (queueSize >= MT_BLK_CNT) {
+//        cout << "DBG_STOP_MT_QUEUE_FULL="
+//             << targetArpLoadIdx << "/"
+//             << currArp << "/"
+//             << queueSize
+//             << endl;
+        return;
+    }
 
-    while ((targetArpLoadIdx < 0) || (targetArpLoadIdx - (int) currArp < MT_BLK_CNT - 1)) {
+//    cout << "DBG_LOAD_NEXT_TARGET_MAP_FILE_BYTE_BLOCK_SIZE=" << fileBlockByteSize << "/" << blockByteSize << endl;
+//    cout << "DBG_LOAD_NEXT_TARGET_MAP_IDX=" << targetArpLoadIdx << "/" << currArp << "/" << MT_BLK_CNT - 1 << endl;
+//    cout << "CURR_ARP_IDX=" << currArp << "/" << currArp % MT_BLK_CNT << endl;
 
-        // load the next block
-        targetArpLoadIdx = targetArpLoadIdx + 1;
-        if (targetArpLoadIdx >= blockCount - 1) {
-            cout << "STOP_TARGET_MAP_NO_MORE_DATA" << endl;
-            return;
-        }
 
-        // rewind the file past the headers to correct position of next block to load
-        input.seekg(headerOffset + targetArpLoadIdx * fileBlockByteSize);
-        if (input.eof()) {
-            cout << "STOP_TARGET_MAP_EOF" << endl;
-            return;
+    auto runCount = 0;
+    while (queueSize < MT_BLK_CNT && runCount < MT_BLK_CNT) {
+        // prevent endless loop
+        runCount++;
+
+        // early exit for EOF
+        blockFilePos = fromArpIdx + targetArpLoadIdx;
+        if (blockFilePos >= blockCount) {
+            break;
         }
 
         // block index to write (circular buffer) with 0 being the starting ARP (fromArpIdx)
-        int idx = (targetArpLoadIdx - fromArpIdx) % MT_BLK_CNT;
-        UINTPTR memPtr = ((UINTPTR) targetMemPtr) + idx * blockByteSize;
+        auto writeBlockIdx = targetArpLoadIdx % MT_BLK_CNT;
+        char *memPtr = ((char *) targetMemPtr) + writeBlockIdx * blockByteSize;
+
+        // rewind the file past the headers to correct position of next block to load
+        size_t offset = headerOffset + blockFilePos * fileBlockByteSize;
+        input.seekg(offset);
+        if (input.eof()) {
+            cout << "STOP_MT_EOF" << endl;
+            break;
+        }
 
         // read from file or clear
-        memset((u8 *) memPtr, 0x0, blockByteSize);
-        input.read((char *) memPtr, fileBlockByteSize);
-        cout << "LOAD_MT_ARP_MAP=" << targetArpLoadIdx << "/" << idx << endl;
+        input.read(memPtr, blockByteSize);
+
+        cout << "LOAD_MT_ARP_MAP="
+             << fromArpIdx + targetArpLoadIdx << "/"
+             << writeBlockIdx << "/"
+             << offset << "/"
+             << PADHEX(8, addrToPhysical((UINTPTR) memPtr)) << "/"
+             << dec << blockCount
+             << endl;
+
+        targetArpLoadIdx = targetArpLoadIdx + 1;
+        queueSize = targetArpLoadIdx - currArp;
     }
 
+    cout << "LOAD_MT_COMPLETE="
+         << targetArpLoadIdx << "/"
+         << currArp << "/"
+         << queueSize
+         << endl;
 }
 
 void SimulatorHandler::loadNextClutterMap(istream &input) {
@@ -611,54 +678,82 @@ void SimulatorHandler::loadNextClutterMap(istream &input) {
     input.read((char *) &trigUs, sizeof(u32));
     input.read((char *) &trigSize, sizeof(u32));
     input.read((char *) &blockCount, sizeof(u32));
+
     auto headerOffset = (u32) input.tellg();
-
-    auto currAcpIdx = ctrl->simAcpIdx;
-    auto currArp = fromArpIdx + currAcpIdx / calAcpCnt;
-
     auto fileBlockByteSize = acpCnt * TRIG_WORD_CNT * WORD_SIZE;
-//    cout << "DBG_LOAD_NEXT_CLUTTER_MAP_FILE_BYTE_BLOCK_SIZE=" << fileBlockByteSize << "/" << blockByteSize << endl;
-//    cout << "DBG_LOAD_NEXT_CLUTTER_MAP_IDX=" << targetArpLoadIdx << "/" << currArp << "/" << CL_BLK_CNT - 1 << endl;
 
-    // ensure circular queue is not full
-    if ((clutterArpLoadIdx >= 0) && (clutterArpLoadIdx - (int) currArp >= CL_BLK_CNT - 1)) {
+    // a zero based, non modulo, set of indexes for the circular queue of a fixed size
+    auto currArp = MAX(ctrl->simAcpIdx / calAcpCnt, 0);
+    clutterArpLoadIdx = MAX(clutterArpLoadIdx, 0);
+
+    // early exit for EOF
+    auto blockFilePos = fromArpIdx + clutterArpLoadIdx;
+    if (blockFilePos >= blockCount) {
         return;
     }
 
-    cout << "CURR_ARP_IDX=" << currArp << "/" << ((currArp - fromArpIdx) % CL_BLK_CNT) << endl;
+    // early exit for full queue
+    auto queueSize = MAX(clutterArpLoadIdx - currArp, 0);
+    if (queueSize >= CL_BLK_CNT) {
+//        cout << "DBG_STOP_CL_QUEUE_FULL="
+//             << clutterArpLoadIdx << "/"
+//             << currArp << "/"
+//             << queueSize
+//             << endl;
+        return;
+    }
 
-    while ((clutterArpLoadIdx < 0) || (clutterArpLoadIdx - (int)currArp < CL_BLK_CNT - 1)) {
+//    cout << "DBG_LOAD_NEXT_CLUTTER_MAP_FILE_BYTE_BLOCK_SIZE=" << fileBlockByteSize << "/" << blockByteSize << endl;
+//    cout << "DBG_LOAD_NEXT_CLUTTER_MAP_IDX=" << targetArpLoadIdx << "/" << currArp << "/" << CL_BLK_CNT - 1 << endl;
+//    cout << "CURR_ARP_IDX=" << currArp << "/" << currArp % CL_BLK_CNT << endl;
 
-        // load the next block
-        clutterArpLoadIdx = clutterArpLoadIdx + 1;
-        if (clutterArpLoadIdx >= blockCount - 1) {
-            cout << "STOP_CLUTTER_MAP_NO_MORE_DATA" << endl;
-            return;
-        }
+    auto runCount = 0;
+    while (queueSize < CL_BLK_CNT && runCount < CL_BLK_CNT) {
+        // prevent endless loop
+        runCount++;
 
-        // rewind the file past the headers to correct position of next block to load
-        input.seekg(headerOffset + clutterArpLoadIdx * fileBlockByteSize);
-        if (input.eof()) {
-            cout << "STOP_CLUTTER_MAP_EOF" << endl;
-            return;
+        // early exit for EOF
+        blockFilePos = fromArpIdx + clutterArpLoadIdx;
+        if (blockFilePos >= blockCount) {
+            break;
         }
 
         // block index to write (circular buffer) with 0 being the starting ARP (fromArpIdx)
-        int idx = (clutterArpLoadIdx - fromArpIdx) % CL_BLK_CNT;
-        UINTPTR memPtr = ((UINTPTR) clutterMemPtr) + idx * blockByteSize;
+        auto writeBlockIdx = clutterArpLoadIdx % CL_BLK_CNT;
+        char *memPtr = ((char *) clutterMemPtr) + writeBlockIdx * blockByteSize;
+
+        // rewind the file past the headers to correct position of next block to load
+        size_t offset = headerOffset + blockFilePos * fileBlockByteSize;
+        input.seekg(offset);
+        if (input.eof()) {
+            cout << "STOP_CL_EOF" << endl;
+            break;
+        }
 
         // read from file or clear
-        memset((u8 *) memPtr, 0x0, blockByteSize);
-        input.read((char *) memPtr, fileBlockByteSize);
-        cout << "LOAD_CL_ARP_MAP=" << clutterArpLoadIdx << "/" << idx << endl;
+        input.read(memPtr, blockByteSize);
+
+        cout << "LOAD_CL_ARP_MAP="
+             << clutterArpLoadIdx << "/"
+             << writeBlockIdx << "/"
+             << offset << "/"
+             << PADHEX(8, addrToPhysical((UINTPTR) memPtr)) << "/"
+             << dec << blockCount
+             << endl;
+
+        clutterArpLoadIdx = clutterArpLoadIdx + 1;
+        queueSize = MAX(clutterArpLoadIdx - currArp, 0);
     }
 
-
+    cout << "LOAD_CL_COMPLETE="
+         << clutterArpLoadIdx << "/"
+         << currArp << "/"
+         << queueSize
+         << endl;
 }
 
 void SimulatorHandler::calibrate() {
 
-    calibrated = false;
     ctrl->calibrated = 0;
 
     std::chrono::seconds sleepDuration(1);
@@ -669,8 +764,6 @@ void SimulatorHandler::calibrate() {
         cout << "CAL_SIM_TRIG_US=" << dec << ctrl->trigUs << endl;
         this_thread::sleep_for(sleepDuration);
     };
-
-    calibrated = ctrl->calibrated == 1;
 
     calArpUs = ctrl->arpUs;
     calAcpCnt = ctrl->acpCnt;
@@ -688,19 +781,4 @@ void SimulatorHandler::calibrate() {
     targetMapWordSize = MT_BLK_CNT * mem_blk_word_cnt;
     clutterMapWordSize = CL_BLK_CNT * mem_blk_word_cnt;
 
-}
-
-void SimulatorHandler::logState() {
-    cout << "SIM_STATUS" << endl;
-    cout << "SIM_ENABLED=" << ctrl->enabled << endl;
-    cout << "SIM_CAL=" << ctrl->calibrated << endl;
-    cout << "SIM_NORM_ENABLED=" << ctrl->normEnabled << endl;
-    cout << "SIM_MTI_ENABLED=" << ctrl->mtiEnabled << endl;
-    cout << "SIM_ACP_CNT=" << ctrl->acpCnt << endl;
-    cout << "SIM_ARP_US=" << ctrl->arpUs << endl;
-    cout << "SIM_TRIG_US=" << ctrl->trigUs << endl;
-    cout << "SIM_LOAD_CL_ACP=" << ctrl->loadedClutterAcp << endl;
-    cout << "SIM_LOAD_TT_ACP=" << ctrl->loadedTargetAcp << endl;
-    cout << "SIM_SIM_ACP_IDX=" << ctrl->simAcpIdx << endl;
-    cout << "SIM_CURR_ACP_IDX=" << ctrl->currAcpIdx << endl;
 }

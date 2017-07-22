@@ -173,7 +173,6 @@ private:
     Simulator *ctrl;
 
     /** Stores the calibrated values **/
-    bool calibrated = false;
     u32 calAcpCnt;
     u32 calArpUs;
     u32 calTrigUs;
@@ -187,7 +186,7 @@ private:
     /** Clutter map memory region **/
     u32 *clutterMemPtr;
 
-    int clutterArpLoadIdx;
+    u32 clutterArpLoadIdx;
 
     /** Clutter memory region size in 32bit words **/
     u32 clutterMapWordSize;
@@ -195,7 +194,7 @@ private:
     /** Target map memory region **/
     u32 *targetMemPtr;
 
-    int targetArpLoadIdx;
+    u32 targetArpLoadIdx;
 
     /** Target memory region size in 32bit words **/
     u32 targetMapWordSize;
@@ -257,7 +256,6 @@ private:
 
     XAxiDma_Bd *firstTargetBdPtr;
 
-    void logState();
 };
 
 #endif /* RADAR_SIMULATOR_ */

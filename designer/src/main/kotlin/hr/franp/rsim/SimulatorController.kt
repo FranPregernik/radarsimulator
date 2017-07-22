@@ -6,7 +6,10 @@ import hr.franp.rsim.models.RadarParameters
 import javafx.application.Platform.runLater
 import javafx.beans.property.SimpleBooleanProperty
 import net.schmizz.sshj.SSHClient
+import net.schmizz.sshj.common.IOUtils
 import net.schmizz.sshj.common.StreamCopier
+import net.schmizz.sshj.connection.channel.direct.Session
+import net.schmizz.sshj.connection.channel.direct.Signal
 import net.schmizz.sshj.xfer.FileSystemFile
 import net.schmizz.sshj.xfer.TransferListener
 import org.apache.commons.math3.stat.regression.SimpleRegression
@@ -18,12 +21,16 @@ import tornadofx.*
 import java.lang.Math.floor
 import java.lang.Thread.sleep
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.logging.Level
+import kotlin.concurrent.thread
 import kotlin.concurrent.timer
 
 class SimulatorController : Controller(), AutoCloseable {
 
     private val simulatorClient: Simulator.Iface
+
+    private val serverCommand: Session.Command
 
     var radarParameters by property(RadarParameters(
         impulsePeriodUs = 3003.0,
@@ -48,7 +55,51 @@ class SimulatorController : Controller(), AutoCloseable {
 
     private val statusTimer: Timer
 
+    private val stdOutLoggingThread: Thread
+    private val stdErrLoggingThread: Thread
+
     init {
+        sshClient = initSsh()
+
+        val session = sshClient.startSession()
+        serverCommand = session.exec("radar_sim_server")
+
+        var boot = false
+
+        stdOutLoggingThread = thread(name = "sim_server_stdout") {
+            try {
+                serverCommand.inputStream.bufferedReader().use { r ->
+                    while (true) {
+                        val line = r.readLine()
+                        log.info(line)
+
+                        if (line.contains("STARTED_SERVER")) {
+                            boot = true
+                        }
+                    }
+                }
+            } catch (ignore: Exception) {
+                // ignore
+            }
+        }
+
+        stdErrLoggingThread = thread(name = "sim_server_stderr") {
+            try {
+                serverCommand.errorStream.bufferedReader().use { r ->
+                    while (true) {
+                        log.info(r.readLine())
+                    }
+                }
+            } catch (ignore: Exception) {
+                // ignore
+            }
+        }
+
+        // wait for server boot
+        while (!boot) {
+            Thread.sleep(1000)
+        }
+
         simulatorClient = initSimulator()
 
         try {
@@ -56,8 +107,6 @@ class SimulatorController : Controller(), AutoCloseable {
         } catch (x: TException) {
             throw RuntimeException("Unable to reset simulator HW", x)
         }
-
-        sshClient = initSsh()
 
         statusTimer = timer("sim_status", period = 5000L) {
             try {
@@ -68,6 +117,8 @@ class SimulatorController : Controller(), AutoCloseable {
                     log.log(Level.INFO, "SIM_ACP_IDX $simAcpIdx")
                     log.log(Level.INFO, "CLUTTER_ACP_IDX $loadedClutterAcpIndex")
                     log.log(Level.INFO, "TARGET_ACP_IDX $loadedTargetAcpIndex")
+                    log.log(Level.INFO, "CLUTTER_ACP $loadedClutterAcp")
+                    log.log(Level.INFO, "TARGET_ACP $loadedTargetAcp")
                 }
             } catch (e: Exception) {
                 log.log(Level.WARNING, e.message)
@@ -77,6 +128,16 @@ class SimulatorController : Controller(), AutoCloseable {
 
     override fun close() {
         statusTimer.cancel()
+
+        stdOutLoggingThread.interrupt()
+        stdOutLoggingThread.join()
+
+        stdErrLoggingThread.interrupt()
+        stdErrLoggingThread.join()
+
+        serverCommand.signal(Signal.TERM)
+        serverCommand.join()
+
         sshClient.close()
     }
 
@@ -98,6 +159,14 @@ class SimulatorController : Controller(), AutoCloseable {
         } catch (ex: Exception) {
             throw RuntimeException("Unable to connect to simulator HW", ex)
         }
+
+        // terminate old stuck servers
+        startSession().use { session ->
+            val cmd = session.exec("killall radar_sim_server; killall -9 radar_sim_server")
+            log.info(IOUtils.readFully(cmd.inputStream).toString())
+            cmd.join(5, TimeUnit.SECONDS)
+        }
+
 
     }
 
@@ -195,8 +264,6 @@ class SimulatorController : Controller(), AutoCloseable {
 
         try {
 
-            calibrate()
-
             // calculate the first ARP before the specified time
             val fromArp = floor(fromTimeSec / radarParameters.seekTimeSec).toInt()
 
@@ -280,7 +347,6 @@ class SimulatorController : Controller(), AutoCloseable {
         try {
 
             val state = synchronized(simulatorClient) {
-                simulatorClient.calibrate()
                 simulatorClient.state
             }
 

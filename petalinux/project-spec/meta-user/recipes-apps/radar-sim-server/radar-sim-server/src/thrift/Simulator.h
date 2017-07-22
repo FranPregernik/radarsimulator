@@ -330,8 +330,9 @@ class Simulator_enable_pargs {
 };
 
 typedef struct _Simulator_enable_result__isset {
-  _Simulator_enable_result__isset() : rsnc(false) {}
+  _Simulator_enable_result__isset() : rsnc(false), d(false) {}
   bool rsnc :1;
+  bool d :1;
 } _Simulator_enable_result__isset;
 
 class Simulator_enable_result {
@@ -344,14 +345,19 @@ class Simulator_enable_result {
 
   virtual ~Simulator_enable_result() throw();
   RadarSignalNotCalibratedException rsnc;
+  DmaNotInitializedException d;
 
   _Simulator_enable_result__isset __isset;
 
   void __set_rsnc(const RadarSignalNotCalibratedException& val);
 
+  void __set_d(const DmaNotInitializedException& val);
+
   bool operator == (const Simulator_enable_result & rhs) const
   {
     if (!(rsnc == rhs.rsnc))
+      return false;
+    if (!(d == rhs.d))
       return false;
     return true;
   }
@@ -367,8 +373,9 @@ class Simulator_enable_result {
 };
 
 typedef struct _Simulator_enable_presult__isset {
-  _Simulator_enable_presult__isset() : rsnc(false) {}
+  _Simulator_enable_presult__isset() : rsnc(false), d(false) {}
   bool rsnc :1;
+  bool d :1;
 } _Simulator_enable_presult__isset;
 
 class Simulator_enable_presult {
@@ -377,6 +384,7 @@ class Simulator_enable_presult {
 
   virtual ~Simulator_enable_presult() throw();
   RadarSignalNotCalibratedException rsnc;
+  DmaNotInitializedException d;
 
   _Simulator_enable_presult__isset __isset;
 

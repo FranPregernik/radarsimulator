@@ -370,6 +370,14 @@ uint32_t Simulator_enable_result::read(::apache::thrift::protocol::TProtocol* ip
           xfer += iprot->skip(ftype);
         }
         break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->d.read(iprot);
+          this->__isset.d = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -391,6 +399,10 @@ uint32_t Simulator_enable_result::write(::apache::thrift::protocol::TProtocol* o
   if (this->__isset.rsnc) {
     xfer += oprot->writeFieldBegin("rsnc", ::apache::thrift::protocol::T_STRUCT, 1);
     xfer += this->rsnc.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  } else if (this->__isset.d) {
+    xfer += oprot->writeFieldBegin("d", ::apache::thrift::protocol::T_STRUCT, 2);
+    xfer += this->d.write(oprot);
     xfer += oprot->writeFieldEnd();
   }
   xfer += oprot->writeFieldStop();
@@ -428,6 +440,14 @@ uint32_t Simulator_enable_presult::read(::apache::thrift::protocol::TProtocol* i
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->rsnc.read(iprot);
           this->__isset.rsnc = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->d.read(iprot);
+          this->__isset.d = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -1628,6 +1648,9 @@ void SimulatorClient::recv_enable()
   if (result.__isset.rsnc) {
     throw result.rsnc;
   }
+  if (result.__isset.d) {
+    throw result.d;
+  }
   return;
 }
 
@@ -2156,6 +2179,9 @@ void SimulatorProcessor::process_enable(int32_t seqid, ::apache::thrift::protoco
   } catch (RadarSignalNotCalibratedException &rsnc) {
     result.rsnc = rsnc;
     result.__isset.rsnc = true;
+  } catch (DmaNotInitializedException &d) {
+    result.d = d;
+    result.__isset.d = true;
   } catch (const std::exception& e) {
     if (this->eventHandler_.get() != NULL) {
       this->eventHandler_->handlerError(ctx, "Simulator.enable");
@@ -2790,6 +2816,10 @@ void SimulatorConcurrentClient::recv_enable(const int32_t seqid)
       if (result.__isset.rsnc) {
         sentry.commit();
         throw result.rsnc;
+      }
+      if (result.__isset.d) {
+        sentry.commit();
+        throw result.d;
       }
       sentry.commit();
       return;

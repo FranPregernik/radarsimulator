@@ -19,11 +19,22 @@
 
 namespace hr { namespace franp { namespace rsim {
 
+struct SubSystem {
+  enum type {
+    CLUTTER = 0,
+    MOVING_TARGET = 1
+  };
+};
+
+extern const std::map<int, const char*> _SubSystem_VALUES_TO_NAMES;
+
 class SimState;
 
 class RadarSignalNotCalibratedException;
 
 class IncompatibleFileException;
+
+class DmaNotInitializedException;
 
 typedef struct _SimState__isset {
   _SimState__isset() : time(false), enabled(false), mtiEnabled(false), normEnabled(false), calibrated(false), arpUs(false), acpCnt(false), trigUs(false), simAcpIdx(false), currAcpIdx(false), loadedClutterAcpIndex(false), loadedTargetAcpIndex(false), loadedClutterAcp(false), loadedTargetAcp(false) {}
@@ -186,19 +197,30 @@ inline std::ostream& operator<<(std::ostream& out, const RadarSignalNotCalibrate
   return out;
 }
 
+typedef struct _IncompatibleFileException__isset {
+  _IncompatibleFileException__isset() : subSystem(false) {}
+  bool subSystem :1;
+} _IncompatibleFileException__isset;
 
 class IncompatibleFileException : public ::apache::thrift::TException {
  public:
 
   IncompatibleFileException(const IncompatibleFileException&);
   IncompatibleFileException& operator=(const IncompatibleFileException&);
-  IncompatibleFileException() {
+  IncompatibleFileException() : subSystem((SubSystem::type)0) {
   }
 
   virtual ~IncompatibleFileException() throw();
+  SubSystem::type subSystem;
 
-  bool operator == (const IncompatibleFileException & /* rhs */) const
+  _IncompatibleFileException__isset __isset;
+
+  void __set_subSystem(const SubSystem::type val);
+
+  bool operator == (const IncompatibleFileException & rhs) const
   {
+    if (!(subSystem == rhs.subSystem))
+      return false;
     return true;
   }
   bool operator != (const IncompatibleFileException &rhs) const {
@@ -218,6 +240,54 @@ class IncompatibleFileException : public ::apache::thrift::TException {
 void swap(IncompatibleFileException &a, IncompatibleFileException &b);
 
 inline std::ostream& operator<<(std::ostream& out, const IncompatibleFileException& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _DmaNotInitializedException__isset {
+  _DmaNotInitializedException__isset() : subSystem(false) {}
+  bool subSystem :1;
+} _DmaNotInitializedException__isset;
+
+class DmaNotInitializedException : public ::apache::thrift::TException {
+ public:
+
+  DmaNotInitializedException(const DmaNotInitializedException&);
+  DmaNotInitializedException& operator=(const DmaNotInitializedException&);
+  DmaNotInitializedException() : subSystem((SubSystem::type)0) {
+  }
+
+  virtual ~DmaNotInitializedException() throw();
+  SubSystem::type subSystem;
+
+  _DmaNotInitializedException__isset __isset;
+
+  void __set_subSystem(const SubSystem::type val);
+
+  bool operator == (const DmaNotInitializedException & rhs) const
+  {
+    if (!(subSystem == rhs.subSystem))
+      return false;
+    return true;
+  }
+  bool operator != (const DmaNotInitializedException &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const DmaNotInitializedException & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+  mutable std::string thriftTExceptionMessageHolder_;
+  const char* what() const throw();
+};
+
+void swap(DmaNotInitializedException &a, DmaNotInitializedException &b);
+
+inline std::ostream& operator<<(std::ostream& out, const DmaNotInitializedException& obj)
 {
   obj.printTo(out);
   return out;

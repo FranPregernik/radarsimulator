@@ -1,17 +1,22 @@
 package hr.franp.rsim
 
-import hr.franp.rsim.models.*
-import javafx.beans.property.*
-import javafx.scene.image.*
-import javafx.stage.*
-import net.schmizz.sshj.xfer.*
+import hr.franp.rsim.models.MovingTarget
+import hr.franp.rsim.models.MovingTargetType
+import hr.franp.rsim.models.Scenario
+import javafx.beans.property.SimpleBooleanProperty
+import javafx.scene.image.Image
+import javafx.stage.FileChooser
+import net.schmizz.sshj.xfer.FileSystemFile
 import tornadofx.*
-import java.io.*
-import java.lang.Math.*
-import java.nio.*
-import java.nio.channels.*
-import javax.imageio.*
-import javax.json.*
+import java.io.File
+import java.io.RandomAccessFile
+import java.lang.Math.max
+import java.lang.Math.min
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.channels.FileChannel
+import javax.imageio.ImageIO
+import javax.json.Json
 
 class DesignerController() : Controller() {
 
@@ -249,10 +254,7 @@ class DesignerController() : Controller() {
                         // dump to file
                         val mappedBuffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, channel.size())
                             .order(ByteOrder.LITTLE_ENDIAN)
-                        mappedBuffer.writeHitsHeader(
-                            radarParameters,
-                            (scenario.simulationDurationMin * MIN_TO_S / radarParameters.seekTimeSec).toInt()
-                        )
+                        mappedBuffer.writeHitsHeader(radarParameters, 1)
 
                         buff.spreadHits(mappedBuffer, cParams)
 

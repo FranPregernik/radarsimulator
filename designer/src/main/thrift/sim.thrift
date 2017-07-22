@@ -18,9 +18,20 @@ struct SimState {
     15: i32 loadedTargetAcp;
 }
 
+enum SubSystem {
+    CLUTTER,       // 1
+    MOVING_TARGET
+}
+
 exception RadarSignalNotCalibratedException {}
 
-exception IncompatibleFileException {}
+exception IncompatibleFileException {
+    1: SubSystem subSystem;
+}
+
+exception DmaNotInitializedException {
+    1: SubSystem subSystem;
+}
 
 service Simulator {
 
@@ -37,7 +48,7 @@ service Simulator {
     /**
      * Enables the simulator output.
      **/
-    void enable() throws (1: RadarSignalNotCalibratedException rsnc);
+    void enable() throws (1: RadarSignalNotCalibratedException rsnc, 2: DmaNotInitializedException d);
 
     /**
      * Enables the MTI simulator output.

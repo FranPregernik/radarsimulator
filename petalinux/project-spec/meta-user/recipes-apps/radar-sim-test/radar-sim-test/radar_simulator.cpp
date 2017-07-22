@@ -15,6 +15,8 @@
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
+#include <boost/uuid/sha1.hpp>
+
 using namespace std;
 
 #include "xilinx/xaxidma.h"
@@ -24,6 +26,16 @@ using namespace std;
 #include "inc/exceptions.hpp"
 
 #include "radar_simulator.hpp"
+
+void dumpMem(char const * data, size_t const bytes) {
+    std::ofstream b_stream("/var/radar-sim-test-mem.bin", std::fstream::out | std::fstream::binary);
+    if (b_stream) {
+        b_stream.write(data, bytes);
+        cout << "DUMP_COMPLETE" << endl;
+    } else {
+        cout << "DUMP_ERR" << endl;
+    }
+}
 
 void PrintMem(u32 *mem, u32 size, u32 wrapping) {
     printf("--- MEM from: 0x%08x - 0x%08x --- \r\n", mem, mem + size);
@@ -131,8 +143,12 @@ XAxiDma_Bd* RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAdd
 
     XAxiDma_BdRing *TxRingPtr = XAxiDma_GetTxRing(dmaPtr);
 
+    cout << "DMA_INIT_BLOCK_SIZE=" << dec << simBlockByteSize << endl;
+
     /* Allocate a couple of BD */
     int bdCount = max(2, blockCount);
+    cout << "DMA_INIT_BD_COUNT=" << dec << bdCount << endl;
+
     Status = XAxiDma_BdRingAlloc(TxRingPtr, bdCount, &FirstBdPtr);
     if (Status != XST_SUCCESS) {
         RAISE(DmaInitFailedException, "Unable to allocate BD ring");
@@ -140,6 +156,7 @@ XAxiDma_Bd* RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAdd
 
     /* For set SOF on first BD */
     XAxiDma_BdSetCtrl(FirstBdPtr, XAXIDMA_BD_CTRL_TXSOF_MASK);
+    cout << "DMA_INIT_FIRST_BD_PTR " << PADHEX(8, FirstBdPtr) << endl;
 
     CurrBdPtr = FirstBdPtr;
     u32 memIdx = 0;
@@ -184,7 +201,6 @@ XAxiDma_Bd* RadarSimulator::startDmaTransfer(XAxiDma *dmaPtr, UINTPTR physMemAdd
 //        CurrBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(TxRingPtr, CurrBdPtr);
 //    }
 //    PrintDmaStatus(dmaPtr);
-
     /* Give the BD to DMA to kick off the transmission. */
     Status = XAxiDma_BdRingToHw(TxRingPtr, bdCount, FirstBdPtr);
     if (Status != XST_SUCCESS) {
@@ -268,12 +284,13 @@ void RadarSimulator::initScatterGatherBufferDescriptors(XAxiDma *dma, UINTPTR vi
 void RadarSimulator::initClutterDma() {
 
     if (!calibrated) {
-        //RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
+        RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
     }
 
     // store pointer to the beginnings of the individual memory blocks
     u32 dataOffset = (DATA_BASE - MEM_BASE_ADDR) / WORD_SIZE;
     clutterMemPtr = scratchMem + dataOffset;
+    cout << "CLUTTER_MEM_PTR=" << PADHEX(8, addrToPhysical((UINTPTR )clutterMemPtr)) << "/" << dec << clutterMapWordSize << endl;
 
     initDmaEngine(CL_DMA_DEV_ID, devMemHandle, &clutterDma);
     initScatterGatherBufferDescriptors(&clutterDma, addrToVirtual(CL_BD_SPACE_BASE), CL_BD_SPACE_BASE, CL_BD_SPACE_HIGH - CL_BD_SPACE_BASE + 1);
@@ -283,12 +300,13 @@ void RadarSimulator::initClutterDma() {
 void RadarSimulator::initTargetDma() {
 
     if (!calibrated) {
-        //RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
+        RAISE(RadarSignalNotCalibratedException, "ARP/ACP/TRIG values are not calibrated");
     }
 
     // store pointer to the beginnings of the individual memory blocks
     u32 dataOffset = (DATA_BASE - MEM_BASE_ADDR) / WORD_SIZE;
     targetMemPtr = scratchMem + dataOffset + clutterMapWordSize;
+    cout << "TARGET_MEM_PTR=" << PADHEX(8, addrToPhysical((UINTPTR )targetMemPtr)) << "/" << dec << targetMapWordSize << endl;
 
     initDmaEngine(MT_DMA_DEV_ID, devMemHandle, &targetDma);
     initScatterGatherBufferDescriptors(&targetDma, addrToVirtual(MT_BD_SPACE_BASE), MT_BD_SPACE_BASE, MT_BD_SPACE_HIGH - MT_BD_SPACE_BASE + 1);
@@ -316,16 +334,33 @@ void RadarSimulator::enable() {
         //RAISE(RadarSignalNotCalibratedException, "Radar signal not calibrated");
     }
 
+    if (!clutterDma.Initialized) {
+        RAISE(RadarSignalNotCalibratedException, "DMA not initialized");
+    }
+
+    if (!targetDma.Initialized) {
+        RAISE(RadarSignalNotCalibratedException, "DMA not initialized");
+    }
+
     startDmaTransfer(&clutterDma, addrToPhysical((UINTPTR) clutterMemPtr), blockByteSize, CL_BLK_CNT);
     startDmaTransfer(&targetDma, addrToPhysical((UINTPTR) targetMemPtr), blockByteSize, MT_BLK_CNT);
+
+    // DEBUG
+    dumpMem((char*)scratchMem, MEM_HIGH_ADDR - MEM_BASE_ADDR + 1);
 
     ctrl->enabled = 0x1;
 }
 
 void RadarSimulator::disable() {
 
-    stopDmaTransfer(&clutterDma);
-    stopDmaTransfer(&targetDma);
+    if (clutterDma.Initialized) {
+        stopDmaTransfer(&clutterDma);
+        cout << "STOP_CL_DMA" << endl;
+    }
+    if (targetDma.Initialized) {
+        stopDmaTransfer(&targetDma);
+        cout << "STOP_MT_DMA" << endl;
+    }
 
     ctrl->enabled = 0x0;
 }
@@ -400,7 +435,11 @@ void RadarSimulator::initTargetMap(istream& input) {
     //    }
 
     for (int i = 0; i < MT_BLK_CNT; i++) {
-        input.read(((char*) targetMemPtr) + i * blockByteSize, blockByteSize);
+        char* memPtr = ((char*) targetMemPtr) + i * blockByteSize;
+        auto offset = input.tellg();
+        input.read(memPtr, blockByteSize);
+
+        cout << "LOAD_MT_ARP_MAP=" << i << "/" << i << "/" << offset << "/" << PADHEX(8, addrToPhysical((UINTPTR )memPtr)) << "/" << "_" << dec << endl;
     }
 
     targetMemLoadIdx = MT_BLK_CNT - 1;
@@ -427,18 +466,19 @@ void RadarSimulator::loadNextTargetMaps(istream& input) {
     input.read((char*) &blockCount, sizeof(u32));
 
     // rewind the file past the headers to correct position of next block to load
-    input.seekg(5 * sizeof(u32) + targetMemLoadIdx * blockByteSize);
+    size_t offset = 5 * sizeof(u32) + targetMemLoadIdx * blockByteSize;
+    input.seekg(offset);
 
     // block index to write - should be the one before where the currArp is located in (circular buffer)
-    int i = targetMemLoadIdx % MT_BLK_CNT;
-    UINTPTR memPtr = ((UINTPTR) targetMemPtr) + i * blockByteSize;
+    int writeBlockIdx = targetMemLoadIdx % MT_BLK_CNT;
+    char* memPtr = ((char*) targetMemPtr) + writeBlockIdx * blockByteSize;
 
     // read from file or clear
     if (!input.eof() && targetMemLoadIdx < blockCount) {
-        input.read((char*) memPtr, blockByteSize);
-        cout << "LOAD_MT_ARP_MAP=" << targetMemLoadIdx << "/" << i << endl;
+        input.read(memPtr, blockByteSize);
+        cout << "LOAD_MT_ARP_MAP=" << targetMemLoadIdx << "/" << writeBlockIdx << "/" << offset << "/" << PADHEX(8, addrToPhysical((UINTPTR )memPtr)) << "/" << dec << blockCount << endl;
     } else {
-        cout << "CLR_MT_ARP_MAP=" << targetMemLoadIdx << "/" << i << endl;
+        cout << "CLR_MT_ARP_MAP=" << targetMemLoadIdx << "/" << writeBlockIdx << "/" << offset << "/" << memPtr << endl;
         memset((u8*) memPtr, 0x0, blockByteSize);
     }
 

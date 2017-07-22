@@ -77,7 +77,7 @@ struct Simulator {
 };
 
 /***************** Macros (Inline Functions) Definitions *********************/
-#define PADHEX(width, val) showbase << setfill('0') << setw(width) << std::hex << internal << (unsigned)(val)
+#define PADHEX(width, val) showbase << setfill('0') << setw(width) << hex << internal << (unsigned)(val)
 
 /***************** Functions Definitions *********************/
 
