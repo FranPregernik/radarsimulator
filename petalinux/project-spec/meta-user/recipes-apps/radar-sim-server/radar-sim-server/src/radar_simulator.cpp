@@ -338,21 +338,15 @@ SimulatorHandler::SimulatorHandler() {
         MEM_BASE_ADDR
     );
 
-    calibrate();
-
     clearAll();
+
+    calibrate();
 
     /* Initialize CLUTTER DMA engine */
     initClutterDma();
 
-    /* Initialize scratch mem */
-    clearClutterMap();
-
     /* Initialize TARGET DMA engine */
     initTargetDma();
-
-    /* Initialize scratch mem */
-    clearTargetMap();
 
     cout << "STARTED_SERVER" << endl;
 }
@@ -521,19 +515,17 @@ void SimulatorHandler::getState(SimState &_return) {
 }
 
 void SimulatorHandler::clearAll() {
-    memset((u8 *) scratchMem, 0x0, MEM_SCRATCH_SIZE);
+    memset(scratchMem, 0x0, MEM_SCRATCH_SIZE);
     cout << "CLR_ALL" << endl;
 }
 
 void SimulatorHandler::clearClutterMap() {
-    // TODO: Align to DMA_DATA_WIDTH
-    memset((u8 *) clutterMemPtr, 0x0, CL_BLK_CNT * blockByteSize);
+    memset(clutterMemPtr, 0x0, CL_BLK_CNT * blockByteSize);
     cout << "CLR_CL" << endl;
 }
 
 void SimulatorHandler::clearTargetMap() {
-    // TODO: Align to DMA_DATA_WIDTH
-    memset((u8 *) targetMemPtr, 0x0, MT_BLK_CNT * blockByteSize);
+    memset(targetMemPtr, 0x0, MT_BLK_CNT * blockByteSize);
     cout << "CLR_MT" << endl;
 }
 
