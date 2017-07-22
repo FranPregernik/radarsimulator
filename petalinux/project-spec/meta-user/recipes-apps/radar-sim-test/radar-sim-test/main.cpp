@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
         cout << "SIM_TRIG_US=" << dec << status.trigUs << endl;
         cout << "SIM_MT_FIFO_CNT=" << dec << status.loadedTargetAcpIndex << endl;
         cout << "SIM_CL_FIFO_CNT=" << dec << status.loadedClutterAcpIndex << endl;
-        cout << "SIM_ACP_IDX=" << dec << status.simAcpIdx << "/" << timeSinceEpoch.count() << endl;
+        cout << "SIM_ACP_IDX=" << dec << status.simAcpIdx << "/" << status.loadedTargetAcp << "/" << status.loadedClutterAcp << "/" << timeSinceEpoch.count() << endl;
         cout << "SIM_CURR_ACP=" << dec << status.currAcpIdx << "/" << timeSinceEpoch.count() << endl;
 
         // notify caller of progress
@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
 
             status = rsim.getStatus();
             timeSinceEpoch = chrono::duration_cast < chrono::milliseconds > (chrono::steady_clock::now().time_since_epoch());
-            cout << "SIM_ACP_IDX=" << dec << status.simAcpIdx << "/" << timeSinceEpoch.count() << endl;
+            cout << "SIM_ACP_IDX=" << dec << status.simAcpIdx << "/" << status.loadedTargetAcp << "/" << status.loadedClutterAcp << "/" << timeSinceEpoch.count() << endl;
 
             // NOT IMPLEMENTED
             // cout << "SIM_CURR_ACP=" << dec << status.currAcpIdx << "/" << timeSinceEpoch.count() << endl;
