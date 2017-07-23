@@ -375,7 +375,7 @@ void SimulatorHandler::reset() {
 
 void SimulatorHandler::enableMti() {
     ctrl->mtiEnabled = 1;
-    cout << "MTI_STATUS=" << (ctrl->normEnabled == 1) << endl;
+    cout << "MTI_STATUS=" << (ctrl->mtiEnabled == 1) << endl;
 }
 
 void SimulatorHandler::enableNorm() {
@@ -448,7 +448,7 @@ void SimulatorHandler::disable() {
 
 void SimulatorHandler::disableMti() {
     ctrl->mtiEnabled = 0;
-    cout << "MTI_STATUS=" << (ctrl->normEnabled == 1) << endl;
+    cout << "MTI_STATUS=" << (ctrl->mtiEnabled == 1) << endl;
 }
 
 void SimulatorHandler::disableNorm() {
