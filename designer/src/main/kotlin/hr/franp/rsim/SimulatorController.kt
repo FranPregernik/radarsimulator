@@ -258,6 +258,8 @@ class SimulatorController : Controller(), AutoCloseable {
         }
     }
 
+    private var fromArp: Int = 0
+
     fun startSimulation(
         fromTimeSec: Double,
         progressConsumer: (Double, String) -> Unit) {
@@ -265,7 +267,7 @@ class SimulatorController : Controller(), AutoCloseable {
         try {
 
             // calculate the first ARP before the specified time
-            val fromArp = floor(fromTimeSec / radarParameters.seekTimeSec).toInt()
+            fromArp = floor(fromTimeSec / radarParameters.seekTimeSec).toInt()
 
             timeShiftFunc.clear()
             acpIdxFunc.clear()
@@ -323,7 +325,7 @@ class SimulatorController : Controller(), AutoCloseable {
     fun approxSimAcp(t: Double = System.currentTimeMillis().toDouble()): Long {
         val simTime = timeShiftFunc.predict(t)
         val acpIdx = acpIdxFunc.predict(simTime)
-        return acpIdx.toLong()
+        return fromArp * radarParameters.azimuthChangePulse + acpIdx.toLong()
     }
 
     fun approxSimTime(t: Double = System.currentTimeMillis().toDouble()) =

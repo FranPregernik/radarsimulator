@@ -494,10 +494,10 @@ void SimulatorHandler::loadMap(const int32_t arpPosition) {
 
 void SimulatorHandler::getState(SimState &_return) {
 
-    _return.enabled = ctrl->enabled > 0;
-    _return.mtiEnabled = ctrl->mtiEnabled > 0;
-    _return.normEnabled = ctrl->normEnabled > 0;
-    _return.calibrated = ctrl->calibrated > 0;
+    _return.enabled = ctrl->enabled == 1;
+    _return.mtiEnabled = ctrl->mtiEnabled == 1;
+    _return.normEnabled = ctrl->normEnabled == 1;
+    _return.calibrated = ctrl->calibrated == 1;
 
     _return.arpUs = calArpUs;
     _return.acpCnt = calAcpCnt;
@@ -593,12 +593,6 @@ void SimulatorHandler::loadNextTargetMap(istream &input) {
     auto currArp = MAX(ctrl->simAcpIdx / calAcpCnt, 0);
     targetArpLoadIdx = MAX(targetArpLoadIdx, 0);
 
-    // early exit for EOF
-    auto blockFilePos = fromArpIdx + targetArpLoadIdx;
-    if (blockFilePos >= blockCount) {
-        return;
-    }
-
     // early exit for full queue
     auto queueSize = targetArpLoadIdx - currArp;
     if (queueSize >= MT_BLK_CNT) {
@@ -620,11 +614,8 @@ void SimulatorHandler::loadNextTargetMap(istream &input) {
         // prevent endless loop
         runCount++;
 
-        // early exit for EOF
-        blockFilePos = fromArpIdx + targetArpLoadIdx;
-        if (blockFilePos >= blockCount) {
-            break;
-        }
+        // ensure we don't go over the EOF
+        auto blockFilePos = MIN(fromArpIdx + targetArpLoadIdx, blockCount - 1);
 
         // block index to write (circular buffer) with 0 being the starting ARP (fromArpIdx)
         auto writeBlockIdx = targetArpLoadIdx % MT_BLK_CNT;
@@ -682,12 +673,6 @@ void SimulatorHandler::loadNextClutterMap(istream &input) {
     auto currArp = MAX(ctrl->simAcpIdx / calAcpCnt, 0);
     clutterArpLoadIdx = MAX(clutterArpLoadIdx, 0);
 
-    // early exit for EOF
-    auto blockFilePos = fromArpIdx + clutterArpLoadIdx;
-    if (blockFilePos >= blockCount) {
-        return;
-    }
-
     // early exit for full queue
     auto queueSize = MAX(clutterArpLoadIdx - currArp, 0);
     if (queueSize >= CL_BLK_CNT) {
@@ -708,11 +693,8 @@ void SimulatorHandler::loadNextClutterMap(istream &input) {
         // prevent endless loop
         runCount++;
 
-        // early exit for EOF
-        blockFilePos = fromArpIdx + clutterArpLoadIdx;
-        if (blockFilePos >= blockCount) {
-            break;
-        }
+        // ensure we don't go over the EOF
+        auto blockFilePos = MIN(fromArpIdx + clutterArpLoadIdx, blockCount - 1);
 
         // block index to write (circular buffer) with 0 being the starting ARP (fromArpIdx)
         auto writeBlockIdx = clutterArpLoadIdx % CL_BLK_CNT;
