@@ -303,7 +303,7 @@ module radar_sim_ctrl_axi #
                     // Slave register 0
                     mti_en_req <= S_AXI_WDATA[0];
                   end
-              4'h0:
+              4'h2:
                 for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
                   if ( S_AXI_WSTRB[byte_index] == 1 ) begin
                     // Respective byte enables are asserted as per write strobes
