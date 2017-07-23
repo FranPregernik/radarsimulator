@@ -25,6 +25,8 @@ using namespace ::hr::franp::rsim;
 #ifndef RADAR_SIMULATOR_
 #define RADAR_SIMULATOR_
 
+//#define FDEBUG
+
 /**  CONSTANTS **/
 #define WORD_SIZE               (sizeof(u32))
 #define WORD_BITS               (8 * WORD_SIZE)

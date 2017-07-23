@@ -84,7 +84,8 @@ void dumpMem(char const *data, size_t const bytes) {
 }
 
 void SimulatorHandler::stopDmaTransfer(XAxiDma *dmaPtr) {
-    XAxiDma_Reset(dmaPtr);
+    // TODO: RESET and Reinitialize
+    //XAxiDma_Reset(dmaPtr);
 }
 
 XAxiDma_Bd *SimulatorHandler::startDmaTransfer(XAxiDma *dmaPtr,
@@ -176,12 +177,14 @@ XAxiDma_Bd *SimulatorHandler::startDmaTransfer(XAxiDma *dmaPtr,
     /* For set EOF on last BD */
     XAxiDma_BdSetCtrl(prevBdPtr, XAXIDMA_BD_CTRL_TXEOF_MASK);
 
+#ifdef FDEBUG
     /*  debug print */
     currBdPtr = firstBdPtr;
     for (int i = 0; i < bdCount; i++) {
         FXAxiDma_DumpBd(currBdPtr);
         currBdPtr = (XAxiDma_Bd *) XAxiDma_BdRingNext(txRingPtr, currBdPtr);
     }
+#endif
 
     /* Give the BD to DMA to kick off the transmission. */
     status = XAxiDma_BdRingToHw(txRingPtr, bdCount, firstBdPtr);
@@ -403,8 +406,9 @@ void SimulatorHandler::enable() {
     firstClutterBdPtr = startDmaTransfer(&clutterDma, addrToPhysical((UINTPTR) clutterMemPtr), blockByteSize, CL_BLK_CNT, firstClutterBdPtr);
     firstTargetBdPtr = startDmaTransfer(&targetDma, addrToPhysical((UINTPTR) targetMemPtr), blockByteSize, MT_BLK_CNT, firstTargetBdPtr);
 
-    // DEBUG
+#ifdef FDEBUG
     dumpMem((char *) scratchMem, MEM_SCRATCH_SIZE);
+#endif
 
     ctrl->enabled = 0x1;
 
