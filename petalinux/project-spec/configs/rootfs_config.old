@@ -381,6 +381,13 @@ CONFIG_openssh-sftp-server=y
 # CONFIG_portmap-utils is not set
 
 #
+# rsync 
+#
+CONFIG_rsync=y
+# CONFIG_rsync-dev is not set
+# CONFIG_rsync-dbg is not set
+
+#
 # tcp-wrappers 
 #
 # CONFIG_tcp-wrappers is not set

@@ -10,41 +10,6 @@ def find_cfgs(d):
 
     return sources_list
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 SRC_URI_append ="\
     file://plnx_kernel.cfg\
 "
