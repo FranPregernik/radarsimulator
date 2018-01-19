@@ -49,7 +49,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.jfxtras/jfxtras-labs
     compile 'org.jfxtras:jfxtras-labs:8.0-r5'
 
-    compile 'org.apache.thrift:libthrift:0.10.0'
+    compile 'org.apache.thrift:libthrift:0.9.3'
 
     // SSH connection
     compile 'com.hierynomus:sshj:0.21.1'
@@ -70,7 +70,7 @@ dependencies {
 
 compileThrift {
     recurse true
-    thriftExecutable 'thrift-0.10.0.exe'
+    thriftExecutable 'thrift-0.9.3.exe'
     generator 'html'
     generator 'cpp'
     generator 'java', 'private-members'
