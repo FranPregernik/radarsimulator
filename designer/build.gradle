@@ -49,7 +49,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.jfxtras/jfxtras-labs
     compile 'org.jfxtras:jfxtras-labs:8.0-r5'
 
-    compile 'org.apache.thrift:libthrift:0.9.3'
+    compile 'org.apache.thrift:libthrift:0.10.0'
 
     // SSH connection
     compile 'com.hierynomus:sshj:0.21.1'
@@ -70,19 +70,29 @@ dependencies {
 
 compileThrift {
     recurse true
-
+    thriftExecutable 'thrift-0.10.0.exe'
     generator 'html'
     generator 'cpp'
     generator 'java', 'private-members'
 }
 
-compileKotlin {
-    dependsOn compileThrift
-}
-
 compileJava {
     dependsOn compileThrift
 }
+
+compileKotlin {
+    dependsOn compileThrift
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
 
 //junitPlatform {
 //    filters {
